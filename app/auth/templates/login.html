@@ -1,6 +1,17 @@
 {% extends 'base.html' %}
 {% block content %}
   <h2>Log In</h2>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <ul class="list-none p-0 mb-4">
+      {% for category, message in messages %}
+        <li class="{{ category }} p-3 mb-2 rounded text-white ...">
+          {{ message }}
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+{% endwith %}
   <form method="post">
     {{ form.hidden_tag() }}
     <div>{{ form.email.label }} {{ form.email() }}</div>

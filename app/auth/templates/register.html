@@ -28,7 +28,7 @@
 
     {# The HTML form element. action should point to your registration route. #}
     {# method="post" is crucial for sending form data #}
-    <form method="POST" action="{{ url_for('register') }}" class="max-w-sm mx-auto bg-white p-6 rounded shadow-md">
+    <form method="POST" action="{{ url_for('auth.register') }}" class="max-w-sm mx-auto bg-white p-6 rounded shadow-md">
         {# Include the CSRF token - required for security with Flask-WTF #}
         {{ form.csrf_token }}
 
