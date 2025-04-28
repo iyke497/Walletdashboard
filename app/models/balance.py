@@ -6,7 +6,7 @@ class AccountAssetBalance(db.Model):
 
     id                = db.Column(db.Integer, primary_key=True)
     account_id        = db.Column(db.Integer, db.ForeignKey('accounts.id'), nullable=False)
-    asset_id          = db.Column(db.Integer, db.ForeignKey('assets.id'), nullable=False)
+    asset_id          = db.Column(db.Integer, db.ForeignKey('crypto_assets.id'), nullable=False)
     available_balance = db.Column(db.Numeric(36,18), nullable=False, default=Decimal('0'))
     frozen_balance    = db.Column(db.Numeric(36,18), nullable=False, default=Decimal('0'))
 
