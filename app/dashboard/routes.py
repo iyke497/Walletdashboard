@@ -6,6 +6,6 @@ bp = Blueprint('dashboard', __name__, url_prefix='/dashboard')
 
 @bp.route('')
 @login_required
-def index():
+def index(): # import db from your extensions
     data = get_portfolio_data(current_user.id)
     return render_template('dashboard/dashboard.html', portfolio=data)
