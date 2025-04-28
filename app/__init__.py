@@ -1,5 +1,5 @@
 from flask import Flask, render_template
-from .extensions import db, migrate, login_manager
+from .extensions import db, migrate, login_manager, csrf
 from .routes import init_app as register_blueprints
 import os
 from dotenv import load_dotenv
@@ -20,6 +20,7 @@ def create_app():
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
+    csrf.init_app(app)
 
     # Register all blueprints
     register_blueprints(app)
