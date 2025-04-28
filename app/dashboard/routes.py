@@ -5,7 +5,7 @@ from .services import get_portfolio_valuation
 
 bp = Blueprint('dashboard', __name__, url_prefix='/dashboard', template_folder='templates')
 
-@bp.route('')
+@bp.route('/')
 @login_required
 def index():
     """
@@ -21,5 +21,5 @@ def index():
     """
     
     vs = request.args.get('vs', 'usd').lower()
-    payload = get_portfolio_valuation(current_user, vs_currency=vs)
+    payload = get_portfolio_valuation(current_user.id, vs_currency=vs)
     return jsonify(payload), 200
