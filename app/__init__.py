@@ -9,7 +9,7 @@ def create_app():
     env = os.getenv("FLASK_ENV", "development").lower()
     load_dotenv(f".env.{env}")
 
-    app = Flask(__name__, template_folder='templates', static_folder='static')
+    app = Flask(__name__, template_folder='templates')
 
     if env == "production":
         app.config.from_object("config.production.ProductionConfig")
