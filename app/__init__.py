@@ -1,12 +1,20 @@
 from flask import Flask, render_template
-from config import Config
 from .extensions import db, migrate, login_manager
 from .routes import init_app as register_blueprints
+import os
+from dotenv import load_dotenv
 
 
 def create_app():
+    env = os.getenv("FLASK_ENV", "development").lower()
+    load_dotenv(f".env.{env}")
+
     app = Flask(__name__, template_folder='app/templates', static_folder='app/static')
-    app.config.from_object(Config)
+
+    if env == "production":
+        app.config.from_object("config.production.ProductionConfig")
+    else:
+        app.config.from_object("config.development.DevelopmentConfig")
 
     # Initialize extensions
     db.init_app(app)
