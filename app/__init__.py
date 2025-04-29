@@ -1,34 +1,29 @@
-from flask import Flask, render_template
-from .extensions import db, migrate, login_manager, csrf, cache
-from .routes import init_app as register_blueprints
 import os
-from dotenv import load_dotenv
+from flask import Flask
+from .config import config_by_name
+from .extensions import db, migrate, login_manager
 
+def create_app(config_name=None):
+    app = Flask(__name__, instance_relative_config=True)
 
-def create_app():
-    env = os.getenv("FLASK_ENV", "development").lower()
-    load_dotenv(f".env.{env}")
+    # choose config
+    if not config_name:
+        flask_env = os.getenv("FLASK_ENV", "production")
+        config_name = "dev" if flask_env == "development" else "prod"
+    app.config.from_object(config_by_name[config_name])
 
-    app = Flask(__name__, template_folder='templates')
-
-    if env == "production":
-        app.config.from_object("config.production.ProductionConfig")
-    else:
-        app.config.from_object("config.development.DevelopmentConfig")
-
-    # Initialize extensions
+    # initialize extensions
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
-    csrf.init_app(app)
-    cache.init_app(app)
 
-    # Register all blueprints
-    register_blueprints(app)
+    # register blueprints
+    from .auth import auth_bp
+    from .dashboard import dashboard_bp
+    from .wallet import wallet_bp
 
-    # Handle 404s
-    @app.errorhandler(404)
-    def not_found(e):
-        return render_template('base.html', content='<h2>Page not found</h2>'), 404
+    app.register_blueprint(auth_bp, url_prefix="/auth")
+    app.register_blueprint(dashboard_bp, url_prefix="/dashboard")
+    app.register_blueprint(wallet_bp, url_prefix="/wallet")
 
     return app
