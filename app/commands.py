@@ -4,7 +4,7 @@ import click
 from flask.cli import with_appcontext
 from datetime import datetime
 from .extensions import db
-from .models import Asset, User, NetworkType, AssetType
+from .models import Asset, User, NetworkType, AssetType, Holding
 
 @click.command('seed-db')
 @with_appcontext
@@ -76,5 +76,51 @@ def seed_db_command():
     db.session.commit()
     click.echo('Database seeded successfully!')
 
+@click.command('seed-holdings')
+@with_appcontext
+def seed_holdings_command():
+    """Seed test holdings for the test user."""
+    test_user = User.query.filter_by(username="testuser").first()
+    if not test_user:
+        click.echo('Test user not found. Please run seed-db first.')
+        return
+
+    # Define test holdings with realistic amounts
+    test_holdings = [
+        {"symbol": "BTC", "balance": 0.5},    # 0.5 BTC
+        {"symbol": "ETH", "balance": 5.0},    # 5 ETH
+        {"symbol": "SOL", "balance": 100.0},  # 100 SOL
+        {"symbol": "USDT", "balance": 10000.0},  # 10,000 USDT
+        {"symbol": "USDC", "balance": 5000.0},   # 5,000 USDC
+    ]
+
+    for holding in test_holdings:
+        asset = Asset.query.filter_by(symbol=holding["symbol"]).first()
+        if not asset:
+            click.echo(f'Asset {holding["symbol"]} not found.')
+            continue
+
+        # Check if holding already exists
+        existing_holding = Holding.query.filter_by(
+            user_id=test_user.id,
+            asset_id=asset.id
+        ).first()
+
+        if existing_holding:
+            existing_holding.balance = holding["balance"]
+            click.echo(f'Updated {holding["symbol"]} balance to {holding["balance"]}')
+        else:
+            new_holding = Holding(
+                user_id=test_user.id,
+                asset_id=asset.id,
+                balance=holding["balance"]
+            )
+            db.session.add(new_holding)
+            click.echo(f'Added {holding["symbol"]} with balance {holding["balance"]}')
+
+    db.session.commit()
+    click.echo('Test holdings seeded successfully!')
+
 def init_app(app):
     app.cli.add_command(seed_db_command)
+    app.cli.add_command(seed_holdings_command)
