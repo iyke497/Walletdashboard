@@ -35,7 +35,7 @@ def login():
         ).first()
         if user and check_password_hash(user.password_hash, form.password.data):
             login_user(user, remember=form.remember.data)
-            next_page = request.args.get('next') or url_for('dashboard.index')
+            next_page = request.args.get('next') or url_for('dashboard.show_portfolio')
             return redirect(next_page)
         flash('Invalid credentials.', 'danger')
     return render_template('auth/login.html', form=form)
