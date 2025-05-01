@@ -152,7 +152,7 @@ class Asset(db.Model, TimestampMixin, SoftDeleteMixin):
     quote_transactions = db.relationship(
         'Transaction',
         primaryjoin="Asset.id==Transaction.quote_asset_id",
-        backref="quote_asset"
+        back_populates='quote_asset'
     )
 
     def __repr__(self):
@@ -205,7 +205,7 @@ class Transaction(db.Model, TimestampMixin, SoftDeleteMixin):
     # Relationships
     user = db.relationship('User', back_populates='transactions')
     asset = db.relationship('Asset', foreign_keys=[asset_id])
-    quote_asset = db.relationship('Asset', foreign_keys=[quote_asset_id])
+    quote_asset = db.relationship('Asset', foreign_keys=[quote_asset_id], back_populates='quote_transactions')
     fiat_conversion_asset = db.relationship('Asset', foreign_keys=[fiat_conversion_asset_id])
     fee_asset = db.relationship('Asset', foreign_keys=[fee_asset_id], backref='fee_transactions')
 
