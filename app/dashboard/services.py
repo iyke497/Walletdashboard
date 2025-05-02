@@ -86,8 +86,6 @@ class PortfolioService:
             })
         
 
-        print(portfolio_details)
-        print(total_value)
         return {
             'total_value': total_value,
             'holdings': portfolio_details
