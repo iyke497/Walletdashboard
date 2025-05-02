@@ -4,7 +4,7 @@ import click
 from flask.cli import with_appcontext
 from datetime import datetime
 from .extensions import db
-from .models import Asset, User, NetworkType, AssetType, Holding
+from .models import Asset, User, NetworkType, AssetType, Holding, DepositAddress
 
 @click.command('seed-db')
 @with_appcontext
@@ -121,6 +121,81 @@ def seed_holdings_command():
     db.session.commit()
     click.echo('Test holdings seeded successfully!')
 
+
+@click.command('seed-deposit-addresses')
+@with_appcontext
+def seed_deposit_addresses():
+    """Seed deposit addresses for the test user."""
+
+    # Get or create assets (assuming these exist in your DB)
+    assets = {
+        'BTC': Asset.query.filter_by(symbol='BTC').first(),
+        'ETH': Asset.query.filter_by(symbol='ETH').first(),
+        'SOL': Asset.query.filter_by(symbol='SOL').first(),
+        'USDT': Asset.query.filter_by(symbol='USDT').first()
+    }
+
+    # Validate assets exist
+    for sym, asset in assets.items():
+        if not asset:
+            print(f"Error: {sym} asset not found in database!")
+
+    # Sample deposit addresses (use real addresses in production!)
+    sample_addresses = [
+        # Bitcoin addresses
+        {
+            'asset': 'BTC',
+            'address': '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2',
+            'network': NetworkType.BITCOIN
+        },
+        
+        # Ethereum addresses
+        {
+            'asset': 'ETH',
+            'address': '0x3f5CE5FBFe3E9af3971dD833D26bA9b5C936f0bE',
+            'network': NetworkType.ETHEREUM
+        },
+        
+        # USDT addresses
+        {
+            'asset': 'USDT',
+            'address': '0x37d8B8E3f36F82BFB3c61f69b3b7fF5e331Ad4E9',
+            'network': NetworkType.ETHEREUM
+        },
+        {
+            'asset': 'USDT',
+            'address': 'TRzLvZ6Ga6TWuAaJn6iE7XF98eqG5Jz2P4',
+            'network': NetworkType.TRON
+        }
+    ]
+
+    # Create deposit addresses
+    created = 0
+    for addr_data in sample_addresses:
+        # Check if address already exists
+        if DepositAddress.query.filter_by(address=addr_data['address']).first():
+            continue
+
+        asset = assets[addr_data['asset']]
+        
+        deposit_address = DepositAddress(
+            asset_id=asset.id,
+            address=addr_data['address'],
+            network=addr_data['network'],
+            is_active=True
+        )
+        
+        db.session.add(deposit_address)
+        created += 1
+
+    try:
+        db.session.commit()
+        print(f"Successfully created {created} deposit addresses")
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error seeding addresses: {str(e)}")
+
 def init_app(app):
     app.cli.add_command(seed_db_command)
     app.cli.add_command(seed_holdings_command)
+    app.cli.add_command(seed_deposit_addresses)
