@@ -7,7 +7,7 @@
     <div class="col">
       <h2>Your Portfolio</h2>
       <p class="lead">
-        Total value: 
+        Total value:
         <strong>{{ currency }} {{ "{:,.2f}".format(total_value) }}</strong>
       </p>
     </div>
@@ -27,7 +27,8 @@
                 <th>Name</th>
                 <th class="text-end">Balance</th>
                 <th class="text-end">Value ({{ currency }})</th>
-                <th class="text-end">%</th>
+                <th class="text-end">% of Portfolio</th>
+                <th class="text-center">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -38,6 +39,17 @@
                   <td class="text-end">{{ "{:,.8f}".format(item.balance) }}</td>
                   <td class="text-end">{{ "{:,.2f}".format(item.value) }}</td>
                   <td class="text-end">{{ "{:.2f}".format(item.percentage) }}%</td>
+                  <td class="text-center">
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-primary"
+                      data-bs-toggle="modal"
+                      data-bs-target="#depositModal"
+                      data-symbol="{{ item.asset.symbol }}"
+                    >
+                      Deposit
+                    </button>
+                  </td>
                 </tr>
               {% endfor %}
             </tbody>
@@ -47,4 +59,61 @@
     </div>
   </div>
 </div>
+
+<!-- Deposit Modal -->
+<div
+  class="modal fade"
+  id="depositModal"
+  tabindex="-1"
+  aria-labelledby="depositModalLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="depositModalLabel">Select Payment Method</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <p class="small text-muted">Buy Crypto with Fiat</p>
+        <div class="list-group mb-3">
+          <a href="{{ url_for('wallet.deposit_fiat', method='p2p') }}"
+             class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+            <div>
+              <strong>P2P Trading</strong>
+              <div class="small text-muted">Bank Transfer, Opay, PalmPay and more</div>
+            </div>
+            <i class="bi bi-arrow-right-circle-fill fs-4 text-primary"></i>
+          </a>
+          <a href="{{ url_for('wallet.deposit_fiat', method='card') }}"
+             class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+            <div>
+              <strong>Buy with NGN</strong>
+              <div class="small text-muted">Visa, Mastercard and JCB are supported</div>
+            </div>
+            <i class="bi bi-arrow-right-circle-fill fs-4 text-primary"></i>
+          </a>
+        </div>
+
+        <p class="small text-muted">Deposit with Crypto</p>
+        <div class="list-group">
+          <a href="{{ url_for('wallet.deposit_crypto') }}"
+             class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+            <div>
+              <strong>Deposit Crypto</strong>
+              <div class="small text-muted">Already have crypto? Deposit directly</div>
+            </div>
+            <i class="bi bi-arrow-right-circle-fill fs-4 text-primary"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
