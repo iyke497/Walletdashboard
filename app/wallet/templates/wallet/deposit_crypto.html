@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+{% block title %}Deposit Crypto{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <div class="card shadow-sm">
+        <div class="card-header">
+          <h4 class="mb-0">Deposit Cryptocurrency</h4>
+        </div>
+        <div class="card-body">
+          <form id="depositForm" method="POST" action="{{ url_for('wallet.deposit_crypto') }}">
+            <div class="mb-3">
+              <label for="coinSelect" class="form-label">Select Cryptocurrency</label>
+              <select class="form-select" id="coinSelect" name="coin" required>
+                <option value="">Select a cryptocurrency</option>
+                {% for asset in crypto_assets %}
+                <option value="{{ asset.symbol }}" data-icon="{{ asset.icon }}">
+                  {{ asset.name }} ({{ asset.symbol }})
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label for="networkSelect" class="form-label">Select Network</label>
+              <select class="form-select" id="networkSelect" name="network" required>
+                <option value="">Select a network</option>
+                <option value="BITCOIN">Bitcoin</option>
+                <option value="ETHEREUM">Ethereum</option>
+                <option value="BSC">Binance Smart Chain</option>
+                <option value="POLYGON">Polygon</option>
+                <option value="TRON">TRON</option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label for="amount" class="form-label">Amount</label>
+              <div class="input-group">
+                <input 
+                  type="number" 
+                  class="form-control" 
+                  id="amount" 
+                  name="amount" 
+                  step="0.00000001" 
+                  min="0" 
+                  required
+                >
+                <span class="input-group-text" id="assetSymbol">-</span>
+              </div>
+              <div class="form-text">Minimum deposit: 0.0001 BTC or equivalent</div>
+            </div>
+
+            <div class="d-grid gap-2 mb-3">
+              <button type="button" class="btn btn-success" id="getDepositDetails">Get Deposit Address</button>
+            </div>
+
+            <!-- Deposit Address and QR Code Section -->
+            <div id="depositDetails" class="mb-3 d-none">
+              <div class="card">
+                <div class="card-body">
+                  <h5 class="card-title">Deposit Address</h5>
+                  <div class="row">
+                    <div class="col-md-6 text-center">
+                      <img id="qrCode" src="" alt="QR Code" class="img-fluid mb-3" style="max-width: 200px;">
+                    </div>
+                    <div class="col-md-6">
+                      <div class="input-group mb-3">
+                        <input type="text" class="form-control" id="depositAddress" readonly>
+                        <button class="btn btn-outline-secondary" type="button" id="copyAddress">
+                          <i class="bi bi-clipboard"></i>
+                        </button>
+                      </div>
+                      <small class="text-muted">Scan the QR code or copy the address above to deposit your cryptocurrency.</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="d-grid gap-2 mb-3 d-none" id="submitDepositWrapper">
+              <button type="submit" class="btn btn-primary">Submit Deposit</button>
+            </div>
+
+            <div class="mb-3">
+              <label for="tx_hash" class="form-label">Transaction Hash (Optional)</label>
+              <input 
+                type="text" 
+                class="form-control" 
+                id="tx_hash" 
+                name="tx_hash" 
+                placeholder="Enter the blockchain transaction hash"
+              >
+              <div class="form-text">This helps us track your deposit faster</div>
+            </div>
+
+            <div class="alert alert-info">
+              <h6 class="alert-heading">Important Notes:</h6>
+              <ul class="mb-0">
+                <li>Only send the selected cryptocurrency to the address provided</li>
+                <li>Double-check the amount and address before sending</li>
+                <li>Deposits may take 1-3 network confirmations to appear in your account</li>
+              </ul>
+            </div>
+
+            <div class="d-grid gap-2">
+              <button type="button" class="btn btn-outline-secondary" onclick="history.back()">Cancel</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('coinSelect').addEventListener('change', function() {
+    const symbol = this.options[this.selectedIndex].text.split('(')[1].split(')')[0];
+    document.getElementById('assetSymbol').textContent = symbol;
+  });
+
+  // Add custom styling for select options with icons
+  const style = document.createElement('style');
+  style.textContent = `
+    .form-select option {
+      padding-left: 30px;
+      background-repeat: no-repeat;
+      background-position: 5px center;
+      background-size: 20px;
+    }
+  `;
+  document.head.appendChild(style);
+
+  // Set background images for options
+  const select = document.getElementById('coinSelect');
+  Array.from(select.options).forEach(option => {
+    if (option.dataset.icon) {
+      option.style.backgroundImage = `url(${option.dataset.icon})`;
+    }
+  });
+
+  // Handle Get Deposit Address button
+  document.getElementById('getDepositDetails').addEventListener('click', function() {
+    const assetSelect = document.getElementById('coinSelect');
+    const networkSelect = document.getElementById('networkSelect');
+    const amountInput = document.getElementById('amount');
+    const depositDetails = document.getElementById('depositDetails');
+    const submitDepositWrapper = document.getElementById('submitDepositWrapper');
+
+    if (assetSelect.value && networkSelect.value && amountInput.value) {
+      // Show deposit details section
+      depositDetails.classList.remove('d-none');
+      submitDepositWrapper.classList.remove('d-none');
+
+      // Update QR code
+      const qrCode = document.getElementById('qrCode');
+      qrCode.src = `/wallet/deposit/crypto/qr/${assetSelect.value}/${networkSelect.value}`;
+
+      // Fetch deposit address
+      fetch(`/wallet/deposit/crypto/address/${assetSelect.value}/${networkSelect.value}`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.address) {
+            document.getElementById('depositAddress').value = data.address;
+          } else {
+            document.getElementById('depositAddress').value = 'Error loading address';
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching address:', error);
+          document.getElementById('depositAddress').value = 'Error loading address';
+        });
+    } else {
+      depositDetails.classList.add('d-none');
+      submitDepositWrapper.classList.add('d-none');
+      alert('Please select a coin, network, and enter an amount.');
+    }
+  });
+
+  // Copy address functionality
+  document.getElementById('copyAddress').addEventListener('click', function() {
+    const addressInput = document.getElementById('depositAddress');
+    addressInput.select();
+    document.execCommand('copy');
+    
+    // Show feedback
+    const originalText = this.innerHTML;
+    this.innerHTML = '<i class="bi bi-check"></i>';
+    setTimeout(() => {
+      this.innerHTML = originalText;
+    }, 2000);
+  });
+});
+</script>
+{% endblock %} 
