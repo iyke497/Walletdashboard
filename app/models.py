@@ -87,6 +87,7 @@ class NetworkType(Enum):
     SOLANA = "solana"
     AVALANCHE = "avalanche"
     COSMOS = "cosmos"
+    TRON = "tron"
     OTHER = "other"
 
 
