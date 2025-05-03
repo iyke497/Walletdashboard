@@ -3,8 +3,9 @@ from enum import Enum
 from sqlalchemy import Enum as SQLAlchemyEnum, CheckConstraint
 from sqlalchemy import orm, event
 from flask_login import UserMixin
-from .extensions import db
+from .extensions import db, cache
 from werkzeug.security import generate_password_hash, check_password_hash
+import requests
 
 
 # Configure soft-delete query
@@ -158,6 +159,26 @@ class Asset(db.Model, TimestampMixin, SoftDeleteMixin):
 
     def __repr__(self):
         return f"<Asset {self.symbol}>"
+
+    @property
+    def coingecko_icon_url(self):
+        if not self.coingecko_id:
+            return None
+        cache_key = f"coingecko_icon_url_{self.coingecko_id}"
+        icon_url = cache.get(cache_key)
+        if icon_url:
+            return icon_url
+        try:
+            url = f"https://api.coingecko.com/api/v3/coins/{self.coingecko_id}"
+            resp = requests.get(url, timeout=2)
+            if resp.status_code == 200:
+                data = resp.json()
+                icon_url = data['image']['thumb']
+                cache.set(cache_key, icon_url, timeout=60 * 60 * 24)  # Cache for 24 hours
+                return icon_url
+        except Exception as e:
+            print(f"Error fetching icon for {self.symbol}: {e}")
+        return None
 
 
 class Holding(db.Model, TimestampMixin, SoftDeleteMixin):
