@@ -23,12 +23,15 @@ def deposit_crypto_form():
         {
             'symbol': asset.symbol,
             'name': asset.name,
-            'icon': f"https://assets.coingecko.com/coins/images/1/large/{asset.coingecko_id}.png"
+            'icon': asset.coingecko_icon_url
         }
         for asset in crypto_assets
     ]
+
+    # Fetch recent deposits for the current user
+    recent_deposits = WalletService.get_recent_crypto_deposits(current_user.id, limit=5)
     
-    return render_template('wallet/deposit_crypto.html', crypto_assets=serialized_assets)
+    return render_template('wallet/deposit_crypto.html', crypto_assets=serialized_assets, recent_deposits=recent_deposits)
 
 @wallet_bp.route('/deposit/crypto/address/<asset_symbol>/<network>')
 @login_required
