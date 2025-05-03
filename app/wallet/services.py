@@ -1,4 +1,5 @@
 from datetime import datetime
+from sqlalchemy import desc
 from sqlalchemy.exc import IntegrityError
 from app.models import Transaction, Asset, Holding, TransactionType, AssetType, ExchangeRate, DepositAddress, NetworkType
 from app.extensions import db
@@ -159,6 +160,18 @@ class WalletService:
             logger.error(f"Unexpected error in deposit_crypto: {str(e)}", exc_info=True)
             raise ValueError("An unexpected error occurred while processing the deposit")
 
+    @staticmethod
+    def get_recent_crypto_deposits(user_id, limit=5):
+        """
+        Fetch the user’s last `limit` crypto‐deposit transactions,
+        ordered newest first.
+        """
+        return Transaction.query \
+            .filter_by(user_id=user_id, tx_type=TransactionType.DEPOSIT) \
+            .order_by(desc(Transaction.timestamp)) \
+            .limit(limit) \
+            .all()
+    
     @staticmethod
     def deposit_fiat(user_id, asset_symbol, amount, reference=None):
         """Record a fiat currency deposit transaction and update holdings"""
