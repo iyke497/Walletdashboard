@@ -5,6 +5,7 @@ from flask.cli import with_appcontext
 from datetime import datetime
 from .extensions import db
 from .models import Asset, User, NetworkType, AssetType, Holding, DepositAddress
+from .dashboard.services import CoinGeckoService
 
 @click.command('seed-db')
 @with_appcontext
@@ -195,7 +196,18 @@ def seed_deposit_addresses():
         db.session.rollback()
         print(f"Error seeding addresses: {str(e)}")
 
+@click.command('fetch-rates')
+@with_appcontext
+def fetch_rates_command():
+    """Fetch and store current exchange rates from CoinGecko."""
+    try:
+        count = CoinGeckoService.fetch_and_store_rates()
+        click.echo(f'Successfully stored {count} exchange rates')
+    except Exception as e:
+        click.echo(f'Error fetching rates: {str(e)}', err=True)
+
 def init_app(app):
     app.cli.add_command(seed_db_command)
     app.cli.add_command(seed_holdings_command)
     app.cli.add_command(seed_deposit_addresses)
+    app.cli.add_command(fetch_rates_command)
