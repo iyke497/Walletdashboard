@@ -12,15 +12,33 @@
         <div class="card-body">
           <form id="depositForm" method="POST" action="{{ url_for('wallet.deposit_crypto') }}">
             <div class="mb-3">
-              <label for="coinSelect" class="form-label">Select Cryptocurrency</label>
-              <select class="form-select" id="coinSelect" name="coin" required>
-                <option value="">Select a cryptocurrency</option>
-                {% for asset in crypto_assets %}
-                <option value="{{ asset.symbol }}" data-icon="{{ asset.icon }}">
-                  {{ asset.name }} ({{ asset.symbol }})
-                </option>
-                {% endfor %}
-              </select>
+              <label for="coinDropdown" class="form-label">Select Cryptocurrency</label>
+              <div class="dropdown">
+                <button class="btn btn-light dropdown-toggle w-100 text-start" type="button" id="coinDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                  <img id="selectedCoinIcon" src="https://coin-images.coingecko.com/coins/images/4128/thumb/solana.png?1718769756" alt="Icon" style="width: 20px; height: 20px; margin-right: 8px;">
+                  <span id="selectedCoinText">{{ crypto_assets[0].name }} ({{ crypto_assets[0].symbol }})</span>
+                </button>
+                <ul class="dropdown-menu w-100" aria-labelledby="coinDropdownBtn" style="max-height: 300px; overflow-y: auto;">
+                  {% for asset in crypto_assets %}
+                    <li>
+                      <a class="dropdown-item d-flex align-items-center coin-option" 
+                         href="#" 
+                         data-id="{{ asset.id }}"
+                         data-symbol="{{ asset.symbol }}"
+                         data-icon="https://coin-images.coingecko.com/coins/images/4128/thumb/solana.png?1718769756"
+                         data-name="{{ asset.name }}">
+                         
+                        <img src="https://coin-images.coingecko.com/coins/images/4128/thumb/solana.png?1718769756" 
+                             alt="{{ asset.symbol }} icon"
+                             style="width: 20px; height: 20px; margin-right: 8px;">
+                             
+                        {{ asset.name }} ({{ asset.symbol }})
+                      </a>
+                    </li>
+                  {% endfor %}
+                </ul>
+                <input type="hidden" id="coinSelect" name="coin" value="{{ crypto_assets[0].symbol }}">
+              </div>
             </div>
 
             <div class="mb-3">
@@ -113,6 +131,57 @@
     </div>
   </div>
 </div>
+
+<!-- Recent Deposits Table -->
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-10">
+      <div class="card shadow-sm">
+        <div class="card-header">
+          <h5 class="mb-0">Recent Deposits</h5>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-striped mb-0">
+              <thead>
+                <tr>
+                  <th>Coin</th>
+                  <th>Network</th>
+                  <th>Amount</th>
+                  <th>Txid</th>
+                  <th>Status</th>
+                  <th>Date & Time</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% if recent_deposits and recent_deposits|length > 0 %}
+                  {% for tx in recent_deposits %}
+                  <tr>
+                    <td>{{ tx.asset.symbol }}</td>
+                    <td>{{ tx.asset.deposit_addresses[0].network.value if tx.asset.deposit_addresses and tx.asset.deposit_addresses[0].network else '-' }}</td>
+                    <td>{{ '%.8f'|format(tx.amount) }}</td>
+                    <td>
+                      {% if tx.external_tx_id %}
+                        <span style="font-size: 0.9em;">{{ tx.external_tx_id[:6] }}...{{ tx.external_tx_id[-6:] }}</span>
+                      {% else %}-{% endif %}
+                    </td>
+                    <td><span class="text-success">Completed</span></td>
+                    <td>{{ tx.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                    <td><a href="#" class="btn btn-link btn-sm">Details</a></td>
+                  </tr>
+                  {% endfor %}
+                {% else %}
+                  <tr><td colspan="7" class="text-center">No recent deposits found.</td></tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -193,6 +262,22 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(() => {
       this.innerHTML = originalText;
     }, 2000);
+  });
+
+  // Custom dropdown for coin selection
+  document.querySelectorAll('.coin-option').forEach(function(item) {
+    item.addEventListener('click', function(e) {
+      e.preventDefault();
+      const icon = this.dataset.icon;
+      const symbol = this.dataset.symbol;
+      const name = this.dataset.name;
+
+      // Update selected display
+      document.getElementById('selectedCoinIcon').src = icon;
+      document.getElementById('selectedCoinText').textContent = `${name} (${symbol})`;
+      document.getElementById('coinSelect').value = symbol;
+      document.getElementById('assetSymbol').textContent = symbol;
+    });
   });
 });
 </script>
