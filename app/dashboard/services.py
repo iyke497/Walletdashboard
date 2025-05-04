@@ -4,6 +4,7 @@ import os
 from sqlalchemy import func
 from app.models import User, Holding, Asset, ExchangeRate, AssetType
 from app.extensions import db
+from decimal import Decimal
 
 class PortfolioService:
     @staticmethod
@@ -96,7 +97,7 @@ class CoinGeckoService:
     
     @staticmethod
     def fetch_and_store_rates():
-        """Get the latest exchange rate between two assets"""
+        """Get the latest exchange rates for crypto-to-fiat and crypto-to-crypto pairs"""
         
         # Get all assets that have CoinGecko IDs
         crypto_assets = Asset.query.filter(
@@ -109,14 +110,14 @@ class CoinGeckoService:
             Asset.asset_type == AssetType.FIAT
         ).all()
 
-        if not crypto_assets or not fiat_assets:
-            raise ValueError("No crypto/fiat assets configured in database")
+        if not crypto_assets:
+            raise ValueError("No crypto assets configured in database")
 
-        # Build CoinGecko parameters
+        # Build CoinGecko parameters for crypto-to-fiat rates
         coin_ids = [asset.coingecko_id for asset in crypto_assets]
         vs_currencies = [asset.symbol.lower() for asset in fiat_assets]
 
-        # Make API request
+        # Make API request for crypto-to-fiat rates
         url = f"{CoinGeckoService.COINGECKO_API}/simple/price"
         params = {
             "ids": ",".join(coin_ids),
@@ -131,7 +132,7 @@ class CoinGeckoService:
         response.raise_for_status()
         data = response.json()
 
-        # Process response
+        # Process response for crypto-to-fiat rates
         timestamp = datetime.utcnow()
         new_rates = []
 
@@ -152,6 +153,34 @@ class CoinGeckoService:
                     source="coingecko"
                 )
                 new_rates.append(new_rate)
+
+        # Calculate and store crypto-to-crypto rates using USD as intermediate
+        usd_asset = Asset.query.filter_by(symbol="USD", asset_type=AssetType.FIAT).first()
+        if usd_asset:
+            for base_crypto in crypto_assets:
+                base_usd_rate = data.get(base_crypto.coingecko_id, {}).get("usd")
+                if not base_usd_rate:
+                    continue
+                    
+                for quote_crypto in crypto_assets:
+                    if base_crypto.id == quote_crypto.id:
+                        continue
+                        
+                    quote_usd_rate = data.get(quote_crypto.coingecko_id, {}).get("usd")
+                    if not quote_usd_rate:
+                        continue
+                        
+                    # Calculate rate between the two cryptos using USD as intermediate
+                    rate = Decimal(str(base_usd_rate)) / Decimal(str(quote_usd_rate))
+                    
+                    new_rate = ExchangeRate(
+                        base_asset_id=base_crypto.id,
+                        quote_asset_id=quote_crypto.id,
+                        rate=rate,
+                        timestamp=timestamp,
+                        source="coingecko"
+                    )
+                    new_rates.append(new_rate)
 
         # Bulk insert
         db.session.bulk_save_objects(new_rates)
