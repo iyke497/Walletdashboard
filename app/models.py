@@ -299,6 +299,23 @@ class StakingPosition(db.Model, TimestampMixin, SoftDeleteMixin):
         lock_info = f" (locked until {self.locked_until})" if self.locked_until else " (flexible)"
         return f"<StakingPosition {self.user.username}: {self.amount} {self.asset.symbol}{lock_info}>"
 
+class TradeOrder(db.Model, TimestampMixin, SoftDeleteMixin):
+    __tablename__ = 'trade_orders'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    base_asset_id = db.Column(db.Integer, db.ForeignKey('assets.id'), nullable=False)
+    quote_asset_id = db.Column(db.Integer, db.ForeignKey('assets.id'), nullable=False)
+    order_type = db.Column(db.String(20))  # market/limit/stop
+    side = db.Column(db.String(4))  # buy/sell
+    amount = db.Column(db.Numeric(30, 18))
+    price = db.Column(db.Numeric(30, 18))  # null for market orders
+    status = db.Column(db.String(20), default='open')
+
+    # Relationships
+    user = db.relationship('User', backref='orders')
+    base_asset = db.relationship('Asset', foreign_keys=[base_asset_id])
+    quote_asset = db.relationship('Asset', foreign_keys=[quote_asset_id])
 
 # ----- Event listeners -----
 
