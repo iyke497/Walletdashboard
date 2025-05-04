@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Withdraw Cryptocurrency</h1>
+
+<form method="POST" action="{{ url_for('wallet.withdraw_crypto') }}">
+    {{ form.csrf_token }}
+    
+    <div class="form-group">
+        <label>Asset</label>
+        <select class="form-control" id="asset" name="asset" required>
+            {% for asset in crypto_assets %}
+            <option value="{{ asset.symbol }}" data-balance="{{ asset.balance }}">
+                {{ asset.name }} ({{ asset.symbol }}) - Available: {{ asset.balance|round(4) }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="form-group">
+        {{ form.amount.label }}
+        {{ form.amount(class="form-control", placeholder="0.00") }}
+    </div>
+
+    <div class="form-group">
+        <label>Withdrawal Address</label>
+        <input type="text" class="form-control" name="address" required 
+               placeholder="Enter destination wallet address">
+    </div>
+
+    <button type="submit" class="btn btn-danger">Withdraw</button>
+</form>
+
+<!-- Show recent withdrawals -->
+<h3 class="mt-4">Recent Withdrawals</h3>
+<table class="table">
+    {% for tx in recent_withdrawals %}
+    <tr>
+        <td>{{ tx.asset.symbol }}</td>
+        <td>{{ tx.amount|round(4) }}</td>
+        <td>{{ tx.timestamp|datetime }}</td>
+        <td>{{ tx.external_tx_id|truncate(10) }}</td>
+    </tr>
+    {% endfor %}
+</table>
+{% endblock %}

@@ -210,32 +210,41 @@ class WalletService:
             db.session.rollback()
             raise ValueError("Failed to process fiat deposit")
 
+    # ********** Withdraw **********
     @staticmethod
-    def withdraw(user_id, asset_symbol, amount):
-        """Record a withdrawal transaction and update holdings"""
-        if amount <= 0:
-            raise ValueError("Withdrawal amount must be positive")
-
-        asset = Asset.query.filter_by(symbol=asset_symbol, deleted_at=None).first()
+    def withdraw_crypto(user_id, asset_symbol, amount, destination_address):
+        """Process cryptocurrency withdrawal with blockchain integration"""
+        # Get asset and validate
+        asset = Asset.query.filter_by(
+            symbol=asset_symbol,
+            asset_type=AssetType.CRYPTO,
+            deleted_at=None
+        ).first()
         if not asset:
             raise ValueError(f"Asset {asset_symbol} not found")
 
-        # Check sufficient balance
+        # Get user's holding
         holding = Holding.query.filter_by(
             user_id=user_id,
             asset_id=asset.id,
             deleted_at=None
         ).first()
-
         if not holding or holding.balance < amount:
             raise ValueError("Insufficient balance")
 
-        # Create transaction
+        # TODO: Integrate with blockchain provider for actual withdrawal
+        # This is where you'd interface with your node or custody provider
+        # For now, we'll just record the transaction
+        tx_hash = "pending"  # Replace with real TX hash from provider
+
+        # Create withdrawal transaction
         transaction = Transaction(
             user_id=user_id,
             asset_id=asset.id,
             tx_type=TransactionType.WITHDRAW,
             amount=amount,
+            external_tx_id=tx_hash,
+            notes=f"Withdrawal to {destination_address}",
             timestamp=datetime.utcnow()
         )
 
@@ -248,8 +257,14 @@ class WalletService:
             return transaction
         except IntegrityError:
             db.session.rollback()
-            raise ValueError("Failed to process withdrawal")
+            raise ValueError("Failed to record withdrawal transaction")
 
+    @staticmethod
+    def get_recent_crypto_withdrawals(user_id, limit=5):
+        return Transaction.query.filter_by(
+            user_id=user_id,
+            tx_type=TransactionType.WITHDRAW
+        ).order_by(Transaction.timestamp.desc()).limit(limit).all()    
     @staticmethod
     def transfer(user_id, from_asset_symbol, to_asset_symbol, amount):
         """Record a transfer between assets and update holdings"""

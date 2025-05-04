@@ -1,8 +1,10 @@
-from flask import request, jsonify, render_template, Response
+from flask import request, jsonify, render_template, Response, flash, redirect, url_for
 from flask_login import login_required, current_user
 from . import wallet_bp
 from .services import WalletService
-from app.models import Asset, AssetType, NetworkType
+from .forms import WithdrawForm
+from app.models import Asset, AssetType, NetworkType, Holding
+from decimal import Decimal
 import logging
 
 logger = logging.getLogger(__name__)
@@ -178,33 +180,74 @@ def deposit_fiat():
     except Exception as e:
         return jsonify({'error': 'An unexpected error occurred'}), 500
 
-@wallet_bp.route('/withdraw', methods=['POST'])
+# ********** Withdraw **********
+
+@wallet_bp.route('/withdraw/crypto', methods=['GET'])
 @login_required
-def withdraw():
-    data = request.get_json()
+def withdraw_crypto_form():
+    """Render crypto withdrawal form"""
+    form = WithdrawForm()
     
+    # Get crypto assets with balances
+    crypto_assets = Asset.query.filter_by(
+        asset_type=AssetType.CRYPTO,
+        is_active=True,
+        deleted_at=None
+    ).join(Holding).filter(
+        Holding.user_id == current_user.id,
+        Holding.balance > 0
+    ).all()
+
+    # Add balance info to assets
+    serialized_assets = []
+    for asset in crypto_assets:
+        holding = next((h for h in current_user.holdings if h.asset_id == asset.id), None)
+        serialized_assets.append({
+            'symbol': asset.symbol,
+            'name': asset.name,
+            'balance': holding.balance if holding else 0
+        })
+
+    # Get recent withdrawals
+    recent_withdrawals = WalletService.get_recent_crypto_withdrawals(current_user.id, limit=5)
+    
+    return render_template('wallet/withdraw_crypto.html',
+                         form=form,
+                         crypto_assets=serialized_assets,
+                         recent_withdrawals=recent_withdrawals)
+
+@wallet_bp.route('/withdraw/crypto', methods=['POST'])
+@login_required
+def withdraw_crypto():
+    """Handle crypto withdrawal form submission"""
     try:
-        asset_symbol = data.get('asset')
-        amount = float(data.get('amount'))
-        
-        if not asset_symbol or not amount:
-            return jsonify({'error': 'Asset and amount are required'}), 400
-            
-        transaction = WalletService.withdraw(current_user.id, asset_symbol, amount)
-        return jsonify({
-            'message': 'Withdrawal successful',
-            'transaction': {
-                'id': transaction.id,
-                'asset': asset_symbol,
-                'amount': amount,
-                'timestamp': transaction.timestamp.isoformat()
-            }
-        }), 201
-        
+        asset_symbol = request.form.get('asset')
+        amount = Decimal(request.form.get('amount'))
+        address = request.form.get('address')
+
+        # Basic validation
+        if not all([asset_symbol, amount, address]):
+            flash('All fields are required', 'danger')
+            return redirect(url_for('wallet.withdraw_crypto_form'))
+
+        # Process withdrawal
+        transaction = WalletService.withdraw_crypto(
+            user_id=current_user.id,
+            asset_symbol=asset_symbol,
+            amount=amount,
+            destination_address=address
+        )
+
+        flash(f'Withdrawal of {amount} {asset_symbol} initiated!', 'success')
+        return redirect(url_for('wallet.withdraw_crypto_form'))
+
     except ValueError as e:
-        return jsonify({'error': str(e)}), 400
+        flash(str(e), 'danger')
+        return redirect(url_for('wallet.withdraw_crypto_form'))
     except Exception as e:
-        return jsonify({'error': 'An unexpected error occurred'}), 500
+        logger.error(f"Withdrawal error: {str(e)}")
+        flash('Failed to process withdrawal', 'danger')
+        return redirect(url_for('wallet.withdraw_crypto_form'))
 
 @wallet_bp.route('/transfer', methods=['POST'])
 @login_required

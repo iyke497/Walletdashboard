@@ -3,6 +3,7 @@ from flask import Flask
 from .config import config_by_name
 from .extensions import db, migrate, login_manager, cache
 from .commands import init_app as init_commands
+from .filters import init_app as init_filters
 
 def create_app(config_name=None):
     app = Flask(__name__, instance_relative_config=True)
@@ -21,6 +22,9 @@ def create_app(config_name=None):
 
     # Register commands
     init_commands(app)
+
+    # Register filters
+    init_filters(app)
 
     # register blueprints
     from .auth import auth_bp

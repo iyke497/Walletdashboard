@@ -42,13 +42,19 @@
                   <td class="text-center">
                     <button
                       type="button"
-                      class="btn btn-sm btn-outline-primary"
+                      class="btn btn-sm btn-outline-primary me-2"
                       data-bs-toggle="modal"
                       data-bs-target="#depositModal"
                       data-symbol="{{ item.asset.symbol }}"
                     >
                       Deposit
                     </button>
+                    <a
+                      href="{{ url_for('wallet.withdraw_crypto_form') }}"
+                      class="btn btn-sm btn-outline-danger"
+                    >
+                      Withdraw
+                    </a>
                   </td>
                 </tr>
               {% endfor %}
