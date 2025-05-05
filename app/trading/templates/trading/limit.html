@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% block title %}Limit Orders{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="row">
+    <div class="col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-header">
+          <h5 class="mb-0">Place Limit Order</h5>
+        </div>
+        <div class="card-body">
+          <form id="limitOrderForm">
+            <div class="mb-3">
+              <label class="form-label">Asset Pair</label>
+              <select class="form-select" id="assetPair" required>
+                {% for asset in assets %}
+                <option value="{{ asset.symbol }}">{{ asset.symbol }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label">Side</label>
+              <div class="btn-group w-100" role="group">
+                <input type="radio" class="btn-check" name="side" id="buy" value="buy" checked>
+                <label class="btn btn-outline-success" for="buy">Buy</label>
+                
+                <input type="radio" class="btn-check" name="side" id="sell" value="sell">
+                <label class="btn btn-outline-danger" for="sell">Sell</label>
+              </div>
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label">Amount</label>
+              <input type="number" class="form-control" id="amount" step="0.00000001" min="0.00000001" required>
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label">Limit Price</label>
+              <input type="number" class="form-control" id="price" step="0.00000001" min="0.00000001" required>
+            </div>
+            
+            <button type="submit" class="btn btn-primary w-100">Place Order</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-header">
+          <h5 class="mb-0">Order Book</h5>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-sm mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>Price</th>
+                  <th>Amount</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody id="orderBook">
+                <!-- Order book will be populated by JavaScript -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const form = document.getElementById('limitOrderForm');
+  const orderBook = document.getElementById('orderBook');
+  
+  // Function to update order book
+  function updateOrderBook() {
+    const baseAsset = document.getElementById('assetPair').value;
+    const quoteAsset = 'USDT'; // Default quote asset
+    
+    fetch(`/api/orderbook/${baseAsset}/${quoteAsset}`)
+      .then(response => response.json())
+      .then(data => {
+        // Clear existing rows
+        orderBook.innerHTML = '';
+        
+        // Add ask orders (highest price first)
+        data.asks.reverse().forEach(order => {
+          const row = document.createElement('tr');
+          row.className = 'text-danger';
+          row.innerHTML = `
+            <td>${order.price}</td>
+            <td>${order.amount}</td>
+            <td>${order.total}</td>
+          `;
+          orderBook.appendChild(row);
+        });
+        
+        // Add bid orders (highest price first)
+        data.bids.forEach(order => {
+          const row = document.createElement('tr');
+          row.className = 'text-success';
+          row.innerHTML = `
+            <td>${order.price}</td>
+            <td>${order.amount}</td>
+            <td>${order.total}</td>
+          `;
+          orderBook.appendChild(row);
+        });
+      })
+      .catch(error => console.error('Error fetching order book:', error));
+  }
+  
+  // Update order book when asset pair changes
+  document.getElementById('assetPair').addEventListener('change', updateOrderBook);
+  
+  // Update order book periodically
+  setInterval(updateOrderBook, 5000);
+  
+  // Handle form submission
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const data = {
+      base_asset: document.getElementById('assetPair').value,
+      quote_asset: 'USDT', // Default quote asset
+      amount: document.getElementById('amount').value,
+      price: document.getElementById('price').value,
+      side: document.querySelector('input[name="side"]:checked').value
+    };
+    
+    fetch('/api/orders/limit', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.error) {
+        alert(data.error);
+      } else {
+        alert('Order placed successfully!');
+        form.reset();
+        updateOrderBook();
+      }
+    })
+    .catch(error => {
+      console.error('Error placing order:', error);
+      alert('Failed to place order');
+    });
+  });
+});
+</script>
+{% endblock %}
+{% endblock %} 

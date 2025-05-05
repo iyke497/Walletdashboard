@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% block title %}Market Trades{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="row">
+    <div class="col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-header">
+          <h5 class="mb-0">Place Market Order</h5>
+        </div>
+        <div class="card-body">
+          <form id="marketOrderForm" method="POST" action="{{ url_for('trading.execute_market_order') }}">
+            {{ form.csrf_token }}
+            <div class="mb-3">
+              <label class="form-label">Trading Pair</label>
+              <div class="input-group">
+                <select class="form-select" id="baseAsset" name="base_asset" required>
+                  <option value="">Select Base Asset</option>
+                  {% for asset in assets %}
+                  <option value="{{ asset.symbol }}">{{ asset.name }} ({{ asset.symbol }})</option>
+                  {% endfor %}
+                </select>
+                <span class="input-group-text">/</span>
+                <select class="form-select" id="quoteAsset" name="quote_asset" required>
+                  <option value="">Select Quote Asset</option>
+                  {% for asset in assets %}
+                  <option value="{{ asset.symbol }}" {% if asset.symbol == 'USDT' %}selected{% endif %}>
+                    {{ asset.name }} ({{ asset.symbol }})
+                  </option>
+                  {% endfor %}
+                </select>
+              </div>
+              <small class="text-muted">Base asset is what you want to buy/sell, Quote asset is what you pay/receive with</small>
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label">Order Type</label>
+              <div class="btn-group w-100" role="group">
+                <input type="radio" class="btn-check" name="side" id="buy" value="buy" checked>
+                <label class="btn btn-outline-success" for="buy">Buy</label>
+                
+                <input type="radio" class="btn-check" name="side" id="sell" value="sell">
+                <label class="btn btn-outline-danger" for="sell">Sell</label>
+              </div>
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label">Amount</label>
+              <div class="input-group">
+                <input type="number" class="form-control" id="amount" name="amount" step="0.00000001" min="0.00000001" required>
+                <span class="input-group-text" id="amountSymbol">-</span>
+              </div>
+              <small class="text-muted">Enter the amount of the base asset you want to buy/sell</small>
+            </div>
+            
+            <button type="submit" class="btn btn-primary w-100" id="submitButton">Execute Market Order</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-header">
+          <h5 class="mb-0">Market Info</h5>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label">Current Price</label>
+            <h4 id="currentPrice">-</h4>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Estimated Cost</label>
+            <h4 id="estimatedCost">-</h4>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const form = document.getElementById('marketOrderForm');
+  const submitButton = document.getElementById('submitButton');
+  const currentPrice = document.getElementById('currentPrice');
+  const estimatedCost = document.getElementById('estimatedCost');
+  const amountSymbol = document.getElementById('amountSymbol');
+  let orderBookInterval;
+  
+  // Function to update market info
+  function updateMarketInfo() {
+    const baseAsset = document.getElementById('baseAsset').value;
+    const quoteAsset = document.getElementById('quoteAsset').value;
+    
+    if (!baseAsset || !quoteAsset) return;
+    
+    // Update amount symbol
+    amountSymbol.textContent = baseAsset;
+    
+    fetch(`/trading/api/orderbook/${baseAsset}/${quoteAsset}`)
+      .then(response => response.json())
+      .then(data => {
+        if (data.asks.length > 0 && data.bids.length > 0) {
+          const bestAsk = parseFloat(data.asks[0].price);
+          const bestBid = parseFloat(data.bids[0].price);
+          const midPrice = ((bestAsk + bestBid) / 2).toFixed(8);
+          
+          currentPrice.textContent = `${midPrice} ${quoteAsset}`;
+          
+          // Update estimated cost if amount is entered
+          const amount = document.getElementById('amount').value;
+          if (amount) {
+            const side = document.querySelector('input[name="side"]:checked').value;
+            const price = side === 'buy' ? bestAsk : bestBid;
+            const cost = (amount * price).toFixed(8);
+            estimatedCost.textContent = `${cost} ${quoteAsset}`;
+          }
+        }
+      })
+      .catch(error => console.error('Error fetching market info:', error));
+  }
+  
+  // Update market info when base asset changes
+  document.getElementById('baseAsset').addEventListener('change', updateMarketInfo);
+  
+  // Update market info when quote asset changes
+  document.getElementById('quoteAsset').addEventListener('change', updateMarketInfo);
+  
+  // Update market info when amount changes
+  document.getElementById('amount').addEventListener('input', updateMarketInfo);
+  
+  // Update market info when side changes
+  document.querySelectorAll('input[name="side"]').forEach(radio => {
+    radio.addEventListener('change', updateMarketInfo);
+  });
+  
+  // Start order book updates
+  orderBookInterval = setInterval(updateMarketInfo, 5000);
+  
+  // Handle form submission
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    if (submitButton.disabled) {
+      console.log('Preventing double submission');
+      return;
+    }
+    
+    submitButton.disabled = true;
+    
+    const data = {
+      base_asset: document.getElementById('baseAsset').value,
+      quote_asset: document.getElementById('quoteAsset').value,
+      amount: document.getElementById('amount').value,
+      side: document.querySelector('input[name="side"]:checked').value
+    };
+    
+    console.log('Submitting market order:', data);
+    
+    fetch('/trading/api/orders/market', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(data)
+    })
+    .then(response => {
+      if (!response.ok) {
+        return response.json().then(err => Promise.reject(err));
+      }
+      return response.json();
+    })
+    .then(data => {
+      console.log('Order response:', data);
+      alert('Order executed successfully!');
+      form.reset();
+      updateMarketInfo();
+    })
+    .catch(error => {
+      console.error('Error executing order:', error);
+      const errorMessage = error.error || 'Failed to execute order';
+      alert(`Error: ${errorMessage}`);
+    })
+    .finally(() => {
+      submitButton.disabled = false;
+    });
+  });
+  
+  // Clean up interval on page unload
+  window.addEventListener('beforeunload', function() {
+    clearInterval(orderBookInterval);
+  });
+});
+</script>
+{% endblock %}
+{% endblock %} 
