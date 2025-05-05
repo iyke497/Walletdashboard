@@ -313,9 +313,37 @@ class TradeOrder(db.Model, TimestampMixin, SoftDeleteMixin):
     status = db.Column(db.String(20), default='open')
 
     # Relationships
-    user = db.relationship('User', backref='orders')
+    user = db.relationship('User', backref='trade_orders')
     base_asset = db.relationship('Asset', foreign_keys=[base_asset_id])
     quote_asset = db.relationship('Asset', foreign_keys=[quote_asset_id])
+
+
+class OrderBook(db.Model, TimestampMixin, SoftDeleteMixin):
+    __tablename__ = 'order_book'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    base_asset_id = db.Column(db.Integer, db.ForeignKey('assets.id'), nullable=False)
+    quote_asset_id = db.Column(db.Integer, db.ForeignKey('assets.id'), nullable=False)
+    order_type = db.Column(db.String(20))  # market/limit
+    side = db.Column(db.String(4))  # buy/sell
+    amount = db.Column(db.Numeric(30, 18))
+    price = db.Column(db.Numeric(30, 18))
+    status = db.Column(db.String(20), default='open')  # open/filled/cancelled
+
+    # Relationships
+    user = db.relationship('User', backref='limit_orders')
+    base_asset = db.relationship('Asset', foreign_keys=[base_asset_id])
+    quote_asset = db.relationship('Asset', foreign_keys=[quote_asset_id])
+
+    __table_args__ = (
+        db.Index('idx_order_book_assets', 'base_asset_id', 'quote_asset_id'),
+        db.Index('idx_order_book_status', 'status'),
+    )
+
+    def __repr__(self):
+        return (f"<OrderBook {self.order_type} {self.side} {self.amount} "
+                f"{self.base_asset.symbol}/{self.quote_asset.symbol} @ {self.price}>")
 
 # ----- Event listeners -----
 
