@@ -1,163 +1,273 @@
 {% extends "base.html" %}
-{% block title %}Limit Orders{% endblock %}
+
+{% block stylesheets %}
+<link href="{{ url_for('trading.static', filename='css/trading.css') }}" rel="stylesheet" />
+{% endblock %}
+
+{% block title %}Trading Dashboard{% endblock %}
 
 {% block content %}
 <div class="container">
-  <div class="row">
-    <div class="col-md-6">
-      <div class="card shadow-sm">
-        <div class="card-header">
-          <h5 class="mb-0">Place Limit Order</h5>
-        </div>
+    <!-- Trading pair selection and price info -->
+    <div class="card shadow-sm mb-4">
         <div class="card-body">
-          <form id="limitOrderForm">
-            <div class="mb-3">
-              <label class="form-label">Asset Pair</label>
-              <select class="form-select" id="assetPair" required>
-                {% for asset in assets %}
-                <option value="{{ asset.symbol }}">{{ asset.symbol }}</option>
-                {% endfor %}
-              </select>
+            <div class="row align-items-center">
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <select class="form-select" id="tradingPair">
+                            {% for pair in trading_pairs %}
+                            <option value="{{ pair }}">{{ pair }}</option>
+                            {% endfor %}
+                        </select>
+                        <button class="btn btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#assetPairModal">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-8 mt-3 mt-md-0">
+                    <div class="market-info-grid">
+                        <div class="market-info-item">
+                            <div class="info-label">Last Price</div>
+                            <div class="info-value {% if price_change >= 0 %}price-up{% else %}price-down{% endif %}">
+                                ${{ "%.2f"|format(current_price) }}
+                            </div>
+                        </div>
+                        <div class="market-info-item">
+                            <div class="info-label">24h Change</div>
+                            <div class="info-value {% if price_change >= 0 %}price-up{% else %}price-down{% endif %}">
+                                {{ "%+.2f"|format(price_change) }}%
+                            </div>
+                        </div>
+                        <div class="market-info-item">
+                            <div class="info-label">24h Volume</div>
+                            <div class="info-value">${{ "{:,.2f}".format(daily_volume) }}</div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            
-            <div class="mb-3">
-              <label class="form-label">Side</label>
-              <div class="btn-group w-100" role="group">
-                <input type="radio" class="btn-check" name="side" id="buy" value="buy" checked>
-                <label class="btn btn-outline-success" for="buy">Buy</label>
-                
-                <input type="radio" class="btn-check" name="side" id="sell" value="sell">
-                <label class="btn btn-outline-danger" for="sell">Sell</label>
-              </div>
-            </div>
-            
-            <div class="mb-3">
-              <label class="form-label">Amount</label>
-              <input type="number" class="form-control" id="amount" step="0.00000001" min="0.00000001" required>
-            </div>
-            
-            <div class="mb-3">
-              <label class="form-label">Limit Price</label>
-              <input type="number" class="form-control" id="price" step="0.00000001" min="0.00000001" required>
-            </div>
-            
-            <button type="submit" class="btn btn-primary w-100">Place Order</button>
-          </form>
         </div>
-      </div>
     </div>
-    
-    <div class="col-md-6">
-      <div class="card shadow-sm">
-        <div class="card-header">
-          <h5 class="mb-0">Order Book</h5>
+
+    <!-- Rest of the trading interface -->
+    <div class="row">
+        <!-- Left column - Chart and order book -->
+        <div class="col-lg-8">
+            <!-- Chart -->
+            <div class="card shadow-sm mb-4">
+                <!-- Chart content remains similar -->
+                <div class="card-header d-flex justify-content-between align-items-center">
+                  <h5 class="card-title mb-0">Price Chart</h5>
+                  <div class="btn-group btn-group-sm">
+                      <button type="button" class="btn btn-outline-secondary active">1H</button>
+                      <button type="button" class="btn btn-outline-secondary">4H</button>
+                      <button type="button" class="btn btn-outline-secondary">1D</button>
+                      <button type="button" class="btn btn-outline-secondary">1W</button>
+                  </div>
+                </div>
+                <div class="card-body p-0 position-relative">
+                  <div class="price-chart" id="priceChart"></div>
+                </div>
+            </div>
+
+            <!-- Order Book and Trades -->
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Order Book</h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-sm order-book mb-0">
+                                    <tbody class="book-asks">
+                                        {% for ask in order_book.asks %}
+                                        <tr>
+                                            <td>
+                                                <div class="td-content">{{ ask.price }}</div>
+                                                <div class="depth-bar depth-ask" style="width: {{ ask.depth }}%;"></div>
+                                            </td>
+                                            <td>{{ ask.amount }}</td>
+                                            <td>{{ ask.total }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                    <tbody>
+                                        <tr class="mid-price">
+                                            <td colspan="3">{{ order_book.mid_price }}</td>
+                                        </tr>
+                                    </tbody>
+                                    <tbody class="book-bids">
+                                        {% for bid in order_book.bids %}
+                                        <tr>
+                                            <td>
+                                                <div class="td-content">{{ bid.price }}</div>
+                                                <div class="depth-bar depth-bid" style="width: {{ bid.depth }}%;"></div>
+                                            </td>
+                                            <td>{{ bid.amount }}</td>
+                                            <td>{{ bid.total }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Recent Trades table -->
+                <div class="col-md-6">
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Recent Trades</h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-sm trades-table mb-0">
+                                    <tbody>
+                                        {% for trade in recent_trades %}
+                                        <tr>
+                                            <td class="trade-{% if trade.side == 'buy' %}buy{% else %}sell{% endif %}">
+                                                {{ trade.price }}
+                                            </td>
+                                            <td>{{ trade.amount }}</td>
+                                            <td>{{ trade.time.strftime('%H:%M:%S') }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="card-body p-0">
-          <div class="table-responsive">
-            <table class="table table-sm mb-0">
-              <thead class="table-light">
-                <tr>
-                  <th>Price</th>
-                  <th>Amount</th>
-                  <th>Total</th>
-                </tr>
-              </thead>
-              <tbody id="orderBook">
-                <!-- Order book will be populated by JavaScript -->
-              </tbody>
-            </table>
-          </div>
+
+        <!-- Right column - Order types cards -->
+        <div class="col-lg-4 order-cards">
+          <div class="row row-cols-1 g-3">
+            <!-- Market Order Card -->
+            <div class="col">
+                <div class="card order-card shadow-sm" data-bs-toggle="modal" data-bs-target="#marketOrderModal">
+                    <div class="card-body text-center">
+                        <i class="fas fa-bolt trade-type-icon market-icon"></i>
+                        <h5 class="card-title">Market Order</h5>
+                        <p class="card-text text-muted">Execute trades at current market price</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Limit Order Card -->
+            <div class="col">
+                <div class="card order-card shadow-sm" data-bs-toggle="modal" data-bs-target="#limitOrderModal">
+                    <div class="card-body text-center">
+                        <i class="fas fa-flag-checkered trade-type-icon limit-icon"></i>
+                        <h5 class="card-title">Limit Order</h5>
+                        <p class="card-text text-muted">Set your price for buying or selling</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Stop-Limit Order Card -->
+            <div class="col">
+                <div class="card order-card shadow-sm" data-bs-toggle="modal" data-bs-target="#stopOrderModal">
+                    <div class="card-body text-center">
+                        <i class="fas fa-shield-alt trade-type-icon stop-icon"></i>
+                        <h5 class="card-title">Stop-Limit Order</h5>
+                        <p class="card-text text-muted">Set stop triggers for price protection</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Watchlist Card -->
+            <div class="col">
+                <div class="card shadow-sm">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Watchlist</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item watchlist-item active">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span><i class="fas fa-star text-warning me-2"></i>BTC/USDT</span>
+                                    <span class="price-up">$38,425.67</span>
+                                </div>
+                            </li>
+                            <li class="list-group-item watchlist-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span><i class="fas fa-star text-warning me-2"></i>ETH/USDT</span>
+                                    <span class="price-up">$2,845.12</span>
+                                </div>
+                            </li>
+                            <li class="list-group-item watchlist-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span><i class="fas fa-star text-warning me-2"></i>SOL/USDT</span>
+                                    <span class="price-down">$154.89</span>
+                                </div>
+                            </li>
+                            <li class="list-group-item watchlist-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span><i class="fas fa-star text-warning me-2"></i>ADA/USDT</span>
+                                    <span class="price-down">$0.47</span>
+                                </div>
+                            </li>
+                            <li class="list-group-item watchlist-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span><i class="fas fa-star text-warning me-2"></i>DOT/USDT</span>
+                                    <span class="price-up">$8.12</span>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+        </div>  <!-- Order cards remain similar -->
         </div>
-      </div>
     </div>
-  </div>
 </div>
 
-{% block scripts %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  const form = document.getElementById('limitOrderForm');
-  const orderBook = document.getElementById('orderBook');
-  
-  // Function to update order book
-  function updateOrderBook() {
-    const baseAsset = document.getElementById('assetPair').value;
-    const quoteAsset = 'USDT'; // Default quote asset
-    
-    fetch(`/api/orderbook/${baseAsset}/${quoteAsset}`)
-      .then(response => response.json())
-      .then(data => {
-        // Clear existing rows
-        orderBook.innerHTML = '';
-        
-        // Add ask orders (highest price first)
-        data.asks.reverse().forEach(order => {
-          const row = document.createElement('tr');
-          row.className = 'text-danger';
-          row.innerHTML = `
-            <td>${order.price}</td>
-            <td>${order.amount}</td>
-            <td>${order.total}</td>
-          `;
-          orderBook.appendChild(row);
-        });
-        
-        // Add bid orders (highest price first)
-        data.bids.forEach(order => {
-          const row = document.createElement('tr');
-          row.className = 'text-success';
-          row.innerHTML = `
-            <td>${order.price}</td>
-            <td>${order.amount}</td>
-            <td>${order.total}</td>
-          `;
-          orderBook.appendChild(row);
-        });
-      })
-      .catch(error => console.error('Error fetching order book:', error));
-  }
-  
-  // Update order book when asset pair changes
-  document.getElementById('assetPair').addEventListener('change', updateOrderBook);
-  
-  // Update order book periodically
-  setInterval(updateOrderBook, 5000);
-  
-  // Handle form submission
-  form.addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    const data = {
-      base_asset: document.getElementById('assetPair').value,
-      quote_asset: 'USDT', // Default quote asset
-      amount: document.getElementById('amount').value,
-      price: document.getElementById('price').value,
-      side: document.querySelector('input[name="side"]:checked').value
-    };
-    
-    fetch('/api/orders/limit', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(data)
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.error) {
-        alert(data.error);
-      } else {
-        alert('Order placed successfully!');
-        form.reset();
-        updateOrderBook();
-      }
-    })
-    .catch(error => {
-      console.error('Error placing order:', error);
-      alert('Failed to place order');
-    });
-  });
-});
-</script>
+<!-- Market Order Modal -->
+<div class="modal fade" id="marketOrderModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-bolt me-2 market-icon"></i>Market Order
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="marketOrderForm" action="{{ url_for('trading.execute_market_order') }}" method="POST">
+                    {{ market_order_form.hidden_tag() }}
+                    
+                    <div class="asset-pair-info">
+                        <!-- Dynamic pair info -->
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Trading Pair</label>
+                        <div class="input-group">
+                            <select class="form-select" name="base_asset" required>
+                                {% for asset in assets %}
+                                <option value="{{ asset.symbol }}">{{ asset.name }} ({{ asset.symbol }})</option>
+                                {% endfor %}
+                            </select>
+                            <span class="input-group-text">/</span>
+                            <select class="form-select" name="quote_asset" required>
+                                <option value="USDT" selected>Tether (USDT)</option>
+                                <option value="USDC">USD Coin (USDC)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Rest of the form -->
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
-{% endblock %} 
+
+{% block scripts %}
+<!-- Include any necessary JavaScript -->
+<script src="{{ url_for('trading.static', filename='js/trading.js') }}"></script>
+{% endblock %}

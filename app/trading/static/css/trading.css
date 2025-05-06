@@ -1,0 +1,260 @@
+:root {
+    --primary: #0d6efd;
+    --primary-light: #cfe2ff;
+    --success: #198754;
+    --success-light: #d1e7dd;
+    --danger: #dc3545;
+    --danger-light: #f8d7da;
+    --dark: #212529;
+    --light: #f8f9fa;
+    --muted: #6c757d;
+    --border: #dee2e6;
+}
+
+body {
+    background-color: var(--light);
+}
+
+.order-card {
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid var(--border);
+    height: 100%;
+}
+
+.order-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 .5rem 1rem rgba(0,0,0,.15);
+}
+
+.asset-pair-info {
+    padding: 1rem;
+    background-color: rgba(0,0,0,.03);
+    border-radius: 0.375rem;
+    margin-bottom: 1rem;
+}
+
+.price-up {
+    color: var(--success);
+}
+
+.price-down {
+    color: var(--danger);
+}
+
+.trade-type-icon {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+}
+
+.market-icon {
+    color: var(--primary);
+}
+
+.limit-icon {
+    color: var(--success);
+}
+
+.stop-icon {
+    color: var(--danger);
+}
+
+.modal-header {
+    border-bottom: 2px solid var(--primary);
+}
+
+.btn-toggle {
+    border: 1px solid var(--border);
+}
+
+.btn-toggle.active.buy {
+    background-color: var(--success-light);
+    color: var(--success);
+    border-color: var(--success);
+}
+
+.btn-toggle.active.sell {
+    background-color: var(--danger-light);
+    color: var(--danger);
+    border-color: var(--danger);
+}
+
+/* Order book styles */
+.order-book {
+    font-size: 0.875rem;
+}
+
+.book-asks tr td {
+    color: var(--danger);
+}
+
+.book-bids tr td {
+    color: var(--success);
+}
+
+.depth-bar {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    z-index: 0;
+    opacity: 0.15;
+}
+
+.depth-ask {
+    background-color: var(--danger);
+}
+
+.depth-bid {
+    background-color: var(--success);
+}
+
+td {
+    position: relative;
+}
+
+.td-content {
+    position: relative;
+    z-index: 1;
+}
+
+.mid-price {
+    text-align: center;
+    background-color: rgba(0,0,0,.03);
+    font-weight: 600;
+}
+
+.price-chart {
+    height: 400px;
+}
+
+@media (max-width: 992px) {
+    .price-chart {
+        height: 300px;
+    }
+}
+
+@media (max-width: 768px) {
+    .order-cards {
+        margin-top: 1rem;
+    }
+    
+    .price-chart {
+        height: 250px;
+    }
+}
+
+.chart-controls {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 10;
+}
+
+.slider-container {
+    padding: 0 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.slider-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: var(--muted);
+}
+
+.estimate-panel {
+    background-color: rgba(0,0,0,.03);
+    border-radius: 0.375rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.estimate-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+.estimate-row:last-child {
+    margin-bottom: 0;
+    padding-top: 0.5rem;
+    border-top: 1px dashed var(--border);
+    font-weight: 600;
+}
+
+.market-info-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+}
+
+@media (max-width: 576px) {
+    .market-info-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.market-info-item {
+    padding: 0.75rem;
+    background-color: rgba(0,0,0,.03);
+    border-radius: 0.375rem;
+    text-align: center;
+}
+
+.info-label {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-bottom: 0.25rem;
+}
+
+.info-value {
+    font-weight: 600;
+}
+
+.trades-table {
+    font-size: 0.875rem;
+}
+
+.trades-table .trade-buy {
+    color: var(--success);
+}
+
+.trades-table .trade-sell {
+    color: var(--danger);
+}
+
+/* Notifications */
+#notification-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    width: 300px;
+}
+
+.custom-notification {
+    margin-bottom: 10px;
+    transition: all 0.3s ease;
+    opacity: 0;
+    transform: translateX(100%);
+}
+
+.custom-notification.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+/* Watchlist */
+.watchlist-item {
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.watchlist-item:hover {
+    background-color: rgba(0,0,0,.03);
+}
+
+.watchlist-item.active {
+    background-color: var(--primary-light);
+}
