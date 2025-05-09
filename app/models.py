@@ -345,6 +345,49 @@ class OrderBook(db.Model, TimestampMixin, SoftDeleteMixin):
         return (f"<OrderBook {self.order_type} {self.side} {self.amount} "
                 f"{self.base_asset.symbol}/{self.quote_asset.symbol} @ {self.price}>")
 
+# ---- Copy Trading Models ----
+class Trader(db.Model, TimestampMixin, SoftDeleteMixin):
+    __tablename__ = 'traders'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True, nullable=False)
+    bio = db.Column(db.Text)
+    tags = db.Column(db.String(255))  # Comma-separated tags (e.g., "crypto,swing,conservative")
+    win_rate = db.Column(db.Numeric(5, 2))  # Stored as percentage (e.g., 76.50)
+    avg_monthly_return = db.Column(db.Numeric(5, 2))  # Percentage
+    max_drawdown = db.Column(db.Numeric(5, 2))  # Percentage
+    risk_score = db.Column(db.String(20), default='medium')  # low/medium/high
+    is_verified = db.Column(db.Boolean, default=False)
+    performance_metrics = db.Column(db.JSON)  # For storing additional stats
+    
+    # Relationships
+    user = db.relationship('User', backref=db.backref('trader_profile', uselist=False))
+    followers = db.relationship('CopyTrade', back_populates='trader')
+
+    def __repr__(self):
+        return f"<Trader {self.user.username}>"
+
+class CopyTrade(db.Model, TimestampMixin, SoftDeleteMixin):
+    __tablename__ = 'copy_trades'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    follower_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    trader_id = db.Column(db.Integer, db.ForeignKey('traders.id'), nullable=False)
+    allocation = db.Column(db.Numeric(5, 2))  # Percentage of capital to allocate
+    is_active = db.Column(db.Boolean, default=True)
+    
+    # Relationships
+    follower = db.relationship('User', foreign_keys=[follower_id], 
+                              backref=db.backref('copied_trades'))
+    trader = db.relationship('Trader', back_populates='followers')
+
+    __table_args__ = (
+        db.UniqueConstraint('follower_id', 'trader_id', name='uq_follower_trader'),
+    )
+
+    def __repr__(self):
+        return f"<CopyTrade {self.follower.username} -> {self.trader.user.username}>"
+
 # ----- Event listeners -----
 
 @event.listens_for(Transaction, 'after_insert')
