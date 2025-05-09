@@ -31,9 +31,11 @@ def create_app(config_name=None):
     from .dashboard import dashboard_bp
     from .wallet import wallet_bp
     from .trading import trading_bp
+    from .copytrade import copytrade_bp
 
     app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(dashboard_bp, url_prefix="/dashboard")
     app.register_blueprint(wallet_bp, url_prefix="/wallet")
     app.register_blueprint(trading_bp, url_prefix="/trading")
+    app.register_blueprint(copytrade_bp, url_prefix="/copytrade")
     return app
