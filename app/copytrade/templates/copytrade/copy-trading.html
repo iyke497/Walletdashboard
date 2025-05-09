@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+
+{% block title %}TradeCopy - Follow Top Traders{% endblock %}
+
+{% block stylesheets %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('copytrade.static', filename='css/copy-trading.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<main class="main">
+    <!-- Keep all original content from copy_trading_interface.html -->
+    <div class="container">
+        <div class="dashboard-stats">
+            <!-- ... (dashboard stats cards) ... -->
+            <div class="stat-card">
+                <div class="stat-title">Your Portfolio Value</div>
+                <div class="stat-value">$14,256.89</div>
+                <div class="stat-trend trend-up">
+                    <i class="fas fa-arrow-up trend-icon"></i>
+                    4.2% this week
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">Active Traders Following</div>
+                <div class="stat-value">8</div>
+                <div class="stat-trend trend-up">
+                    <i class="fas fa-arrow-up trend-icon"></i>
+                    2 new this month
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">Total Profit/Loss</div>
+                <div class="stat-value">+$1,238.53</div>
+                <div class="stat-trend trend-up">
+                    <i class="fas fa-arrow-up trend-icon"></i>
+                    12.6% all time
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">Open Positions</div>
+                <div class="stat-value">5</div>
+                <div class="stat-trend trend-neutral">
+                    <i class="fas fa-minus trend-icon"></i>
+                    No change
+                </div>
+            </div>
+        </div>
+        
+        <h2 class="page-title">Top Traders to Follow</h2>
+        
+        <div class="filters">
+            <!-- ... (filter dropdowns and search) ... -->
+            <div class="filter-group">
+                <select class="filter-dropdown">
+                    <option>Sort By: Win Rate</option>
+                    <option>Sort By: Total Profit</option>
+                    <option>Sort By: Followers</option>
+                    <option>Sort By: Experience</option>
+                </select>
+                <select class="filter-dropdown">
+                    <option>All Markets</option>
+                    <option>Forex</option>
+                    <option>Crypto</option>
+                    <option>Stocks</option>
+                    <option>Commodities</option>
+                </select>
+                <select class="filter-dropdown">
+                    <option>Time Period: All Time</option>
+                    <option>Time Period: Last Month</option>
+                    <option>Time Period: Last Week</option>
+                    <option>Time Period: Last Day</option>
+                </select>
+            </div>
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" placeholder="Search traders...">
+            </div>
+        </div>
+        
+        <div class="traders-container">
+            <!-- ... (trader cards 1, 2, 3) ... -->
+            <!-- Trader 1 -->
+            {% for trader in traders %}
+            <div class="trader-card">
+                <div class="trader-header">
+                    <div class="trader-avatar">
+                        <img src="/api/placeholder/60/60" alt="Trader Avatar">
+                    </div>
+                    <div class="trader-info">
+                        <h3 class="trader-name">
+                            {{ trader.user.username }}
+                            {% if trader.is_verified %}
+                            <i class="fas fa-check-circle verified-badge"></i>
+                            {% endif %}
+                        </h3>
+                        <p class="trader-bio">{{ trader.bio }}</p>
+                        <div class="trader-tags">
+                            {% for tag in trader.tags.split(',') %}
+                            <span class="trader-tag">{{ tag|trim }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                <div class="trader-stats">
+                    <div class="trader-stat">
+                        <div class="stat-label">Win Rate</div>
+                        <div class="profit-positive">{{ trader.win_rate }}%</div>
+                    </div>
+                    <div class="trader-stat">
+                        <div class="stat-label">Avg. Monthly Return</div>
+                        <div class="profit-positive">{{ trader.avg_monthly_return }}%</div>
+                    </div>
+                    <div class="trader-stat">
+                        <div class="stat-label">Max Drawdown</div>
+                        <div class="profit-negative">{{ trader.max_drawdown }}%</div>
+                    </div>
+                    <div class="trader-stat">
+                        <div class="stat-label">Risk Score</div>
+                        <div class="profit-neutral">{{ trader.risk_score|capitalize }}</div>
+                    </div>
+                </div>
+                <div class="trader-chart">
+                    <canvas id="trader1Chart"></canvas>
+                </div>
+                <div class="trade-history">
+                    <h4 class="history-title">Recent Trades</h4>
+                    <div class="trade-list">
+                        <div class="trade-item">
+                            <div>
+                                <span class="trade-symbol">EUR/USD</span>
+                                <span class="trade-direction buy">Buy</span>
+                            </div>
+                            <div>
+                                <span class="trade-date">May 4, 2025</span>
+                                <span class="trade-profit profit-positive">+2.1%</span>
+                            </div>
+                        </div>
+                        <div class="trade-item">
+                            <div>
+                                <span class="trade-symbol">GBP/JPY</span>
+                                <span class="trade-direction sell">Sell</span>
+                            </div>
+                            <div>
+                                <span class="trade-date">May 2, 2025</span>
+                                <span class="trade-profit profit-positive">+1.8%</span>
+                            </div>
+                        </div>
+                        <div class="trade-item">
+                            <div>
+                                <span class="trade-symbol">USD/CAD</span>
+                                <span class="trade-direction buy">Buy</span>
+                            </div>
+                            <div>
+                                <span class="trade-date">Apr 29, 2025</span>
+                                <span class="trade-profit profit-negative">-0.7%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="trader-footer">
+                    <div class="followers">
+                        <i class="fas fa-users"></i>
+                        4,521 followers
+                    </div>
+                    <div class="action-buttons">
+                        <button class="btn btn-outline">
+                            <i class="fas fa-eye"></i>
+                            Profile
+                        </button>
+                        <button class="btn btn-primary">
+                            <i class="fas fa-plus"></i>
+                            Copy Trades
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="alert alert-info">No traders found matching your criteria</div>
+            {% endfor %}
+        </div>
+        
+        <div class="pagination">
+            <!-- ... (pagination links) ... -->
+            <div class="page-item">
+                <a href="#" class="page-link">
+                    <i class="fas fa-chevron-left"></i>
+                </a>
+            </div>
+            <div class="page-item active">
+                <a href="#" class="page-link">1</a>
+            </div>
+            <div class="page-item">
+                <a href="#" class="page-link">2</a>
+            </div>
+            <div class="page-item">
+                <a href="#" class="page-link">3</a>
+            </div>
+            <div class="page-item">
+                <a href="#" class="page-link">4</a>
+            </div>
+            <div class="page-item">
+                <a href="#" class="page-link">5</a>
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<script>
+    // Initialize charts
+    document.querySelectorAll('.trader-chart canvas').forEach((canvas, index) => {
+        const ctx = canvas.getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May'],
+                datasets: [{
+                    label: 'Profit %',
+                    data: [2, 4, 3, 5, 8], // Replace with dynamic data
+                    borderColor: 'var(--primary)',
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } }
+            }
+        });
+    });
+</script>
+{% endblock %}
