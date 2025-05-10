@@ -3,3 +3,6 @@ __pycache__/
 temp
 .DS_Store
 claude_models.py
+tree.txt
+tree*
+.gitignore
