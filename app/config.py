@@ -15,6 +15,10 @@ class BaseConfig:
     )
     # Pagination defaults, etc.
     ITEMS_PER_PAGE = int(os.getenv("ITEMS_PER_PAGE", 25))
+    # Exchange API Key
+    EXCHANGE_API_KEY = os.getenv("EXCHANGE_API_KEY")
+    # Exchange Secret Key
+    EXCHANGE_SECRET_KEY = os.getenv("EXCHANGE_SECRET_KEY")
 
 class DevelopmentConfig(BaseConfig):
     DEBUG = True

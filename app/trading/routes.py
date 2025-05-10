@@ -65,11 +65,51 @@ def execute_market_order():
         print(f'Unexpected error in market order: {e}')  # Debug log
         return jsonify({'error': 'Order execution failed'}), 500
 
+#ToDo: Rename the route to be congruent with naming convention
 @trading_bp.route('/limit', methods=['GET'])
 @login_required
 def limit_trade():
     assets = Asset.query.filter_by(is_active=True).all()
-    return render_template('trading/limit.html', assets=assets)
+    
+    # Get default trading pair (e.g., BTC/USDT)
+    default_base = Asset.query.filter_by(symbol='BTC').first()
+    default_quote = Asset.query.filter_by(symbol='USDT').first()
+    
+    # Get market data
+    ticker = TradingService.get_ticker(default_base, default_quote)
+    current_price = ticker['last']
+    price_change = ticker['percentage']
+    daily_volume = ticker['quoteVolume']
+    
+    # Get order book data
+    order_book = OrderBookService.get_order_book(default_base.id, default_quote.id)
+    
+    
+    # Get recent trades
+    recent_trades = [] # TODO: Implement recent trades fetching
+    
+    # Get trading pairs
+    trading_pairs = [f"{asset.symbol}/USDT" for asset in assets if asset.symbol != 'USDT']
+    
+    # Initialize forms
+    market_order_form = MarketOrderForm()
+    limit_order_form = LimitOrderForm()
+    
+    return render_template('trading/limit.html',
+                         assets=assets,
+                         trading_pairs=trading_pairs,
+                         current_price=current_price,
+                         price_change=price_change,
+                         daily_volume=daily_volume,
+                         order_book=order_book,
+                         recent_trades=recent_trades,
+                         market_order_form=market_order_form,
+                         limit_order_form=limit_order_form)
+
+
+
+
+
 
 @trading_bp.route('/api/orders/limit', methods=['POST'])
 @login_required

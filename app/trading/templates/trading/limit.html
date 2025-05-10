@@ -79,6 +79,13 @@
                         <div class="card-body p-0">
                             <div class="table-responsive">
                                 <table class="table table-sm order-book mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Price</th>
+                                            <th>Amount</th>
+                                            <th>Total</th>
+                                        </tr>
+                                    </thead>
                                     <tbody class="book-asks">
                                         {% for ask in order_book.asks %}
                                         <tr>
