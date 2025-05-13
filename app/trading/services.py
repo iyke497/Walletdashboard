@@ -1,5 +1,7 @@
 # app/trading/services.py
 import ccxt
+import pandas as pd
+import time
 from decimal import Decimal
 from app.models import Asset, ExchangeRate, AssetType, Holding, TradeOrder, OrderBook
 from app.wallet.services import WalletService
@@ -366,4 +368,9 @@ class TradingService:
         ticker = exchange_service.get_ticker(symbol)
         return ticker
     
-   
+    @staticmethod
+    def get_ohlcv(base_asset: Asset, quote_asset: Asset, timeframe: str = '1h', limit: int = 100) -> List:
+        """Get OHLCV data for a trading pair"""
+        symbol = f"{base_asset.symbol}/{quote_asset.symbol}"
+        return exchange_service.get_ohlcv(symbol, timeframe, limit)
+
