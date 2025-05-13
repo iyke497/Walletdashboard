@@ -1,11 +1,14 @@
 # app/commands.py
 
 import click
+import json
+from sqlalchemy import exc
 from flask.cli import with_appcontext
 from datetime import datetime
 from .extensions import db
 from .models import Asset, User, NetworkType, AssetType, Holding, DepositAddress
 from .dashboard.services import CoinGeckoService
+from sqlalchemy.exc import IntegrityError
 
 @click.command('seed-db')
 @with_appcontext
@@ -206,8 +209,90 @@ def fetch_rates_command():
     except Exception as e:
         click.echo(f'Error fetching rates: {str(e)}', err=True)
 
+
+
+@click.command('load-crypto-assets')
+@click.argument('json_file', type=click.Path(exists=True))
+@with_appcontext
+def load_crypto_assets_command(json_file):
+    """Load cryptocurrency asset data from a JSON file into the database.
+    
+    This command loads basic cryptocurrency data (id, symbol, name) from the specified 
+    JSON file and creates corresponding Asset records.
+    """
+    try:
+        # Load JSON data
+        with open(json_file, 'r') as f:
+            crypto_data = json.load(f)
+        
+        if not isinstance(crypto_data, list):
+            click.echo("Error: JSON file should contain a list of cryptocurrency objects")
+            return
+        
+        # Track our progress
+        assets_created = 0
+        assets_updated = 0
+        
+        # Process each cryptocurrency
+        for crypto in crypto_data:
+            coingecko_id = crypto.get('id')
+            symbol = crypto.get('symbol', '').upper()
+            name = crypto.get('name')
+            
+            # Validate required fields
+            if not all([coingecko_id, symbol, name]):
+                click.echo(f"Warning: Skipping crypto with missing required fields: {crypto}")
+                continue
+                
+            # Check if the asset already exists
+            asset = Asset.query.filter_by(coingecko_id=coingecko_id).first()
+            
+            if asset:
+                # Update existing asset
+                asset.symbol = symbol
+                asset.name = name
+                assets_updated += 1
+                click.echo(f"Updated asset: {symbol} ({name})")
+            else:
+                # Create new asset
+                asset = Asset(
+                    coingecko_id=coingecko_id,
+                    symbol=symbol,
+                    name=name,
+                    asset_type=AssetType.CRYPTO,
+                    is_active=True,
+                    decimals=18
+                )
+                db.session.add(asset)
+                try:
+                    db.session.commit()
+                    assets_created += 1
+                    click.echo(f"Created asset: {symbol} ({name})")
+                except IntegrityError:
+                    db.session.rollback()
+                    click.echo(f"Warning: Could not create asset due to constraint violation: {symbol}")
+                    continue
+        
+        # Commit all changes
+        db.session.commit()
+        
+        # Report results
+        click.echo(f"Successfully processed {len(crypto_data)} cryptocurrencies:")
+        click.echo(f"  - Created {assets_created} new assets")
+        click.echo(f"  - Updated {assets_updated} existing assets")
+    
+    except json.JSONDecodeError:
+        click.echo("Error: Invalid JSON file")
+    except Exception as e:
+        db.session.rollback()
+        click.echo(f"Error loading cryptocurrency assets: {str(e)}")
+
+
+
+
 def init_app(app):
     app.cli.add_command(seed_db_command)
     app.cli.add_command(seed_holdings_command)
     app.cli.add_command(seed_deposit_addresses)
     app.cli.add_command(fetch_rates_command)
+    app.cli.add_command(load_crypto_assets_command)
