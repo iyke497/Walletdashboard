@@ -1,7 +1,7 @@
 import os
 from flask import Flask
 from .config import config_by_name
-from .extensions import db, migrate, login_manager, cache
+from .extensions import db, migrate, login_manager, cache, assets, css_bundle, js_bundle
 from .commands import init_app as init_commands
 from .filters import init_app as init_filters
 
@@ -19,12 +19,17 @@ def create_app(config_name=None):
     migrate.init_app(app, db)
     login_manager.init_app(app)
     cache.init_app(app)
+    assets.init_app(app)
 
     # Register commands
     init_commands(app)
 
     # Register filters
     init_filters(app)
+
+    # register assets
+    assets.register('css_all', css_bundle)
+    assets.register('js_all', js_bundle) # TODO: _all or _bundle
 
     # register blueprints
     from .auth import auth_bp

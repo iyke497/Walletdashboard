@@ -20,6 +20,10 @@ class BaseConfig:
     # Exchange Secret Key
     EXCHANGE_SECRET_KEY = os.getenv("EXCHANGE_SECRET_KEY")
 
+    # Asset configs
+    ASSETS_DEBUG = os.environ.get('ASSETS_DEBUG', 'False') == 'True'
+    ASSETS_AUTO_BUILD = True
+
 class DevelopmentConfig(BaseConfig):
     DEBUG = True
     ENV = "development"

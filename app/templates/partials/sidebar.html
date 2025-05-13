@@ -1,0 +1,75 @@
+<!-- app/templates/partials/sidebar.html -->
+<aside id="layout-menu" class="layout-menu menu-vertical menu bg-menu-theme">
+    <div class="app-brand demo">
+        <a href="{{ url_for('dashboard.index') }}" class="app-brand-link">
+            <span class="app-brand-text demo menu-text fw-bold">Trading Platform</span>
+        </a>
+        
+        <a href="javascript:void(0);" class="layout-menu-toggle menu-link text-large ms-auto">
+            <i class="bx menu-toggle-icon d-none d-xl-block fs-4"></i>
+            <i class="bx bx-x d-block d-xl-none fs-4"></i>
+        </a>
+    </div>
+    
+    <div class="menu-divider mt-0"></div>
+    
+    <div class="menu-inner-shadow"></div>
+    
+    <ul class="menu-inner py-1">
+        <!-- Dashboard -->
+        <li class="menu-item {{ 'active' if request.blueprint == 'dashboard' else '' }}">
+            <a href="{{ url_for('dashboard.index') }}" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-home-circle"></i>
+                <div>Dashboard</div>
+            </a>
+        </li>
+        
+        <!-- Trading -->
+        <li class="menu-item {{ 'active open' if request.blueprint == 'trading' else '' }}">
+            <a href="javascript:void(0);" class="menu-link menu-toggle">
+                <i class="menu-icon tf-icons bx bx-line-chart"></i>
+                <div>Trading</div>
+            </a>
+            <ul class="menu-sub">
+                <li class="menu-item {{ 'active' if request.endpoint == 'trading.market' else '' }}">
+                    <a href="{{ url_for('trading.market') }}" class="menu-link">
+                        <div>Market Orders</div>
+                    </a>
+                </li>
+                <li class="menu-item {{ 'active' if request.endpoint == 'trading.limit' else '' }}">
+                    <a href="{{ url_for('trading.limit') }}" class="menu-link">
+                        <div>Limit Orders</div>
+                    </a>
+                </li>
+            </ul>
+        </li>
+        
+        <!-- Copy Trading -->
+        <li class="menu-item {{ 'active' if request.blueprint == 'copytrade' else '' }}">
+            <a href="{{ url_for('copytrade.index') }}" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-copy"></i>
+                <div>Copy Trading</div>
+            </a>
+        </li>
+        
+        <!-- Wallet -->
+        <li class="menu-item {{ 'active open' if request.blueprint == 'wallet' else '' }}">
+            <a href="javascript:void(0);" class="menu-link menu-toggle">
+                <i class="menu-icon tf-icons bx bx-wallet"></i>
+                <div>Wallet</div>
+            </a>
+            <ul class="menu-sub">
+                <li class="menu-item {{ 'active' if request.endpoint == 'wallet.deposit_crypto' else '' }}">
+                    <a href="{{ url_for('wallet.deposit_crypto') }}" class="menu-link">
+                        <div>Deposit</div>
+                    </a>
+                </li>
+                <li class="menu-item {{ 'active' if request.endpoint == 'wallet.withdraw_crypto' else '' }}">
+                    <a href="{{ url_for('wallet.withdraw_crypto') }}" class="menu-link">
+                        <div>Withdraw</div>
+                    </a>
+                </li>
+            </ul>
+        </li>
+    </ul>
+</aside>
