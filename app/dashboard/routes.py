@@ -4,11 +4,6 @@ from app.models import Asset
 from .services import PortfolioService, CoinGeckoService
 from . import dashboard_bp
 
-# @dashboard_bp.route("/", methods=["GET"])
-# def index():
-#     # For now just render a placeholder
-#     return render_template("dashboard/index.html")
-
 
 @dashboard_bp.route("/", methods=["GET"])
 def index():
