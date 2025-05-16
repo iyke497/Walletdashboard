@@ -35,7 +35,7 @@ def deposit_crypto_form():
     # Fetch recent deposits for the current user
     recent_deposits = WalletService.get_recent_crypto_deposits(current_user.id, limit=5)
     
-    return render_template('wallet/deposit_crypto.html',
+    return render_template('wallet/deposit_crypto_fixed.html',
                            form=form, 
                            crypto_assets=serialized_assets, 
                            recent_deposits=recent_deposits)
@@ -71,7 +71,7 @@ def deposit_crypto():
         logger.info(f"Received deposit form data: {request.form}")
         
         # Get form data
-        asset_symbol = request.form.get('coin')
+        asset_symbol = request.form.get('asset')
         amount = float(request.form.get('amount'))
         tx_hash = request.form.get('tx_hash')  # Optional blockchain transaction hash
         

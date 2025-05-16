@@ -156,7 +156,7 @@
                   <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">
                     Close
                   </button>
-                  <button type="button" id="makeDepositBtn" class="btn btn-primary">Deposit</button>
+                  <button type="button" class="btn btn-primary">Save changes</button>
                 </div>
               </div>
             </div>
@@ -232,6 +232,8 @@
     </div>
   </div>
 </div>
+
+{% endblock %}
 
 {% block extra_js %}
 <script src="{{ url_for('static', filename='vendor/libs/notyf/notyf.js') }}"></script>
@@ -359,8 +361,8 @@
           .then(() => showToast('Address copied!', 'success'));
       });
       copyBtn.dataset.bound = 'true';
-    }})
-
+    }
+    
     // -----------------------------validate amount on the fly ----------------
     const amountInput = document.getElementById('amountInput');
     amountInput.addEventListener('input', () => {
@@ -368,48 +370,6 @@
       amountOk = !isNaN(v) && v > 0;
       maybeEnable();                 // re-check launch button
     });
-
-
-    // ---------------------------deposit click listener-------------------------
-    document.getElementById('makeDepositBtn').addEventListener('click', async () => {
-      // basic safety
-      const amt = parseFloat(amountInput.value);
-      if (isNaN(amt) || amt <= 0) {
-        showToast('Enter a valid amount', 'warning');
-        return;
-      }
-
-      // Build x-www-form-urlencoded payload (keeps CSRF token support intact)
-      const data = new URLSearchParams();
-      data.append('asset',   selectedCoin);
-      data.append('network', selectedNet);      // optional, but useful
-      data.append('amount',  amt);
-      data.append('csrf_token', '{{ csrf_token() }}');  // if you use Flask-WTF
-
-      try {
-        const r = await fetch('/wallet/deposit/crypto', {
-          method : 'POST',
-          body   : data,
-        });
-
-        const res = await r.json();
-        if (!r.ok) throw new Error(res.error || 'Deposit failed');
-
-        showToast('Deposit recorded', 'success');
-        bootstrap.Modal.getInstance(
-          document.getElementById('animationModal')
-        ).hide();
-
-      } catch (err) {
-        console.error(err);
-        showToast(err.message, 'danger');
-      }
-    });
-
-
-
-  </script>
-  
-{% endblock %}
-
+  });
+</script>
 {% endblock %}
