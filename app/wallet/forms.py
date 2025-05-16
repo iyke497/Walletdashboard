@@ -6,6 +6,7 @@ from wtforms.validators import DataRequired, NumberRange
 
 class DepositForm(FlaskForm):
     asset = StringField('Asset', validators=[DataRequired()])
+    network = StringField('Network', validators=[DataRequired()])
     amount = DecimalField('Amount', 
         validators=[DataRequired(), NumberRange(min=0.00000001, message="Must be positive")])
     submit = SubmitField('Deposit')

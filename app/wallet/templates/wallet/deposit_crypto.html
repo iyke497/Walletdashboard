@@ -1,317 +1,237 @@
-{% extends "base.html" %}
+{% extends "layouts/vertical.html" %}
 {% block title %}Deposit Crypto{% endblock %}
 
 {% block content %}
-<div class="container">
-  <div class="row justify-content-center">
+<div class="container-xxl flex-grow-1 container-p-y">
+  <h4 class="fw-bold py-3 mb-4">Deposit</h4>
+
+  <div class="row">
     <div class="col-md-8">
-      <div class="card shadow-sm">
-        <div class="card-header">
-          <h4 class="mb-0">Deposit Cryptocurrency</h4>
-        </div>
+      <div class="card mb-4">
         <div class="card-body">
-          <form id="depositForm" method="POST" action="{{ url_for('wallet.deposit_crypto') }}">
-            <div class="mb-3">
-              <label for="coinDropdown" class="form-label">Select Cryptocurrency</label>
-              <div class="dropdown">
-                <button class="btn btn-light dropdown-toggle w-100 text-start" type="button" id="coinDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false">
-                  <img id="selectedCoinIcon" src="{{ crypto_assets[0].icon_url }}" alt="Icon" style="width: 20px; height: 20px; margin-right: 8px;">
-                  <span id="selectedCoinText">{{ crypto_assets[0].name }} ({{ crypto_assets[0].symbol }})</span>
-                </button>
-                <ul class="dropdown-menu w-100" aria-labelledby="coinDropdownBtn" style="max-height: 300px; overflow-y: auto;">
-                  {% for asset in crypto_assets %}
-                    <li>
-                      <a class="dropdown-item d-flex align-items-center coin-option" 
-                         href="#" 
-                         data-id="{{ asset.id }}"
-                         data-symbol="{{ asset.symbol }}"
-                         data-icon="{{ asset.icon_url }}"
-                         data-name="{{ asset.name }}">
-                        <img src="{{ asset.icon_url }}" 
-                             alt="{{ asset.symbol }} icon"
-                             style="width: 20px; height: 20px; margin-right: 8px;">
-                        {{ asset.name }} ({{ asset.symbol }})
-                      </a>
-                    </li>
-                  {% endfor %}
-                </ul>
-                <input type="hidden" id="coinSelect" name="coin" value="{{ crypto_assets[0].symbol }}">
-              </div>
-            </div>
-
-            <div class="mb-3">
-              <label for="networkSelect" class="form-label">Select Network</label>
-              <select class="form-select" id="networkSelect" name="network" required>
-                <option value="">Select a network</option>
-                <option value="BITCOIN">Bitcoin</option>
-                <option value="ETHEREUM">Ethereum</option>
-                <option value="BSC">Binance Smart Chain</option>
-                <option value="POLYGON">Polygon</option>
-                <option value="TRON">TRON</option>
-              </select>
-            </div>
-
-            <div class="mb-3">
-              <label for="amount" class="form-label">Amount</label>
-              <div class="input-group">
-                <input 
-                  type="number" 
-                  class="form-control" 
-                  id="amount" 
-                  name="amount" 
-                  step="0.00000001" 
-                  min="0" 
-                  required
-                >
-                <span class="input-group-text" id="assetSymbol">-</span>
-              </div>
-              <div class="form-text">Minimum deposit: 0.0001 BTC or equivalent</div>
-            </div>
-
-            <div class="d-grid gap-2 mb-3">
-              <button type="button" class="btn btn-success" id="getDepositDetails">Get Deposit Address</button>
-            </div>
-
-            <!-- Deposit Address and QR Code Section -->
-            <div id="depositDetails" class="mb-3 d-none">
-              <div class="card">
-                <div class="card-body">
-                  <h5 class="card-title">Deposit Address</h5>
-                  <div class="row">
-                    <div class="col-md-6 text-center">
-                      <img id="qrCode" src="" alt="QR Code" class="img-fluid mb-3" style="max-width: 200px;">
-                    </div>
-                    <div class="col-md-6">
-                      <div class="input-group mb-3">
-                        <input type="text" class="form-control" id="depositAddress" readonly>
-                        <button class="btn btn-outline-secondary" type="button" id="copyAddress">
-                          <i class="bi bi-clipboard"></i>
-                        </button>
-                      </div>
-                      <small class="text-muted">Scan the QR code or copy the address above to deposit your cryptocurrency.</small>
-                    </div>
+          <h6>1. Select Coin</h6>
+          <!-- Step 1: Choose Coin -->
+          
+          <form method="POST" action="{{ url_for('wallet.select_coin') }}">
+            {{ form.hidden_tag() }}
+            <div class="row mb-4">
+              <div class="col-12">
+                <div class="form-group">
+                  <label class="form-label d-block" for="coin">Select cryptocurrency</label>
+                  <div class="dropdown w-100">
+                      <button class="form-select d-flex align-items-center" type="button" id="coinDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <span id="selectedCoin">Select crypto</span>
+                      </button>
+                    
+                    
+                    <!-- Coin Dropdown -->
+                    <ul class="dropdown-menu w-100" aria-labelledby="coinDropdown" style="max-height: 300px; overflow-y: auto;">
+                      <!-- Search Input -->
+                      <li class="px-3 pb-2">
+                        <input type="text" class="form-control form-control-sm" placeholder="Search crypto..." id="coinSearch">
+                      </li>
+                      
+                      <!-- Limited Initial Display -->
+                      {% for asset in crypto_assets[:50] %}
+                      <li class="asset-item">
+                        <a class="dropdown-item d-flex align-items-center coin-option" href="#" data-value="{{ asset.symbol }}">
+                          <div class="avatar avatar-xs me-2">
+                            <img src="{{ asset.images }}" alt="{{ asset.name }} logo" class="rounded-circle">
+                          </div>
+                          <span>{{ asset.name }} ({{ asset.symbol }})</span>
+                        </a>
+                      </li>
+                      {% endfor %}
+                    </ul>
                   </div>
+                  <input type="hidden" name="asset" id="assetInput" required>
                 </div>
               </div>
             </div>
+          </form>
+          
 
-            <div class="d-grid gap-2 mb-3 d-none" id="submitDepositWrapper">
-              <button type="submit" class="btn btn-primary">Submit Deposit</button>
-            </div>
+          <hr class="my-6 mx-n6" />
 
-            <div class="mb-3">
-              <label for="tx_hash" class="form-label">Transaction Hash (Optional)</label>
-              <input 
-                type="text" 
-                class="form-control" 
-                id="tx_hash" 
-                name="tx_hash" 
-                placeholder="Enter the blockchain transaction hash"
-              >
-              <div class="form-text">This helps us track your deposit faster</div>
-            </div>
-
-            <div class="alert alert-info">
-              <h6 class="alert-heading">Important Notes:</h6>
-              <ul class="mb-0">
-                <li>Only send the selected cryptocurrency to the address provided</li>
-                <li>Double-check the amount and address before sending</li>
-                <li>Deposits may take 1-3 network confirmations to appear in your account</li>
-              </ul>
-            </div>
-
-            <div class="d-grid gap-2">
-              <button type="button" class="btn btn-outline-secondary" onclick="history.back()">Cancel</button>
+          <h6>2. Choose Chain</h6>
+          <!-- Step 2: Choose Chain -->
+          
+          <form method="POST" action="{{ url_for('wallet.select_network') }}">
+            {{ form.hidden_tag() }}
+            <input type="hidden" name="asset" value="{{ selected_asset }}">
+            
+            <div class="row mb-4">
+              <div class="col-12">
+                <div class="form-group">
+                  <label class="form-label d-block" for="network">Select network</label>
+                  <div class="dropdown w-100">
+                    <button class="form-select d-flex align-items-center" type="button" id="networkDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                      <span id="selectedNetwork">Select network</span>
+                    </button>
+                    <ul class="dropdown-menu w-100" aria-labelledby="networkDropdown" id="networkOptions">
+                      <!-- Networks will be populated dynamically based on selected asset -->
+                    </ul>
+                  </div>
+                  <input type="hidden" name="network" id="networkInput" required>
+                </div>
+              </div>
             </div>
           </form>
+          
+
+          <hr class="my-6 mx-n6" />
+
+          <h6>3. Confirm Details</h6>
+          <!-- Step 3: Confirm Details -->
         </div>
       </div>
     </div>
-  </div>
-</div>
-
-<!-- Recent Deposits Table -->
-<div class="container mt-5">
-  <div class="row justify-content-center">
-    <div class="col-md-10">
-      <div class="card shadow-sm">
+    
+    <!-- FAQ Side Panel -->
+    <div class="col-md-4">
+      <div class="card mb-4">
         <div class="card-header">
-          <h5 class="mb-0">Recent Deposits</h5>
+          <h5 class="m-0">FAQ</h5>
         </div>
-        <div class="card-body p-0">
-          <div class="table-responsive">
-            <table class="table table-striped mb-0">
-              <thead>
-                <tr>
-                  <th>Coin</th>
-                  <th>Network</th>
-                  <th>Amount</th>
-                  <th>Txid</th>
-                  <th>Status</th>
-                  <th>Date & Time</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% if recent_deposits and recent_deposits|length > 0 %}
-                  {% for tx in recent_deposits %}
-                  <tr>
-                    <td>{{ tx.asset.symbol }}</td>
-                    <td>{{ tx.asset.deposit_addresses[0].network.value if tx.asset.deposit_addresses and tx.asset.deposit_addresses[0].network else '-' }}</td>
-                    <td>{{ '%.8f'|format(tx.amount) }}</td>
-                    <td>
-                      {% if tx.external_tx_id %}
-                        <span style="font-size: 0.9em;">{{ tx.external_tx_id[:6] }}...{{ tx.external_tx_id[-6:] }}</span>
-                      {% else %}-{% endif %}
-                    </td>
-                    <td><span class="text-success">Completed</span></td>
-                    <td>{{ tx.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
-                    <td><a href="#" class="btn btn-link btn-sm">Details</a></td>
-                  </tr>
-                  {% endfor %}
-                {% else %}
-                  <tr><td colspan="7" class="text-center">No recent deposits found.</td></tr>
-                {% endif %}
-              </tbody>
-            </table>
+        <div class="card-body">
+          <ul class="list-unstyled mb-0">
+            <li class="mb-3">
+              <a href="#" class="d-flex align-items-center">
+                <i class="ti tabler-chevron-right me-2 text-primary"></i>
+                <span>How to Make a Deposit</span>
+              </a>
+            </li>
+            <li class="mb-3">
+              <a href="#" class="d-flex align-items-center">
+                <i class="ti tabler-chevron-right me-2 text-primary"></i>
+                <span>Unsupported Deposit Recovery Procedure</span>
+              </a>
+            </li>
+            <li class="mb-3">
+              <a href="#" class="d-flex align-items-center">
+                <i class="ti tabler-chevron-right me-2 text-primary"></i>
+                <span>FAQ — Crypto Deposit</span>
+              </a>
+            </li>
+            <li class="mb-3">
+              <a href="#" class="d-flex align-items-center">
+                <i class="ti tabler-chevron-right me-2 text-primary"></i>
+                <span>How to Recover a Deposit with Wrong or Missing Tag/Memo</span>
+              </a>
+            </li>
+            <li class="mb-3">
+              <a href="#" class="d-flex align-items-center">
+                <i class="ti tabler-chevron-right me-2 text-primary"></i>
+                <span>Deposits yet to be credited?</span>
+                <i class="ti tabler-arrow-right ms-auto text-muted"></i>
+              </a>
+            </li>
+            <li>
+              <a href="#" class="d-flex align-items-center">
+                <i class="ti tabler-chevron-right me-2 text-primary"></i>
+                <span>Deposit/Withdrawal Status of All Coins</span>
+                <i class="ti tabler-arrow-right ms-auto text-muted"></i>
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+      
+      <!-- Option for Fiat Deposit -->
+      <div class="card mb-0">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <i class="ti tabler-currency-dollar fs-3 me-2"></i>
+            <div>
+              <h5 class="mb-0">Fiat Deposit</h5>
+              <small>Deposit using bank transfer or cards</small>
+            </div>
+            <a href="#" class="btn btn-primary btn-sm ms-auto">Deposit</a>
           </div>
         </div>
       </div>
     </div>
   </div>
 </div>
-{% endblock %}
 
-{% block scripts %}
+{% block extra_js %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-  console.log('DOM Content Loaded');
-  
-  // Custom dropdown for coin selection
-  document.querySelectorAll('.coin-option').forEach(function(item) {
-    item.addEventListener('click', function(e) {
-      e.preventDefault();
-      console.log('Coin option clicked:', this.dataset); // Debug log
+document.addEventListener('DOMContentLoaded', () => {
+  // Coin selection handler with network reset
+  document.querySelector('.dropdown-menu[aria-labelledby="coinDropdown"]').addEventListener('click', async (e) => {
+    const coinOption = e.target.closest('.coin-option');
+    if (!coinOption) return;
+
+    e.preventDefault();
+    
+    // Reset network selection
+    document.getElementById('selectedNetwork').textContent = 'Select network';
+    document.getElementById('networkInput').value = '';
+    const networkList = document.getElementById('networkOptions');
+    networkList.innerHTML = '<li class="text-muted px-3">Loading networks...</li>';
+    
+    // Disable network dropdown during loading
+    const networkDropdown = document.getElementById('networkDropdown');
+    networkDropdown.disabled = true;
+
+    // Update coin selection
+    const symbol = coinOption.dataset.value;
+    const name = coinOption.querySelector('span').textContent;
+    document.getElementById('selectedCoin').textContent = name;
+    document.getElementById('assetInput').value = symbol;
+
+    try {
+      const response = await fetch(`/wallet/get-networks/${symbol}`);
+      if (!response.ok) throw new Error('Network response was not ok');
       
-      const icon = this.dataset.icon;
-      const symbol = this.dataset.symbol;
-      const name = this.dataset.name;
-      const id = this.dataset.id;
+      const networks = await response.json();
+      
+      networkList.innerHTML = ''; // Clear loading message
+      networkDropdown.disabled = false;
 
-      // Update selected display
-      document.getElementById('selectedCoinIcon').src = icon;
-      document.getElementById('selectedCoinText').textContent = `${name} (${symbol})`;
-      document.getElementById('coinSelect').value = symbol;
-      document.getElementById('assetSymbol').textContent = symbol;
-
-      // Close the dropdown
-      const dropdownBtn = document.getElementById('coinDropdownBtn');
-      const dropdown = bootstrap.Dropdown.getInstance(dropdownBtn);
-      if (dropdown) {
-        dropdown.hide();
+      if (networks.length === 0) {
+        networkList.innerHTML = '<li class="text-muted px-3">No networks available</li>';
+        return;
       }
-    });
-  });
 
-  // Initialize Bootstrap dropdown
-  const dropdownElementList = document.querySelectorAll('[data-bs-toggle="dropdown"]');
-  const dropdownList = [...dropdownElementList].map(dropdownToggleEl => new bootstrap.Dropdown(dropdownToggleEl));
-
-  // Rest of your existing code...
-  const getDepositDetailsBtn = document.getElementById('getDepositDetails');
-  if (getDepositDetailsBtn) {
-    getDepositDetailsBtn.addEventListener('click', function(e) {
-      e.preventDefault();
-      console.log('Button clicked - full handler');
-      
-      const assetSelect = document.getElementById('coinSelect');
-      const networkSelect = document.getElementById('networkSelect');
-      const amountInput = document.getElementById('amount');
-      
-      console.log('Form values:', {
-        asset: assetSelect ? assetSelect.value : 'not found',
-        network: networkSelect ? networkSelect.value : 'not found',
-        amount: amountInput ? amountInput.value : 'not found'
+      networks.forEach(network => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <a class="dropdown-item network-option" href="#" 
+            data-value="${network}"
+            data-display="${network}">
+            ${network.replace(/-/g, ' ').toUpperCase()}
+          </a>
+        `;
+        networkList.appendChild(li);
       });
 
-      const depositDetails = document.getElementById('depositDetails');
-      const submitDepositWrapper = document.getElementById('submitDepositWrapper');
+    } catch (error) {
+      networkList.innerHTML = '<li class="text-danger px-3">Error loading networks</li>';
+      networkDropdown.disabled = true;
+    }
+  });
 
-      if (assetSelect && assetSelect.value && networkSelect && networkSelect.value && amountInput && amountInput.value) {
-        depositDetails.classList.remove('d-none');
-        submitDepositWrapper.classList.remove('d-none');
+  // Network selection handler
+  document.getElementById('networkOptions').addEventListener('click', (e) => {
+    const networkOption = e.target.closest('.network-option');
+    if (!networkOption) return;
 
-        const qrCode = document.getElementById('qrCode');
-        const qrCodeUrl = `/wallet/deposit/crypto/qr/${assetSelect.value}/${networkSelect.value}`;
-        console.log('QR Code URL:', qrCodeUrl);
-        qrCode.src = qrCodeUrl;
+    e.preventDefault();
+    document.getElementById('selectedNetwork').textContent = networkOption.dataset.display;
+    document.getElementById('networkInput').value = networkOption.dataset.value;
+  });
 
-        const addressUrl = `/wallet/deposit/crypto/address/${assetSelect.value}/${networkSelect.value}`;
-        console.log('Address URL:', addressUrl);
-        
-        fetch(addressUrl)
-          .then(response => {
-            console.log('Response status:', response.status);
-            return response.json();
-          })
-          .then(data => {
-            console.log('Address data:', data);
-            if (data.address) {
-              document.getElementById('depositAddress').value = data.address;
-            } else {
-              document.getElementById('depositAddress').value = 'Error loading address';
-            }
-          })
-          .catch(error => {
-            console.error('Error fetching address:', error);
-            document.getElementById('depositAddress').value = 'Error loading address';
-          });
-      } else {
-        depositDetails.classList.add('d-none');
-        submitDepositWrapper.classList.add('d-none');
-        alert('Please select a coin, network, and enter an amount.');
-      }
+  // Existing search functionality
+  document.getElementById('coinSearch').addEventListener('input', function(e) {
+    const searchTerm = e.target.value.toLowerCase();
+    document.querySelectorAll('.asset-item').forEach(item => {
+      const text = item.textContent.toLowerCase();
+      item.style.display = text.includes(searchTerm) ? 'block' : 'none';
     });
-  }
-
-  document.getElementById('coinSelect').addEventListener('change', function() {
-    const symbol = this.options[this.selectedIndex].text.split('(')[1].split(')')[0];
-    document.getElementById('assetSymbol').textContent = symbol;
-  });
-
-  // Add custom styling for select options with icons
-  const style = document.createElement('style');
-  style.textContent = `
-    .form-select option {
-      padding-left: 30px;
-      background-repeat: no-repeat;
-      background-position: 5px center;
-      background-size: 20px;
-    }
-  `;
-  document.head.appendChild(style);
-
-  // Set background images for options
-  const select = document.getElementById('coinSelect');
-  Array.from(select.options).forEach(option => {
-    if (option.dataset.icon) {
-      option.style.backgroundImage = `url(${option.dataset.icon})`;
-    }
-  });
-
-  // Copy address functionality
-  document.getElementById('copyAddress').addEventListener('click', function() {
-    const addressInput = document.getElementById('depositAddress');
-    addressInput.select();
-    document.execCommand('copy');
-    
-    // Show feedback
-    const originalText = this.innerHTML;
-    this.innerHTML = '<i class="bi bi-check"></i>';
-    setTimeout(() => {
-      this.innerHTML = originalText;
-    }, 2000);
   });
 });
 </script>
-{% endblock %} 
+{% endblock %}
+
+{% endblock %}
