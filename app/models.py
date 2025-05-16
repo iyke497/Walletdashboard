@@ -134,6 +134,8 @@ class Asset(db.Model, TimestampMixin, SoftDeleteMixin):
     symbol = db.Column(db.String(10), unique=True, nullable=False, index=True)
     name = db.Column(db.String(64), nullable=False)
     coingecko_id = db.Column(db.String(50), unique=True, nullable=False, index=True)
+    images = db.Column(db.JSON, nullable=True)
+    networks = db.Column(db.JSON, nullable=True)
     decimals = db.Column(db.Integer, default=8)
     asset_type = db.Column(SQLAlchemyEnum(AssetType), nullable=False)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
