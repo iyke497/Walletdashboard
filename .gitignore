@@ -6,3 +6,6 @@ claude_models.py
 tree.txt
 tree*
 .gitignore
+*.log
+*.txt
+*.json
