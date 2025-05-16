@@ -245,7 +245,7 @@ class ExchangeRate(db.Model, TimestampMixin, SoftDeleteMixin):
         return f"<ExchangeRate {self.base_asset.symbol}/{self.quote_asset.symbol}={self.rate} @ {self.timestamp}>"
 
 
-class DepositAddress(db.Model, TimestampMixin, SoftDeleteMixin):
+class DepositAddress(db.Model, TimestampMixin, SoftDeleteMixin): # TODO: Delete
     __tablename__ = 'deposit_addresses'
 
     id = db.Column(db.Integer, primary_key=True)

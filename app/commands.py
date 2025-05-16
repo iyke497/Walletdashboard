@@ -1,14 +1,16 @@
 # app/commands.py
-
 import click
 import json
+import time
+import math
+import requests
 from sqlalchemy import exc
 from flask.cli import with_appcontext
 from datetime import datetime
 from .extensions import db
 from .models import Asset, User, NetworkType, AssetType, Holding, DepositAddress
 from .dashboard.services import CoinGeckoService
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 @click.command('seed-db')
 @with_appcontext
@@ -210,84 +212,191 @@ def fetch_rates_command():
         click.echo(f'Error fetching rates: {str(e)}', err=True)
 
 
-
 @click.command('load-crypto-assets')
 @click.argument('json_file', type=click.Path(exists=True))
 @with_appcontext
 def load_crypto_assets_command(json_file):
-    """Load cryptocurrency asset data from a JSON file into the database.
-    
-    This command loads basic cryptocurrency data (id, symbol, name) from the specified 
-    JSON file and creates corresponding Asset records.
+    """Load cryptocurrency asset data from a JSON file into the database,
+    populating the new JSON 'networks' field with platform keys, committing per entry
+    and logging any integrity errors to a separate file.
     """
-    try:
-        # Load JSON data
-        with open(json_file, 'r') as f:
-            crypto_data = json.load(f)
-        
-        if not isinstance(crypto_data, list):
-            click.echo("Error: JSON file should contain a list of cryptocurrency objects")
-            return
-        
-        # Track our progress
-        assets_created = 0
-        assets_updated = 0
-        
-        # Process each cryptocurrency
-        for crypto in crypto_data:
-            coingecko_id = crypto.get('id')
-            symbol = crypto.get('symbol', '').upper()
-            name = crypto.get('name')
-            
-            # Validate required fields
-            if not all([coingecko_id, symbol, name]):
-                click.echo(f"Warning: Skipping crypto with missing required fields: {crypto}")
-                continue
-                
-            # Check if the asset already exists
+
+    error_log_path = 'load_crypto_assets_errors.log'
+    new_count = 0
+    update_count = 0
+    fail_count = 0
+
+    # Load the JSON data
+    with open(json_file, 'r') as f:
+        data = json.load(f)
+
+    for entry in data:
+        coingecko_id = entry.get('id')
+        symbol = entry.get('symbol')
+        name = entry.get('name')
+        platforms = entry.get('platforms', {}) or {}
+        networks = list(platforms.keys())
+
+        # Disable autoflush during query
+        with db.session.no_autoflush:
             asset = Asset.query.filter_by(coingecko_id=coingecko_id).first()
-            
-            if asset:
-                # Update existing asset
-                asset.symbol = symbol
-                asset.name = name
-                assets_updated += 1
-                click.echo(f"Updated asset: {symbol} ({name})")
+
+        if asset:
+            action = 'Update'
+            asset.symbol = symbol
+            asset.name = name
+            asset.networks = networks
+        else:
+            action = 'Create'
+            asset = Asset(
+                symbol=symbol,
+                name=name,
+                coingecko_id=coingecko_id,
+                networks=networks
+            )
+            db.session.add(asset)
+
+        # Commit per asset and handle integrity errors
+        try:
+            db.session.commit()
+            if action == 'Create':
+                new_count += 1
             else:
-                # Create new asset
-                asset = Asset(
-                    coingecko_id=coingecko_id,
-                    symbol=symbol,
-                    name=name,
-                    asset_type=AssetType.CRYPTO,
-                    is_active=True,
-                    decimals=18
+                update_count += 1
+            click.echo(f"{action} successful for {coingecko_id}")
+        except IntegrityError as err:
+            db.session.rollback()
+            fail_count += 1
+            # Log the failure
+            with open(error_log_path, 'a') as log_file:
+                log_file.write(f"{coingecko_id}: {err}\n")
+            click.echo(f"Skipped {action} for {coingecko_id} due to integrity error")
+            continue
+
+    # Summary output
+    click.echo(f"Created {new_count} new assets, updated {update_count} assets, {fail_count} failures.")
+    click.echo(f"Integrity errors logged to {error_log_path}")
+
+@click.command('fetch-crypto-images')
+@click.argument('json_file', type=click.Path(exists=True))
+@click.option('--top', default=2000, help='Number of top market cap coins to process')
+@with_appcontext
+def fetch_crypto_images_command(json_file, top):
+    """Fetch image URLs for the top N market-cap coins (by CoinGecko) present in the JSON file and save them into Asset.images, with backoff on rate limits."""
+    # Rate limiting parameters
+    per_minute_limit = 50
+    delay = 60.0 / per_minute_limit
+    fail_count = 0
+    update_count = 0
+    error_log_path = 'fetch_crypto_images_errors.log'
+
+    # 1. Load all entries and collect valid IDs
+    with open(json_file, 'r') as f:
+        entries = json.load(f)
+    valid_ids = {e.get('id') for e in entries if e.get('id')}
+
+    # 2. Retrieve top N IDs by market cap in pages, with retry/backoff
+    top_ids = []
+    per_page = 250
+    pages = math.ceil(top / per_page)
+    for page in range(1, pages + 1):
+        params = {
+            'vs_currency': 'usd',
+            'order': 'market_cap_desc',
+            'per_page': per_page,
+            'page': page
+        }
+        retries = 0
+        while True:
+            try:
+                resp = requests.get(
+                    'https://api.coingecko.com/api/v3/coins/markets',
+                    params=params,
+                    timeout=15
                 )
-                db.session.add(asset)
-                try:
-                    db.session.commit()
-                    assets_created += 1
-                    click.echo(f"Created asset: {symbol} ({name})")
-                except IntegrityError:
-                    db.session.rollback()
-                    click.echo(f"Warning: Could not create asset due to constraint violation: {symbol}")
+                resp.raise_for_status()
+                data = resp.json()
+                top_ids.extend([coin['id'] for coin in data])
+                break
+            except requests.exceptions.HTTPError as http_err:
+                status = getattr(http_err.response, 'status_code', None)
+                if status == 429 and retries < 5:
+                    wait = 60  # back off for 60 seconds on rate limit
+                    click.echo(f"Rate limit reached on page {page}, retrying after {wait}s... (retry {retries+1})")
+                    time.sleep(wait)
+                    retries += 1
                     continue
-        
-        # Commit all changes
-        db.session.commit()
-        
-        # Report results
-        click.echo(f"Successfully processed {len(crypto_data)} cryptocurrencies:")
-        click.echo(f"  - Created {assets_created} new assets")
-        click.echo(f"  - Updated {assets_updated} existing assets")
-    
-    except json.JSONDecodeError:
-        click.echo("Error: Invalid JSON file")
-    except Exception as e:
-        db.session.rollback()
-        click.echo(f"Error loading cryptocurrency assets: {str(e)}")
+                else:
+                    click.echo(f"Error fetching market data page {page}: {http_err}")
+                    return
+            except Exception as err:
+                click.echo(f"Error fetching market data page {page}: {err}")
+                return
+        time.sleep(delay)
 
+    top_ids = top_ids[:top]
 
+    # 3. Filter to those present in local JSON data
+    to_process = [cid for cid in top_ids if cid in valid_ids]
+    click.echo(f"Will fetch images for {len(to_process)} of the top {top} coins from JSON.")
+
+    # 4. Fetch images and update DB, with per-call backoff
+    for coin_id in to_process:
+        retries = 0
+        while True:
+            try:
+                resp = requests.get(
+                    f"https://api.coingecko.com/api/v3/coins/{coin_id}",
+                    timeout=15
+                )
+                resp.raise_for_status()
+                images = resp.json().get('image', {}) or {}
+                break
+            except requests.exceptions.HTTPError as http_err:
+                status = getattr(http_err.response, 'status_code', None)
+                if status == 429 and retries < 5:
+                    wait = 60
+                    click.echo(f"Rate limit reached fetching {coin_id}, retry {retries+1}, waiting {wait}s...")
+                    time.sleep(wait)
+                    retries += 1
+                    continue
+                click.echo(f"Fetch error for {coin_id}: {http_err}")
+                fail_count += 1
+                with open(error_log_path, 'a') as log:
+                    log.write(f"Fetch failure {coin_id}: {http_err}\n")
+                images = None
+                break
+            except Exception as err:
+                click.echo(f"Fetch error for {coin_id}: {err}")
+                fail_count += 1
+                with open(error_log_path, 'a') as log:
+                    log.write(f"Fetch failure {coin_id}: {err}\n")
+                images = None
+                break
+        if images is None:
+            continue
+
+        # Update database
+        try:
+            asset = Asset.query.filter_by(coingecko_id=coin_id).first()
+            if asset:
+                asset.images = images
+                db.session.commit()
+                update_count += 1
+                click.echo(f"Updated images for {coin_id}")
+            else:
+                click.echo(f"No asset found for {coin_id}, skipping.")
+        except SQLAlchemyError as db_err:
+            db.session.rollback()
+            fail_count += 1
+            click.echo(f"DB error for {coin_id}: {db_err}")
+            with open(error_log_path, 'a') as log:
+                log.write(f"DB failure {coin_id}: {db_err}\n")
+
+        time.sleep(delay)
+
+    click.echo(f"Done: {update_count} updated, {fail_count} failed.")
+    click.echo(f"Errors logged in {error_log_path}")
 
 
 def init_app(app):
@@ -296,3 +405,4 @@ def init_app(app):
     app.cli.add_command(seed_deposit_addresses)
     app.cli.add_command(fetch_rates_command)
     app.cli.add_command(load_crypto_assets_command)
+    app.cli.add_command(fetch_crypto_images_command)
