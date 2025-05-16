@@ -103,3 +103,21 @@
   text-align: center;
   margin-top: 1rem;
 }
+
+/* make the toast container move on small screens */
+@media (max-width: 575.98px) {        /* <576 px = Bootstrap “xs” */
+  #toastContainer {
+    top: auto !important;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}
+
+/* Toast must beat .modal (1055) and .offcanvas (1045) */
+#toastContainer,
+#toastContainer .toast {
+  z-index: 1100 !important;
+}
+
+

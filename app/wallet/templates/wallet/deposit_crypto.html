@@ -1,6 +1,12 @@
 {% extends "layouts/vertical.html" %}
 {% block title %}Deposit Crypto{% endblock %}
 
+{% block extra_css %}
+<!-- TODO: MOVE to asset bundle-->
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/libs/notyf/notyf.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/libs/animate-css/animate.css') }}" />
+{% endblock %}
+
 {% block content %}
 <div class="container-xxl flex-grow-1 container-p-y">
   <h4 class="fw-bold py-3 mb-4">Deposit</h4>
@@ -12,7 +18,7 @@
           <h6>1. Select Coin</h6>
           <!-- Step 1: Choose Coin -->
           
-          <form method="POST" action="{{ url_for('wallet.select_coin') }}">
+          <form method="POST" action="">
             {{ form.hidden_tag() }}
             <div class="row mb-4">
               <div class="col-12">
@@ -56,7 +62,7 @@
           <h6>2. Choose Chain</h6>
           <!-- Step 2: Choose Chain -->
           
-          <form method="POST" action="{{ url_for('wallet.select_network') }}">
+          <form method="POST" action="">
             {{ form.hidden_tag() }}
             <input type="hidden" name="asset" value="{{ selected_asset }}">
             
@@ -83,6 +89,57 @@
 
           <h6>3. Confirm Details</h6>
           <!-- Step 3: Confirm Details -->
+           
+          <!-- Button trigger modal -->
+          <div class="col-12 col-sm-6 col-md-8">
+            <button
+              type="button"
+              id="launchModalBtn"
+              class="btn btn-primary" disabled
+              data-bs-toggle="modal"
+              data-bs-target="#animationModal">
+              Get deposit details
+            </button>
+          </div>
+
+          <!-- Modal -->
+          <div
+            class="modal fade animate__animated slideInUp"
+            id="animationModal"
+            tabindex="-1"
+            aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="exampleModalLabel5">Deposit Crypto</h5>
+                  <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body text-center">
+                  <img id="depositQr" class="img-fluid mb-3" style="max-width:200px" />
+                  <div class="input-group">
+                    <input id="depositAddress" type="text" class="form-control" readonly>
+                    <button id="copyBtn" class="btn btn-outline-primary" type="button">
+                      Copy
+                    </button>
+                  </div>
+                  <small id="depositMeta" class="text-muted d-block mt-2"></small>
+                </div>
+                
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">
+                    Close
+                  </button>
+                  <button type="button" class="btn btn-primary">Save changes</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>
@@ -155,83 +212,134 @@
 </div>
 
 {% block extra_js %}
+<script src="{{ url_for('static', filename='vendor/libs/notyf/notyf.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ui-modals.js') }}"></script>
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-  // Coin selection handler with network reset
-  document.querySelector('.dropdown-menu[aria-labelledby="coinDropdown"]').addEventListener('click', async (e) => {
-    const coinOption = e.target.closest('.coin-option');
-    if (!coinOption) return;
+  document.addEventListener('DOMContentLoaded', () => {
 
-    e.preventDefault();
-    
-    // Reset network selection
-    document.getElementById('selectedNetwork').textContent = 'Select network';
-    document.getElementById('networkInput').value = '';
-    const networkList = document.getElementById('networkOptions');
-    networkList.innerHTML = '<li class="text-muted px-3">Loading networks...</li>';
-    
-    // Disable network dropdown during loading
-    const networkDropdown = document.getElementById('networkDropdown');
-    networkDropdown.disabled = true;
+    // ------------------------------------------------------------------
+    // Toast helper: showToast('Copied!', 'success')  or  showToast('Oops','danger')
+    // ------------------------------------------------------------------
+    function showToast(message, variant = 'primary') {
+      const el = document.createElement('div');
+      el.className = `toast align-items-center text-bg-${variant} border-0`;
+      el.setAttribute('role', 'alert');
+      el.setAttribute('aria-live', 'assertive');
+      el.setAttribute('aria-atomic', 'true');
+      el.innerHTML = `
+        <div class="d-flex">
+          <div class="toast-body">${message}</div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto"
+                  data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>`;
 
-    // Update coin selection
-    const symbol = coinOption.dataset.value;
-    const name = coinOption.querySelector('span').textContent;
-    document.getElementById('selectedCoin').textContent = name;
-    document.getElementById('assetInput').value = symbol;
-
-    try {
-      const response = await fetch(`/wallet/get-networks/${symbol}`);
-      if (!response.ok) throw new Error('Network response was not ok');
-      
-      const networks = await response.json();
-      
-      networkList.innerHTML = ''; // Clear loading message
-      networkDropdown.disabled = false;
-
-      if (networks.length === 0) {
-        networkList.innerHTML = '<li class="text-muted px-3">No networks available</li>';
-        return;
-      }
-
-      networks.forEach(network => {
-        const li = document.createElement('li');
-        li.innerHTML = `
-          <a class="dropdown-item network-option" href="#" 
-            data-value="${network}"
-            data-display="${network}">
-            ${network.replace(/-/g, ' ').toUpperCase()}
-          </a>
-        `;
-        networkList.appendChild(li);
-      });
-
-    } catch (error) {
-      networkList.innerHTML = '<li class="text-danger px-3">Error loading networks</li>';
-      networkDropdown.disabled = true;
+      // add, show, then auto-remove to prevent DOM bloat
+      const container = document.getElementById('toastContainer');
+      container.appendChild(el);
+      const bsToast = bootstrap.Toast.getOrCreateInstance(el, { delay: 3000 });
+      bsToast.show();
+      el.addEventListener('hidden.bs.toast', () => el.remove());
     }
-  });
 
-  // Network selection handler
-  document.getElementById('networkOptions').addEventListener('click', (e) => {
-    const networkOption = e.target.closest('.network-option');
-    if (!networkOption) return;
-
-    e.preventDefault();
-    document.getElementById('selectedNetwork').textContent = networkOption.dataset.display;
-    document.getElementById('networkInput').value = networkOption.dataset.value;
-  });
-
-  // Existing search functionality
-  document.getElementById('coinSearch').addEventListener('input', function(e) {
-    const searchTerm = e.target.value.toLowerCase();
-    document.querySelectorAll('.asset-item').forEach(item => {
-      const text = item.textContent.toLowerCase();
-      item.style.display = text.includes(searchTerm) ? 'block' : 'none';
+  
+    // ---------------- state ---------------------------------
+    let selectedCoin = null;
+    let selectedNet  = null;
+  
+    const btnLaunch  = document.getElementById('launchModalBtn');
+    const coinMenu   = document.querySelector('.dropdown-menu[aria-labelledby="coinDropdown"]');
+    const netMenu    = document.getElementById('networkOptions');
+  
+    // ---------- helper to fetch address & QR ----------------
+    async function maybeEnable() {
+      if (!selectedCoin || !selectedNet) return;
+  
+      // temporarily disable so user can’t click twice
+      btnLaunch.disabled = true;
+  
+      try {
+        const res  = await fetch(`/wallet/deposit-info/${selectedCoin}/${selectedNet}`);
+        if (!res.ok) throw new Error('fetch failed');
+  
+        const info = await res.json();
+  
+        // fill the modal
+        document.getElementById('depositQr').src       = info.qr;
+        document.getElementById('depositAddress').value = info.address;
+        document.getElementById('depositMeta').textContent =
+          `Min ${info.minimum_deposit || '—'}  •  Fee ${info.fees || '—'}`;
+  
+        btnLaunch.disabled = false;          // ready!
+  
+      } catch (err) {
+        console.error(err);
+        showToast('Unable to fetch deposit info', 'danger');   // replace with toast() if you have one
+      }
+    }
+  
+    // ---------------- coin picker ---------------------------
+    coinMenu.addEventListener('click', async (e) => {
+      const opt = e.target.closest('.coin-option');
+      if (!opt) return;
+      e.preventDefault();
+  
+      // UI
+      document.getElementById('selectedCoin').textContent = opt.textContent.trim();
+      document.getElementById('assetInput').value         = opt.dataset.value;
+  
+      // state
+      selectedCoin = opt.dataset.value;
+      selectedNet  = null;
+      btnLaunch.disabled = true;                 // force re-fetch
+  
+      // reset network dropdown
+      document.getElementById('selectedNetwork').textContent = 'Select network';
+      document.getElementById('networkInput').value          = '';
+      netMenu.innerHTML = '<li class="text-muted px-3">Loading…</li>';
+  
+      // get networks
+      const r   = await fetch(`/wallet/get-networks/${selectedCoin}`);
+      const arr = r.ok ? await r.json() : [];
+  
+      netMenu.innerHTML = arr.length
+        ? arr.map(n => `
+            <li>
+              <a class="dropdown-item network-option"
+                 href="#" data-value="${n.id}" data-display="${n.symbol}">
+                ${n.symbol.toUpperCase()}
+              </a>
+            </li>`).join('')
+        : '<li class="text-muted px-3">No networks available</li>';
     });
-  });
-});
-</script>
+  
+    // ---------------- network picker ------------------------
+    netMenu.addEventListener('click', (e) => {
+      const opt = e.target.closest('.network-option');
+      if (!opt) return;
+      e.preventDefault();
+  
+      // UI
+      document.getElementById('selectedNetwork').textContent = opt.dataset.display;
+      document.getElementById('networkInput').value          = opt.dataset.value;
+  
+      // state
+      selectedNet = opt.dataset.value;
+  
+      maybeEnable();
+    });
+  
+    // -------------------------------- copy button -----------------------------
+    const copyBtn = document.getElementById('copyBtn');
+    if (!copyBtn.dataset.bound) {           // <-- guard
+      copyBtn.addEventListener('click', () => {
+        navigator.clipboard
+          .writeText(document.getElementById('depositAddress').value)
+          .then(() => showToast('Address copied!', 'success'));
+      });
+      copyBtn.dataset.bound = 'true';
+    }})
+  </script>
+  
 {% endblock %}
 
 {% endblock %}

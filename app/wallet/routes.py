@@ -1,9 +1,10 @@
-from flask import request, jsonify, render_template, Response, flash, redirect, url_for
+from flask import request, jsonify, render_template, flash, redirect, url_for, session
 from flask_login import login_required, current_user
+import base64
 from . import wallet_bp
 from .services import WalletService
-from .forms import WithdrawForm
-from app.models import Asset, AssetType, NetworkType, Holding
+from .forms import WithdrawForm, DepositForm
+from app.models import Asset, AssetType, Holding
 from decimal import Decimal
 import logging
 
@@ -13,19 +14,20 @@ logger = logging.getLogger(__name__)
 @login_required
 def deposit_crypto_form():
     """Render the crypto deposit form"""
+    form = DepositForm()
     # Get all active crypto assets
     crypto_assets = Asset.query.filter_by(
         asset_type=AssetType.CRYPTO,
         is_active=True,
         deleted_at=None
-    ).all()
-    
+    ).limit(1000).all()
+
     # Convert assets to serializable format with CoinGecko icons
     serialized_assets = [
         {
             'symbol': asset.symbol,
             'name': asset.name,
-            'icon': asset.coingecko_icon_url
+            'images': asset.images.get('thumb') if asset.images else None
         }
         for asset in crypto_assets
     ]
@@ -33,80 +35,32 @@ def deposit_crypto_form():
     # Fetch recent deposits for the current user
     recent_deposits = WalletService.get_recent_crypto_deposits(current_user.id, limit=5)
     
-    return render_template('wallet/deposit_crypto.html', crypto_assets=serialized_assets, recent_deposits=recent_deposits)
+    return render_template('wallet/deposit_crypto.html',
+                           form=form, 
+                           crypto_assets=serialized_assets, 
+                           recent_deposits=recent_deposits)
 
-@wallet_bp.route('/deposit/crypto/address/<asset_symbol>/<network>')
-@login_required
-def get_deposit_address(asset_symbol: str, network: str):
-    """
-    Get a deposit address for a specific asset and network.
-    
-    Args:
-        asset_symbol: The symbol of the asset (e.g., 'BTC', 'ETH')
-        network: The network type (e.g., 'BITCOIN', 'ETHEREUM')
-    """
-    try:
-        # Convert network string to enum
-        network_type = NetworkType[network.upper()]
-        
-        # Get deposit address
-        deposit_address = WalletService.get_deposit_address(
-            current_user.id,
-            asset_symbol,
-            network_type
-        )
-        
-        return jsonify({
-            'address': deposit_address.address,
-            'network': network_type.value
-        })
-        
-    except (ValueError, KeyError) as e:
-        logger.error(f"Error getting deposit address: {str(e)}")
-        return jsonify({'error': str(e)}), 400
-    except Exception as e:
-        logger.error(f"Unexpected error getting deposit address: {str(e)}", exc_info=True)
-        return jsonify({'error': 'Failed to get deposit address'}), 500
+@wallet_bp.route('/get-networks/<asset_symbol>')
+def get_networks(asset_symbol):
+    asset = Asset.query.filter_by(symbol=asset_symbol).first()
+    nets = [{'id': n['id'], 'symbol': n['symbol']} for n in (asset.networks or [])]
+    #return jsonify(asset.networks if asset else [])  # Directly return the JSON array
+    return jsonify(nets)
 
-@wallet_bp.route('/deposit/crypto/qr/<asset_symbol>/<network>')
+@wallet_bp.route('/deposit-info/<asset_symbol>/<network_id>')
 @login_required
-def get_deposit_qr(asset_symbol: str, network: str):
-    """
-    Generate and return a QR code for a deposit address.
-    
-    Args:
-        asset_symbol: The symbol of the asset (e.g., 'BTC', 'ETH')
-        network: The network type (e.g., 'BITCOIN', 'ETHEREUM')
-    """
-    try:
-        # Convert network string to enum
-        network_type = NetworkType[network.upper()]
-        
-        # Get deposit address
-        deposit_address = WalletService.get_deposit_address(
-            current_user.id,
-            asset_symbol,
-            network_type
-        )
-        
-        # Generate QR code
-        qr_buffer = WalletService.generate_deposit_qr(deposit_address)
-        
-        # Return as PNG image
-        return Response(
-            qr_buffer.getvalue(),
-            mimetype='image/png',
-            headers={
-                'Content-Disposition': f'attachment; filename={asset_symbol}_{network}_deposit_qr.png'
-            }
-        )
-        
-    except (ValueError, KeyError) as e:
-        logger.error(f"Error generating QR code: {str(e)}")
-        return jsonify({'error': str(e)}), 400
-    except Exception as e:
-        logger.error(f"Unexpected error generating QR code: {str(e)}", exc_info=True)
-        return jsonify({'error': 'Failed to generate QR code'}), 500
+def get_deposit_info(asset_symbol, network_id):
+    """ Retreive wallet address for specific network id. Dynamically generate QR code and metadata. """
+    rec = WalletService.get_deposit_info(asset_symbol, network_id)
+    qr_buf = WalletService.generate_qr_png(rec['deposit_address'])
+    # Encode PNG → base64 for easy embedding
+    b64 = base64.b64encode(qr_buf.getvalue()).decode()
+    return jsonify({
+        "address": rec["deposit_address"],
+        "qr": f"data:image/png;base64,{b64}",
+        "minimum_deposit": rec.get("minimum_deposit"),
+        "fees": rec.get("fees")
+    })
 
 @wallet_bp.route('/deposit/crypto', methods=['POST'])
 @login_required

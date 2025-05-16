@@ -1,7 +1,7 @@
 from datetime import datetime
 from sqlalchemy import desc
 from sqlalchemy.exc import IntegrityError
-from app.models import Transaction, Asset, Holding, TransactionType, AssetType, ExchangeRate, DepositAddress, NetworkType
+from app.models import Transaction, Asset, Holding, TransactionType, AssetType, ExchangeRate
 from app.extensions import db
 import qrcode
 from io import BytesIO
@@ -30,8 +30,9 @@ class WalletService:
         
         return holding
 
+    # TODO: Delete
     @staticmethod
-    def generate_deposit_qr(deposit_address: DepositAddress) -> BytesIO:
+    def generate_qr_png(data: str) -> BytesIO:
         """
         Generate a QR code for a deposit address.
         
@@ -41,7 +42,7 @@ class WalletService:
         Returns:
             BytesIO: A buffer containing the PNG image data
         """
-        if not deposit_address or not deposit_address.address:
+        if not data:
             raise ValueError("Invalid deposit address")
             
         # Create QR code
@@ -51,7 +52,7 @@ class WalletService:
             box_size=10,
             border=4,
         )
-        qr.add_data(deposit_address.address)
+        qr.add_data(data)
         qr.make(fit=True)
         
         # Generate image
@@ -65,40 +66,22 @@ class WalletService:
         return buffer
 
     @staticmethod
-    def get_deposit_address(user_id: int, asset_symbol: str, network: NetworkType) -> DepositAddress:
-        """
-        Get a deposit address for a specific asset and network.
-        
-        Args:
-            user_id: The ID of the user requesting the address
-            asset_symbol: The symbol of the asset (e.g., 'BTC', 'ETH')
-            network: The network type (e.g., NetworkType.BITCOIN, NetworkType.ETHEREUM)
-            
-        Returns:
-            DepositAddress: The matching deposit address
-        """
-        # Get the asset
-        asset = Asset.query.filter_by(
-            symbol=asset_symbol,
-            asset_type=AssetType.CRYPTO,
-            deleted_at=None
-        ).first()
-        
+    def get_deposit_info(asset_symbol: str, network_id: str):
+        """Return address & metadata for the pair."""
+        asset = Asset.query.filter_by(symbol=asset_symbol,
+                                      asset_type=AssetType.CRYPTO,
+                                      deleted_at=None).first()
         if not asset:
-            raise ValueError(f"Asset {asset_symbol} not found")
-            
-        # Get the deposit address
-        deposit_address = DepositAddress.query.filter_by(
-            asset_id=asset.id,
-            network=network,
-            is_active=True,
-            deleted_at=None
-        ).first()
-        
-        if not deposit_address:
-            raise ValueError(f"No active deposit address found for {asset_symbol} on {network.value}")
-            
-        return deposit_address
+            raise ValueError(f"{asset_symbol} not found")
+
+        record = next(
+            (n for n in (asset.networks or []) if n["id"] == network_id),
+            None
+        )
+        if not record:
+            raise ValueError(f"{asset_symbol} is not supported on {network_id}")
+
+        return record   # whole dict
 
     @staticmethod
     def deposit_crypto(user_id, asset_symbol, amount, tx_hash=None):
