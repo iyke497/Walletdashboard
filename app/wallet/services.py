@@ -197,6 +197,14 @@ class WalletService:
     @staticmethod
     def withdraw_crypto(user_id, asset_symbol, amount, destination_address):
         """Process cryptocurrency withdrawal with blockchain integration"""
+
+        # Add input validation
+        if not isinstance(amount, Decimal):
+            raise ValueError("Amount must be a Decimal type")
+        
+        if amount <= Decimal('0'):
+            raise ValueError("Withdrawal amount must be positive")
+
         # Get asset and validate
         asset = Asset.query.filter_by(
             symbol=asset_symbol,
