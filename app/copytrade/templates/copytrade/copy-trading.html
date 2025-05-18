@@ -1,238 +1,354 @@
-{% extends "base.html" %}
-
+{% extends "layouts/vertical.html" %}
 {% block title %}TradeCopy - Follow Top Traders{% endblock %}
 
-{% block stylesheets %}
-{{ super() }}
-<link rel="stylesheet" href="{{ url_for('copytrade.static', filename='css/copy-trading.css') }}">
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/libs/apex-charts/apex-charts.css') }}" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 {% endblock %}
+
 
 {% block content %}
 
 <main class="main">
+    
     <!-- Keep all original content from copy_trading_interface.html -->
-    <div class="container">
-        <div class="dashboard-stats">
-            <!-- ... (dashboard stats cards) ... -->
-            <div class="stat-card">
-                <div class="stat-title">Your Portfolio Value</div>
-                <div class="stat-value">$14,256.89</div>
-                <div class="stat-trend trend-up">
-                    <i class="fas fa-arrow-up trend-icon"></i>
-                    4.2% this week
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-title">Active Traders Following</div>
-                <div class="stat-value">8</div>
-                <div class="stat-trend trend-up">
-                    <i class="fas fa-arrow-up trend-icon"></i>
-                    2 new this month
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-title">Total Profit/Loss</div>
-                <div class="stat-value">+$1,238.53</div>
-                <div class="stat-trend trend-up">
-                    <i class="fas fa-arrow-up trend-icon"></i>
-                    12.6% all time
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-title">Open Positions</div>
-                <div class="stat-value">5</div>
-                <div class="stat-trend trend-neutral">
-                    <i class="fas fa-minus trend-icon"></i>
-                    No change
-                </div>
-            </div>
-        </div>
-        
-        <h2 class="page-title">Top Traders to Follow</h2>
-        
-        <div class="filters">
-            <!-- ... (filter dropdowns and search) ... -->
-            <div class="filter-group">
-                <select class="filter-dropdown">
-                    <option>Sort By: Win Rate</option>
-                    <option>Sort By: Total Profit</option>
-                    <option>Sort By: Followers</option>
-                    <option>Sort By: Experience</option>
-                </select>
-                <select class="filter-dropdown">
-                    <option>All Markets</option>
-                    <option>Forex</option>
-                    <option>Crypto</option>
-                    <option>Stocks</option>
-                    <option>Commodities</option>
-                </select>
-                <select class="filter-dropdown">
-                    <option>Time Period: All Time</option>
-                    <option>Time Period: Last Month</option>
-                    <option>Time Period: Last Week</option>
-                    <option>Time Period: Last Day</option>
-                </select>
-            </div>
-            <div class="search-box">
-                <i class="fas fa-search"></i>
-                <input type="text" placeholder="Search traders...">
-            </div>
-        </div>
-        
-        <div class="traders-container">
-            <!-- ... (trader cards 1, 2, 3) ... -->
-            <!-- Trader 1 -->
-            {% for trader in traders %}
-            <div class="trader-card">
-                <div class="trader-header">
-                    <div class="trader-avatar">
-                        <img src="/api/placeholder/60/60" alt="Trader Avatar">
-                    </div>
-                    <div class="trader-info">
-                        <h3 class="trader-name">
-                            {{ trader.user.username }}
-                            {% if trader.is_verified %}
-                            <i class="fas fa-check-circle verified-badge"></i>
-                            {% endif %}
-                        </h3>
-                        <p class="trader-bio">{{ trader.bio }}</p>
-                        <div class="trader-tags">
-                            {% for tag in trader.tags.split(',') %}
-                            <span class="trader-tag">{{ tag|trim }}</span>
-                            {% endfor %}
+    <div class="content-wrapper">
+        <div class="container-xxl flex-grow-1 container-p-y">
+            <div class="row g-6">
+                <!-- ... (dashboard stats cards) ... -->
+                <div class="col-lg-3 col-sm-6">
+                    <div class="card card-border-shadow-primary h-100">
+                        <div class="card-body">
+                        <div class="d-flex align-items-center mb-1">
+                            <div class="avatar me-4">
+                            <span class="avatar-initial rounded bg-label-primary"
+                                ><i class="icon-base ti tabler-truck icon-28px"></i
+                            ></span>
+                            </div>
+                            <h4 class="mb-0">$14,256.89</h4>
+                        </div>
+                        <p class="mb-1">Your Portfolio Value</p>
+                        <p class="mb-0">
+                            <span class="text-heading fw-medium me-2">+4.2%</span>
+                            <small class="text-body-secondary">than last week</small>
+                        </p>
                         </div>
                     </div>
                 </div>
-                <div class="trader-stats">
-                    <div class="trader-stat">
-                        <div class="stat-label">Win Rate</div>
-                        <div class="profit-positive">{{ trader.win_rate }}%</div>
-                    </div>
-                    <div class="trader-stat">
-                        <div class="stat-label">Avg. Monthly Return</div>
-                        <div class="profit-positive">{{ trader.avg_monthly_return }}%</div>
-                    </div>
-                    <div class="trader-stat">
-                        <div class="stat-label">Max Drawdown</div>
-                        <div class="profit-negative">{{ trader.max_drawdown }}%</div>
-                    </div>
-                    <div class="trader-stat">
-                        <div class="stat-label">Risk Score</div>
-                        <div class="profit-neutral">{{ trader.risk_score|capitalize }}</div>
-                    </div>
-                </div>
-                <div class="trader-chart">
-                    <canvas id="trader1Chart"></canvas>
-                </div>
-                <div class="trade-history">
-                    <h4 class="history-title">Recent Trades</h4>
-                    <div class="trade-list">
-                        <div class="trade-item">
-                            <div>
-                                <span class="trade-symbol">EUR/USD</span>
-                                <span class="trade-direction buy">Buy</span>
+                <div class="col-lg-3 col-sm-6">
+                    <div class="card card-border-shadow-primary h-100">
+                        <div class="card-body">
+                        <div class="d-flex align-items-center mb-1">
+                            <div class="avatar me-4">
+                            <span class="avatar-initial rounded bg-label-primary"
+                                ><i class="icon-base ti tabler-truck icon-28px"></i
+                            ></span>
                             </div>
-                            <div>
-                                <span class="trade-date">May 4, 2025</span>
-                                <span class="trade-profit profit-positive">+2.1%</span>
-                            </div>
+                            <h4 class="mb-0">8</h4>
                         </div>
-                        <div class="trade-item">
-                            <div>
-                                <span class="trade-symbol">GBP/JPY</span>
-                                <span class="trade-direction sell">Sell</span>
-                            </div>
-                            <div>
-                                <span class="trade-date">May 2, 2025</span>
-                                <span class="trade-profit profit-positive">+1.8%</span>
-                            </div>
-                        </div>
-                        <div class="trade-item">
-                            <div>
-                                <span class="trade-symbol">USD/CAD</span>
-                                <span class="trade-direction buy">Buy</span>
-                            </div>
-                            <div>
-                                <span class="trade-date">Apr 29, 2025</span>
-                                <span class="trade-profit profit-negative">-0.7%</span>
-                            </div>
+                        <p class="mb-1">Active Traders Following</p>
+                        <p class="mb-0">
+                            <span class="text-heading fw-medium me-2">+2 new</span>
+                            <small class="text-body-secondary">this month</small>
+                        </p>
                         </div>
                     </div>
                 </div>
-                <div class="trader-footer">
-                    <div class="followers">
-                        <i class="fas fa-users"></i>
-                        4,521 followers
-                    </div>
-                    <div class="action-buttons">
-                        <button class="btn btn-outline">
-                            <i class="fas fa-eye"></i>
-                            Profile
-                        </button>
-                        <button class="btn btn-primary">
-                            <i class="fas fa-plus"></i>
-                            Copy Trades
-                        </button>
+                <div class="col-lg-3 col-sm-6">
+                    <div class="card card-border-shadow-primary h-100">
+                        <div class="card-body">
+                        <div class="d-flex align-items-center mb-1">
+                            <div class="avatar me-4">
+                            <span class="avatar-initial rounded bg-label-primary"
+                                ><i class="icon-base ti tabler-truck icon-28px"></i
+                            ></span>
+                            </div>
+                            <h4 class="mb-0">+$1,238.53</h4>
+                        </div>
+                        <p class="mb-1">Total Profit/Loss</p>
+                        <p class="mb-0">
+                            <span class="text-heading fw-medium me-2">12.6%</span>
+                            <small class="text-body-secondary">all time</small>
+                        </p>
+                        </div>
                     </div>
                 </div>
-            </div>
-            {% else %}
-            <div class="alert alert-info">No traders found matching your criteria</div>
-            {% endfor %}
-        </div>
-        
-        <div class="pagination">
-            <!-- ... (pagination links) ... -->
-            <div class="page-item">
-                <a href="#" class="page-link">
-                    <i class="fas fa-chevron-left"></i>
-                </a>
-            </div>
-            <div class="page-item active">
-                <a href="#" class="page-link">1</a>
-            </div>
-            <div class="page-item">
-                <a href="#" class="page-link">2</a>
-            </div>
-            <div class="page-item">
-                <a href="#" class="page-link">3</a>
-            </div>
-            <div class="page-item">
-                <a href="#" class="page-link">4</a>
-            </div>
-            <div class="page-item">
-                <a href="#" class="page-link">5</a>
+                <div class="col-lg-3 col-sm-6">
+                    <div class="card card-border-shadow-primary h-100">
+                        <div class="card-body">
+                        <div class="d-flex align-items-center mb-1">
+                            <div class="avatar me-4">
+                            <span class="avatar-initial rounded bg-label-primary"
+                                ><i class="icon-base ti tabler-truck icon-28px"></i
+                            ></span>
+                            </div>
+                            <h4 class="mb-0">5</h4>
+                        </div>
+                        <p class="mb-1">Open Positions</p>
+                        <p class="mb-0">
+                            <span class="text-heading fw-medium me-2">-</span>
+                            <small class="text-body-secondary">No change</small>
+                        </p>
+                        </div>
+                    </div>
+                </div>
+                        
+                <h4 class="fw-bold py-3 mb-4">Top traders to follow</h4>
+                    
+                <!-- Filter and Search Row -->
+                <div class="row align-items-center mb-3">
+                    <!-- Left side - Filter dropdowns -->
+                    <div class="col-md-8">
+                        <div class="d-flex gap-2">
+                            <!-- Sort By Dropdown -->
+                            <div class="btn-group">
+                                <button
+                                    type="button"
+                                    class="btn btn-outline-secondary dropdown-toggle"
+                                    data-bs-toggle="dropdown"
+                                    aria-expanded="false">
+                                    Sort By
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="javascript:void(0);">Win Rate</a></li>
+                                    <li><a class="dropdown-item" href="javascript:void(0);">Experience</a></li>
+                                    <li><a class="dropdown-item" href="javascript:void(0);">Total Profit</a></li>
+                                    <li><hr class="dropdown-divider" /></li>
+                                    <li><a class="dropdown-item" href="javascript:void(0);">Followers</a></li>
+                                </ul>
+                            </div>
+                            
+                            <!-- All markets Dropdown -->
+                            <div class="btn-group">
+                                <button
+                                    type="button"
+                                    class="btn btn-outline-secondary dropdown-toggle"
+                                    data-bs-toggle="dropdown"
+                                    aria-expanded="false">
+                                    All markets
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="javascript:void(0);">Spot Trading</a></li>
+                                    <li><a class="dropdown-item" href="javascript:void(0);">Futures</a></li>
+                                </ul>
+                            </div>
+                            
+                            <!-- Time Period Dropdown -->
+                            <div class="btn-group">
+                                <button
+                                    type="button"
+                                    class="btn btn-outline-secondary dropdown-toggle"
+                                    data-bs-toggle="dropdown"
+                                    aria-expanded="false">
+                                    Time Period
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="javascript:void(0);">Last day</a></li>
+                                    <li><a class="dropdown-item" href="javascript:void(0);">Last week</a></li>
+                                    <li><a class="dropdown-item" href="javascript:void(0);">Last month</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Right side - Search box -->
+                    <div class="col-md-4">
+                        <div class="input-group input-group-merge">
+                            <span class="input-group-text" id="basic-addon-search31">
+                                <i class="icon-base ti tabler-search"></i>
+                            </span>
+                            <input type="text" class="form-control" placeholder="Search traders..." aria-label="Search traders..." aria-describedby="basic-addon-search31"/>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Traders -->
+                <div class="row gy-4"> <!--align-items-center-->
+                    <!-- Trader 1 -->
+                    {% for trader in traders %}
+                    <div class="col-lg-4 col-sm-6">
+                        <div class="card h-100">
+                            <div class="card-body pb-0">
+                                <!-- Trader Avatar Badge -->
+                                <div class="card-icon">
+                                    <span class="badge bg-label-primary rounded p-2">
+                                        <img src="{{ url_for('static', filename='img/avatars/1.png') }}" alt="Trader Avatar" class="rounded-circle" style="width: 26px; height: 26px;">
+                                    </span>
+                                </div>
+                                <!-- Trader Name and Verification -->
+                                <h5 class="card-title mb-0 mt-2">
+                                    {{ trader.user.username }}
+                                    {% if trader.is_verified %}
+                                    <i class="fas fa-check-circle text-primary ms-1"></i>
+                                    {% endif %}
+                                </h5>
+                                <small>{{ trader.bio }}</small>
+                                
+                                <!-- Trader Tags -->
+                                <div class="mt-2 mb-3">
+                                    {% for tag in trader.tags.split(',') %}
+                                    <span class="badge bg-label-secondary me-1">{{ tag|trim }}</span>
+                                    {% endfor %}
+                                </div>
+                                
+                                <!-- Key Stats -->
+                                <div class="row g-2 mb-3">
+                                    <div class="col-6">
+                                        <div class="d-flex flex-column">
+                                            <small class="text-muted">Win Rate</small>
+                                            <span class="text-success fw-semibold">{{ trader.win_rate }}%</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="d-flex flex-column">
+                                            <small class="text-muted">Monthly Return</small>
+                                            <span class="text-success fw-semibold">{{ trader.avg_monthly_return }}%</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="d-flex flex-column">
+                                            <small class="text-muted">Max Drawdown</small>
+                                            <span class="text-danger fw-semibold">{{ trader.max_drawdown }}%</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="d-flex flex-column">
+                                            <small class="text-muted">Risk Score</small>
+                                            <span class="fw-semibold">{{ trader.risk_score|capitalize }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Trader Chart -->
+                            <div id="revenueGenerated"></div>
+                            
+                            <!-- Recent Trades Header -->
+                            <div class="d-flex justify-content-between align-items-center pt-1 px-3">
+                                <small class="text-muted">Recent Trades</small>
+                                <small class="text-primary cursor-pointer">View All</small>
+                            </div>
+                            
+                            <!-- Recent Trades List -->
+                            <div class="px-3 pb-3">
+                                <div class="list-group list-group-flush">
+                                    <div class="list-group-item px-0 d-flex justify-content-between border-0 py-1">
+                                        <div>
+                                            <span class="fw-semibold">EUR/USD</span>
+                                            <span class="badge bg-label-success ms-1">Buy</span>
+                                        </div>
+                                        <div>
+                                            <small class="text-muted me-2">May 4</small>
+                                            <span class="text-success">+2.1%</span>
+                                        </div>
+                                    </div>
+                                    <div class="list-group-item px-0 d-flex justify-content-between border-0 py-1">
+                                        <div>
+                                            <span class="fw-semibold">GBP/JPY</span>
+                                            <span class="badge bg-label-danger ms-1">Sell</span>
+                                        </div>
+                                        <div>
+                                            <small class="text-muted me-2">May 2</small>
+                                            <span class="text-success">+1.8%</span>
+                                        </div>
+                                    </div>
+                                    <div class="list-group-item px-0 d-flex justify-content-between border-0 py-1">
+                                        <div>
+                                            <span class="fw-semibold">USD/CAD</span>
+                                            <span class="badge bg-label-success ms-1">Buy</span>
+                                        </div>
+                                        <div>
+                                            <small class="text-muted me-2">Apr 29</small>
+                                            <span class="text-danger">-0.7%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Card Footer -->
+                            <div class="card-footer border-top">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="fas fa-users text-muted"></i>
+                                        <span class="text-muted ms-1">4,521 followers</span>
+                                    </div>
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i>Profile
+                                        </button>
+                                        <button class="btn btn-sm btn-primary">
+                                            <i class="fas fa-plus"></i> Copy
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">No traders found matching your criteria</div>
+                    {% endfor %}
+                </div>
+                
+                <!-- ... (pagination links) ... -->
+                <div class="row">
+                    <div class="col-lg-12">
+                        <div class="demo-inline-spacing">
+                            <nav aria-label="Page navigation">
+                                <ul class="pagination pagination-rounded justify-content-end">
+                                <li class="page-item first">
+                                    <a class="page-link" href="javascript:void(0);"
+                                    ><i class="icon-base ti tabler-chevrons-left icon-sm"></i
+                                    ></a>
+                                </li>
+                                <li class="page-item prev">
+                                    <a class="page-link" href="javascript:void(0);"
+                                    ><i class="icon-base ti tabler-chevron-left icon-sm"></i
+                                    ></a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="javascript:void(0);">1</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="javascript:void(0);">2</a>
+                                </li>
+                                <li class="page-item active">
+                                    <a class="page-link" href="javascript:void(0);">3</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="javascript:void(0);">4</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="javascript:void(0);">5</a>
+                                </li>
+                                <li class="page-item next">
+                                    <a class="page-link" href="javascript:void(0);"
+                                    ><i class="icon-base ti tabler-chevron-right icon-sm"></i
+                                    ></a>
+                                </li>
+                                <li class="page-item last">
+                                    <a class="page-link" href="javascript:void(0);"
+                                    ><i class="icon-base ti tabler-chevrons-right icon-sm"></i
+                                    ></a>
+                                </li>
+                                </ul>
+                            </nav>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
+
 </main>
+
 {% endblock %}
 
-{% block scripts %}
-{{ super() }}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
-<script>
-    // Initialize charts
-    document.querySelectorAll('.trader-chart canvas').forEach((canvas, index) => {
-        const ctx = canvas.getContext('2d');
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May'],
-                datasets: [{
-                    label: 'Profit %',
-                    data: [2, 4, 3, 5, 8], // Replace with dynamic data
-                    borderColor: 'var(--primary)',
-                    tension: 0.4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } }
-            }
-        });
-    });
-</script>
+
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/cards-statistics.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ui-modals.js') }}"></script>
+
+
 {% endblock %}
