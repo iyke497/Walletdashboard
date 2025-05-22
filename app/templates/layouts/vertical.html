@@ -28,7 +28,7 @@
       href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&ampdisplay=swap"
       rel="stylesheet" />
 
-    <link rel="stylesheet" href="../../assets/vendor/fonts/iconify-icons.css" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fonts/iconify-icons.css') }}" />
 
     <!-- Core CSS -->
     <!-- build:css assets/vendor/css/theme.css  -->
@@ -56,7 +56,7 @@
 
         <aside id="layout-menu" class="layout-menu menu-vertical menu">
           <div class="app-brand demo">
-            <a href="index.html" class="app-brand-link">
+            <a href="{{ url_for('dashboard.index') }}" class="app-brand-link">
               <span class="app-brand-logo demo">
                 <span class="text-primary">
                   <svg width="32" height="22" viewBox="0 0 32 22" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -97,18 +97,64 @@
           <div class="menu-inner-shadow"></div>
 
           <ul class="menu-inner py-1">
-            <!-- Page -->
-            <li class="menu-item active">
-              <a href="index.html" class="menu-link">
-                <i class="menu-icon icon-base ti tabler-smart-home"></i>
-                <div data-i18n="Page 1">Page 1</div>
-              </a>
-            </li>
+            <!-- Wallet -->
             <li class="menu-item">
-              <a href="page-2.html" class="menu-link">
-                <i class="menu-icon icon-base ti tabler-app-window"></i>
-                <div data-i18n="Page 2">Page 2</div>
+              <a href="" class="menu-link menu-toggle">
+                <i class="menu-icon icon-base ti tabler-wallet"></i>
+                <div data-i18n="Wallet">Wallet</div>
               </a>
+              <ul class="menu-sub">
+                <li class="menu-item">
+                  <a href="{{ url_for('wallet.deposit_crypto') }}" class="menu-link">
+                    <div data-i18n="Deposit">Deposit</div>
+                  </a>
+                </li>
+                <li class="menu-item">
+                  <a href="{{ url_for('wallet.withdraw_crypto_form') }}" class="menu-link">
+                    <div data-i18n="Withdraw">Withdraw</div>
+                  </a>
+                </li>
+              </ul>
+            </li>
+            
+            <!-- Investments -->
+            <li class="menu-item">
+              <a href="" class="menu-link menu-toggle">
+                <i class="menu-icon icon-base ti tabler-chart-pie"></i>
+                <div data-i18n="Investments">Investments</div>
+              </a>
+              <ul class="menu-sub">
+                <li class="menu-item">
+                  <a href="{{ url_for('dashboard.show_portfolio') }}" class="menu-link">
+                    <div data-i18n="Portfolio">Portfolio</div>
+                  </a>
+                </li>
+                <li class="menu-item">
+                  <a href="{{ url_for('dashboard.show_portfolio') }}" class="menu-link">
+                    <div data-i18n="Earn">Earn</div>
+                  </a>
+                </li>
+              </ul>
+            </li>
+            
+            <!-- Trading -->
+            <li class="menu-item">
+              <a href="" class="menu-link menu-toggle">
+                <i class="menu-icon icon-base ti tabler-exchange"></i>
+                <div data-i18n="Trading">Trading</div>
+              </a>
+              <ul class="menu-sub">
+                <li class="menu-item">
+                  <a href="{{ url_for('trading.limit_trade') }}" class="menu-link">
+                    <div data-i18n="Limit Trade">Limit Trade</div>
+                  </a>
+                </li>
+                <li class="menu-item">
+                  <a href="{{ url_for('copytrade.trader_list') }}" class="menu-link">
+                    <div data-i18n="Copy Trade">Copy Trade</div>
+                  </a>
+                </li>
+              </ul>
             </li>
           </ul>
         </aside>
@@ -136,72 +182,6 @@
 
             <div class="navbar-nav-right d-flex align-items-center justify-content-end" id="navbar-collapse">
               <div class="navbar-nav align-items-center">
-                <!-- Wallet Navigation -->
-                <div class="nav-item dropdown me-2 me-xl-0">
-                  <a class="nav-link dropdown-toggle" href="javascript:void(0);" data-bs-toggle="dropdown">
-                    <i class="icon-base ti tabler-wallet icon-md"></i>
-                    <span class="ms-2">Wallet</span>
-                  </a>
-                  <ul class="dropdown-menu dropdown-menu-start">
-                    <li>
-                      <a class="dropdown-item" href="{{ url_for('wallet.deposit_crypto') }}">
-                        <i class="icon-base ti tabler-arrow-down-circle icon-md me-3"></i>
-                        <span>Deposit</span>
-                      </a>
-                    </li>
-                    <li>
-                      <a class="dropdown-item" href="{{ url_for('wallet.withdraw_crypto_form') }}">
-                        <i class="icon-base ti tabler-arrow-up-circle icon-md me-3"></i>
-                        <span>Withdraw</span>
-                      </a>
-                    </li>
-                  </ul>
-                </div>
-
-                <!-- Investments Navigation -->
-                <div class="nav-item dropdown me-2 me-xl-0">
-                  <a class="nav-link dropdown-toggle" href="javascript:void(0);" data-bs-toggle="dropdown">
-                    <i class="icon-base ti tabler-chart-pie icon-md"></i>
-                    <span class="ms-2">Investments</span>
-                  </a>
-                  <ul class="dropdown-menu dropdown-menu-start">
-                    <li>
-                      <a class="dropdown-item" href="{{ url_for('dashboard.show_portfolio') }}">
-                        <i class="icon-base ti tabler-chart-bar icon-md me-3"></i>
-                        <span>Portfolio</span>
-                      </a>
-                    </li>
-                    <li>
-                      <a class="dropdown-item" href="{{ url_for('dashboard.show_portfolio') }}">
-                        <i class="icon-base ti tabler-chart-line icon-md me-3"></i>
-                        <span>Performance</span>
-                      </a>
-                    </li>
-                  </ul>
-                </div>
-
-                <!-- Trading Navigation -->
-                <div class="nav-item dropdown me-2 me-xl-0">
-                  <a class="nav-link dropdown-toggle" href="javascript:void(0);" data-bs-toggle="dropdown">
-                    <i class="icon-base ti tabler-exchange icon-md"></i>
-                    <span class="ms-2">Trading</span>
-                  </a>
-                  <ul class="dropdown-menu dropdown-menu-start">
-                    <li>
-                      <a class="dropdown-item" href="{{ url_for('trading.limit_trade') }}">
-                        <i class="icon-base ti tabler-exchange icon-md me-3"></i>
-                        <span>Limit Trade</span>
-                      </a>
-                    </li>
-                    <li>
-                      <a class="dropdown-item" href="{{ url_for('copytrade.trader_list') }}">
-                        <i class="icon-base ti tabler-copy icon-md me-3"></i>
-                        <span>Copy Trade</span>
-                      </a>
-                    </li>
-                  </ul>
-                </div>
-
                 <!-- Toggle Light/Dark Theme -->
                 <div class="nav-item dropdown me-2 me-xl-0">
                   <a
@@ -249,7 +229,7 @@
                     </li>
                   </ul>
                 </div>
-                <!-- Toggle Light/Dark Theme -->
+                <!-- / Toggle Light/Dark Theme -->
               </div>
 
               <ul class="navbar-nav flex-row align-items-center ms-md-auto">
