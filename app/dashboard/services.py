@@ -78,8 +78,9 @@ class PortfolioService:
             
             portfolio_details.append({
                 'asset': {
-                    'symbol': asset.symbol,
-                    'name': asset.name
+                    'symbol': asset.symbol.upper(),
+                    'name': asset.name,
+                    'image': asset.images.get('small') if asset.images else None
                 },
                 'balance': float(holding.balance),
                 'value': holding_value,

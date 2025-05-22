@@ -73,7 +73,6 @@
         <thead class="table-light">
           <tr>
             <th>Asset</th>
-            <th>Name</th>
             <th>Balance</th>
             <th>Value ({{ currency }})</th>
             <th>% of Portfolio</th>
@@ -84,10 +83,16 @@
           {% for item in portfolio %}
           <tr>
             <td>
-              <i class="icon-base ti tabler-coin icon-md text-warning me-4"></i>
-              <span class="fw-medium">{{ item.asset.symbol }}</span>
+              <div class="d-flex align-items-center">
+                <div class="avatar flex-shrink-0 me-3">
+                  <img src="{{ item.asset.image }}" alt="{{ item.asset.name }} logo" class="rounded-circle">
+                </div>
+                <div>
+                  <h6 class="mb-0">{{ item.asset.symbol }}</h6>
+                  <small class="text-body">{{ item.asset.name }}</small>
+                </div>
+              </div>
             </td>
-            <td>{{ item.asset.name }}</td>
             <td>{{ "{:,.8f}".format(item.balance) }}</td>
             <td>{{ "{:,.2f}".format(item.value) }}</td>
             <td>{{ "{:.2f}".format(item.percentage) }}%</td>
