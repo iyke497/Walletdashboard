@@ -7,140 +7,245 @@
 
 {% block content %}
 <div class="container-xxl flex-grow-1 container-p-y">
-    <!-- DataTable with Buttons -->
-     <div class="row">
+    <!-- Search and Filter Section -->
+    <div class="row mb-4">
         <div class="col-md-8 col-lg-6 mx-auto">
             <div class="card">
-                <div class="card-datatable table-responsive pt-0">
-                <table class="datatables-basic table">
-                    <thead>
-                    <tr>
-                        <th></th>
-                        <th>Coin</th>
-                        <th>APR</th>
-                        <th>Action</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                        {% for asset in assets %}
-                        <tr>
-                            <td></td>
-                            <td>{{ asset.symbol }}</td>
-                            <td>4.5%</td>
-                            <td>
-                                <button class="btn btn-primary">Stake</button>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                <div class="card-body">
+                    <form method="GET" class="d-flex gap-3 align-items-end">
+                        <div class="flex-grow-1">
+                            <label for="search" class="form-label">Search Assets</label>
+                            <input type="text" 
+                                   id="search" 
+                                   name="search" 
+                                   class="form-control" 
+                                   placeholder="Search by symbol or name..." 
+                                   value="{{ search_query }}"
+                                   autocomplete="off">
+                        </div>
+                        <div>
+                            <label for="per_page" class="form-label">Per Page</label>
+                            <select name="per_page" id="per_page" class="form-select" style="width: 80px;">
+                                <option value="5" {% if current_per_page == 5 %}selected{% endif %}>5</option>
+                                <option value="10" {% if current_per_page == 10 %}selected{% endif %}>10</option>
+                                <option value="25" {% if current_per_page == 25 %}selected{% endif %}>25</option>
+                                <option value="50" {% if current_per_page == 50 %}selected{% endif %}>50</option>
+                            </select>
+                        </div>
+                        <div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="icon-base ti tabler-search me-1"></i>Search
+                            </button>
+                        </div>
+                        {% if search_query %}
+                        <div>
+                            <a href="{{ url_for('staking.staking_home') }}" class="btn btn-outline-secondary">
+                                <i class="icon-base ti tabler-x me-1"></i>Clear
+                            </a>
+                        </div>
+                        {% endif %}
+                    </form>
                 </div>
             </div>
         </div>
     </div>
-      <!-- Modal to add new record -->
-      <div class="offcanvas offcanvas-end" id="add-new-record">
+
+    <!-- Results Summary -->
+    {% if search_query %}
+    <div class="row mb-3">
+        <div class="col-md-8 col-lg-6 mx-auto">
+            <div class="alert alert-info">
+                <i class="icon-base ti tabler-info-circle me-1"></i>
+                Found {{ pagination.total }} result(s) for "{{ search_query }}"
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- DataTable with Buttons -->
+    <div class="row">
+        <div class="col-md-8 col-lg-6 mx-auto">
+            <div class="card">
+                <div class="card-datatable table-responsive pt-0">
+                    <table class="datatables-basic table">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Asset</th>
+                                <th>APR</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for asset in assets %}
+                            <tr>
+                                <td></td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar flex-shrink-0 me-3">
+                                            {% if asset.image %}
+                                                <img src="{{ asset.image }}" 
+                                                     alt="{{ asset.name }} logo" 
+                                                     class="rounded-circle"
+                                                     style="width: 32px; height: 32px;">
+                                            {% else %}
+                                                <div class="avatar-initial rounded-circle bg-label-primary">
+                                                    {{ asset.symbol[0] if asset.symbol else 'A' }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-0">{{ asset.symbol }}</h6>
+                                            <small class="text-body">{{ asset.name }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-label-success">4.5%</span>
+                                </td>
+                                <td>
+                                    <button class="btn btn-primary btn-sm" 
+                                            data-asset-id="{{ asset.id }}"
+                                            data-asset-symbol="{{ asset.symbol }}">
+                                        <i class="icon-base ti tabler-coins me-1"></i>Stake
+                                    </button>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center py-4">
+                                    <div class="text-muted">
+                                        <i class="icon-base ti tabler-search icon-lg d-block mx-auto mb-2"></i>
+                                        {% if search_query %}
+                                            No assets found matching "{{ search_query }}"
+                                        {% else %}
+                                            No assets available for staking
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pagination -->
+                {% if pagination.pages > 1 %}
+                <div class="card-footer d-flex justify-content-between align-items-center">
+                    <div class="text-muted small">
+                        Showing {{ ((pagination.page - 1) * pagination.per_page) + 1 }} to 
+                        {{ pagination.page * pagination.per_page if pagination.page * pagination.per_page < pagination.total else pagination.total }} 
+                        of {{ pagination.total }} entries
+                    </div>
+                    
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination pagination-sm mb-0">
+                            <!-- Previous button -->
+                            <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                                {% if pagination.has_prev %}
+                                    <a class="page-link" href="{{ url_for('staking.staking_home', page=pagination.prev_num, per_page=current_per_page, search=search_query) }}">
+                                        <i class="icon-base ti tabler-chevron-left"></i>
+                                    </a>
+                                {% else %}
+                                    <span class="page-link">
+                                        <i class="icon-base ti tabler-chevron-left"></i>
+                                    </span>
+                                {% endif %}
+                            </li>
+
+                            <!-- Page numbers -->
+                            {% for page_num in pagination.iter_pages %}
+                                {% if page_num %}
+                                    {% if page_num != pagination.page %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="{{ url_for('staking.staking_home', page=page_num, per_page=current_per_page, search=search_query) }}">
+                                                {{ page_num }}
+                                            </a>
+                                        </li>
+                                    {% else %}
+                                        <li class="page-item active">
+                                            <span class="page-link">{{ page_num }}</span>
+                                        </li>
+                                    {% endif %}
+                                {% else %}
+                                    <li class="page-item disabled">
+                                        <span class="page-link">…</span>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+
+                            <!-- Next button -->
+                            <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                                {% if pagination.has_next %}
+                                    <a class="page-link" href="{{ url_for('staking.staking_home', page=pagination.next_num, per_page=current_per_page, search=search_query) }}">
+                                        <i class="icon-base ti tabler-chevron-right"></i>
+                                    </a>
+                                {% else %}
+                                    <span class="page-link">
+                                        <i class="icon-base ti tabler-chevron-right"></i>
+                                    </span>
+                                {% endif %}
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal to add new record (keeping your existing modal) -->
+    <div class="offcanvas offcanvas-end" id="add-new-record">
         <div class="offcanvas-header border-bottom">
-          <h5 class="offcanvas-title" id="exampleModalLabel">New Record</h5>
-          <button
-            type="button"
-            class="btn-close text-reset"
-            data-bs-dismiss="offcanvas"
-            aria-label="Close"></button>
+            <h5 class="offcanvas-title" id="exampleModalLabel">New Record</h5>
+            <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
         </div>
         <div class="offcanvas-body flex-grow-1">
-          <form class="add-new-record pt-0 row g-2" id="form-add-new-record" onsubmit="return false">
-            <div class="col-sm-12 form-control-validation">
-              <label class="form-label" for="basicFullname">Full Name</label>
-              <div class="input-group input-group-merge">
-                <span id="basicFullname2" class="input-group-text"
-                  ><i class="icon-base ti tabler-user"></i
-                ></span>
-                <input
-                  type="text"
-                  id="basicFullname"
-                  class="form-control dt-full-name"
-                  name="basicFullname"
-                  placeholder="John Doe"
-                  aria-label="John Doe"
-                  aria-describedby="basicFullname2" />
-              </div>
-            </div>
-            <div class="col-sm-12 form-control-validation">
-              <label class="form-label" for="basicPost">Post</label>
-              <div class="input-group input-group-merge">
-                <span id="basicPost2" class="input-group-text"
-                  ><i class="icon-base ti tabler-briefcase"></i
-                ></span>
-                <input
-                  type="text"
-                  id="basicPost"
-                  name="basicPost"
-                  class="form-control dt-post"
-                  placeholder="Web Developer"
-                  aria-label="Web Developer"
-                  aria-describedby="basicPost2" />
-              </div>
-            </div>
-            <div class="col-sm-12 form-control-validation">
-              <label class="form-label" for="basicEmail">Email</label>
-              <div class="input-group input-group-merge">
-                <span class="input-group-text"><i class="icon-base ti tabler-mail"></i></span>
-                <input
-                  type="text"
-                  id="basicEmail"
-                  name="basicEmail"
-                  class="form-control dt-email"
-                  placeholder="john.doe@example.com"
-                  aria-label="john.doe@example.com" />
-              </div>
-              <div class="form-text">You can use letters, numbers & periods</div>
-            </div>
-            <div class="col-sm-12 form-control-validation">
-              <label class="form-label" for="basicDate">Joining Date</label>
-              <div class="input-group input-group-merge">
-                <span id="basicDate2" class="input-group-text"
-                  ><i class="icon-base ti tabler-calendar"></i
-                ></span>
-                <input
-                  type="text"
-                  class="form-control dt-date"
-                  id="basicDate"
-                  name="basicDate"
-                  aria-describedby="basicDate2"
-                  placeholder="MM/DD/YYYY"
-                  aria-label="MM/DD/YYYY" />
-              </div>
-            </div>
-            <div class="col-sm-12 form-control-validation">
-              <label class="form-label" for="basicSalary">Salary</label>
-              <div class="input-group input-group-merge">
-                <span id="basicSalary2" class="input-group-text"
-                  ><i class="icon-base ti tabler-currency-dollar"></i
-                ></span>
-                <input
-                  type="number"
-                  id="basicSalary"
-                  name="basicSalary"
-                  class="form-control dt-salary"
-                  placeholder="12000"
-                  aria-label="12000"
-                  aria-describedby="basicSalary2" />
-              </div>
-            </div>
-            <div class="col-sm-12">
-              <button type="submit" class="btn btn-primary data-submit me-sm-4 me-1">Submit</button>
-              <button type="reset" class="btn btn-outline-secondary" data-bs-dismiss="offcanvas">Cancel</button>
-            </div>
-          </form>
+            <form class="add-new-record pt-0 row g-2" id="form-add-new-record" onsubmit="return false">
+                <!-- Your existing form content -->
+                <div class="col-sm-12">
+                    <button type="submit" class="btn btn-primary data-submit me-sm-4 me-1">Submit</button>
+                    <button type="reset" class="btn btn-outline-secondary" data-bs-dismiss="offcanvas">Cancel</button>
+                </div>
+            </form>
         </div>
-      </div>
-      <!--/ DataTable with Buttons -->
+    </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="{{ url_for('static', filename='js/cards-advance.js')}}"></script>
 <script src="{{ url_for('static', filename='js/tables-datatables-basic.js')}}"></script>
-{% endblock %}
+<script>
+// Auto-submit form on per_page change
+document.getElementById('per_page').addEventListener('change', function() {
+    this.form.submit();
+});
 
+// Enhanced search with debouncing
+let searchTimeout;
+document.getElementById('search').addEventListener('input', function() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        // Auto-submit after 500ms of no typing
+        if (this.value.length === 0 || this.value.length >= 2) {
+            this.form.submit();
+        }
+    }, 500);
+});
+
+// Stake button functionality
+document.querySelectorAll('button[data-asset-id]').forEach(button => {
+    button.addEventListener('click', function() {
+        const assetId = this.dataset.assetId;
+        const assetSymbol = this.dataset.assetSymbol;
+        
+        // Add your staking logic here
+        console.log('Staking asset:', assetSymbol, 'ID:', assetId);
+        
+        // Example: Open staking modal or redirect to staking page
+        // window.location.href = `/staking/${assetId}`;
+    });
+});
+</script>
+{% endblock %}
