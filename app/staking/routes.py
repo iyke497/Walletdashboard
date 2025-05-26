@@ -7,20 +7,21 @@ from app.staking.services import AssetService, StakingService
 from app.staking.forms import StakingForm, QuickStakeForm, UnstakeForm
 from app.models import Asset
 
+# <-----------------------Start------------------------->
 @staking_bp.route('/')
+@login_required # Good practice if viewing positions requires login
 def staking_home():
     page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 10, type=int)
+    per_page = request.args.get('per_page', 10, type=int) # Default to 10 per page
     search = request.args.get('search', '', type=str).strip()
 
-    # Get paginated assets with search
+    # Get paginated assets for staking
     paginated_assets = AssetService.get_assets(
-        page=page, 
-        per_page=per_page, 
+        page=page,
+        per_page=per_page,
         search=search
     )
 
-    # Serialize assets for template
     serialized_assets = []
     for asset in paginated_assets.items:
         serialized_assets.append({
@@ -30,11 +31,10 @@ def staking_home():
             'image': asset.images.get('small', asset.images.get('thumb', '')) if asset.images else None
         })
 
-    # Create form instances for modal
+    # Forms for modals
     staking_form = StakingForm()
-    quick_stake_form = QuickStakeForm()
+    # quick_stake_form = QuickStakeForm() # Keep if used by a modal on this page
 
-    # Pagination info for template
     pagination_info = {
         'page': paginated_assets.page,
         'pages': paginated_assets.pages,
@@ -47,16 +47,40 @@ def staking_home():
         'iter_pages': list(paginated_assets.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2))
     }
 
+    # --- Fetch Staking Positions Data ---
+    user_staking_positions = []
+    total_user_positions = 0
+    active_user_positions = 0
+    # Pass the UnstakeForm instance needed for the unstake modal in the positions tab
+    unstake_form_for_positions_tab = UnstakeForm()
+
+    if current_user.is_authenticated: # Ensure user is logged in
+        try:
+            positions_data = StakingService.get_user_staking_positions(current_user.id) #
+            user_staking_positions = positions_data
+            total_user_positions = len(positions_data) #
+            active_user_positions = len([p for p in positions_data if p['status'] == 'active']) #
+        except Exception as e:
+            current_app.logger.error(f"Error fetching staking positions for user {current_user.id}: {e}")
+            flash('Could not load your staking positions at this time.', 'warning')
+    # --- End Staking Positions Data ---
+
     return render_template(
-        'staking/staking_home.html', 
+        'staking/staking_home.html',
         assets=serialized_assets,
         pagination=pagination_info,
         search_query=search,
         current_per_page=per_page,
-        staking_form=staking_form,
-        quick_stake_form=quick_stake_form
+        staking_form=staking_form, # For the "Stake Asset" modal
+        # quick_stake_form=quick_stake_form,
+        # --- Pass positions data to the template ---
+        user_positions=user_staking_positions,
+        total_positions=total_user_positions, # Renamed for clarity in template
+        active_positions=active_user_positions, #
+        unstake_form=unstake_form_for_positions_tab # Pass the specific unstake_form instance
     )
 
+# <-----------------------End------------------------->
 @staking_bp.route('/stake', methods=['POST'])
 @login_required
 def stake_asset():
@@ -84,7 +108,7 @@ def stake_asset():
                     f'Successfully staked {form.amount.data:.8f} {asset.symbol}!',
                     'success'
                 )
-                return redirect(url_for('staking.staking_positions'))
+                return redirect(url_for('staking.staking_home'))
             else:
                 flash(result.get('error', 'Failed to create staking position'), 'error')
                 
@@ -199,30 +223,6 @@ def validate_stake_ajax():
             'errors': form.errors
         })
 
-@staking_bp.route('/positions')
-@login_required
-def staking_positions():
-    """Page to view user's staking positions"""
-    try:
-        positions = StakingService.get_user_staking_positions(current_user.id)
-        unstake_form = UnstakeForm()
-        
-        # Calculate total staked value
-        total_positions = len(positions)
-        active_positions = len([p for p in positions if p['status'] == 'active'])
-        
-        return render_template(
-            'staking/staking_positions.html',
-            positions=positions,
-            total_positions=total_positions,
-            active_positions=active_positions,
-            unstake_form=unstake_form
-        )
-    
-    except Exception as e:
-        flash('Error loading staking positions', 'error')
-        return redirect(url_for('staking.staking_home'))
-
 @staking_bp.route('/unstake', methods=['POST'])
 @login_required
 def unstake_position():
@@ -248,7 +248,7 @@ def unstake_position():
             for error in errors:
                 flash(f'{error}', 'error')
     
-    return redirect(url_for('staking.staking_positions'))
+    return redirect(url_for('staking.staking_home'))
 
 # Keep the API endpoints for backwards compatibility or AJAX functionality
 @staking_bp.route('/api/stake', methods=['POST'])

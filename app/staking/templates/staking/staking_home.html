@@ -1,5 +1,5 @@
 {% extends "layouts/vertical.html" %}
-{% block title %}Staking{% endblock %}
+{% block title %}Stake & Manage Positions{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='vendor/css/pages/cards-advance.css')}}">
@@ -8,13 +8,11 @@
 {% block content %}
 <div class="container-xxl flex-grow-1 container-p-y">
 
-    {# ------------------------------------------------------------------- #}
-    {# FLASH MESSAGES – surfacing WTForms validation + success messages   #}
-    {# ------------------------------------------------------------------- #}
+    {# FLASH MESSAGES – (existing code) #}
     {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
         <div class="row mb-3">
-            <div class="col-md-8 col-lg-6 mx-auto">
+            <div class="col-md-12"> {# Changed to full width for better layout with tabs #}
                 {% for category, message in messages %}
                     <div class="alert alert-{{ 'success' if category=='success' else 'danger' }} alert-dismissible fade show" role="alert">
                         {{ message }}
@@ -26,140 +24,270 @@
     {% endif %}
     {% endwith %}
 
-    {# ------------------------------------------------------------------- #}
-    {# SEARCH / FILTER CARD                                             #}
-    {# ------------------------------------------------------------------- #}
-    <div class="row mb-4">
-        <div class="col-md-8 col-lg-6 mx-auto">
-            <div class="card">
-                <div class="card-body">
-                    <form method="GET" class="d-flex gap-3 align-items-end">
-                        <div class="flex-grow-1">
-                            <label for="search" class="form-label">Search Assets</label>
-                            <input type="text"
-                                   id="search"
-                                   name="search"
-                                   class="form-control"
-                                   placeholder="Search by symbol or name…"
-                                   value="{{ search_query }}"
-                                   autocomplete="off">
-                        </div>
-                        <div>
-                            <label for="per_page" class="form-label">Per Page</label>
-                            <select name="per_page" id="per_page" class="form-select" style="width: 80px;">
-                                <option value="5"  {% if current_per_page == 5  %}selected{% endif %}>5</option>
-                                <option value="10" {% if current_per_page == 10 %}selected{% endif %}>10</option>
-                                <option value="25" {% if current_per_page == 25 %}selected{% endif %}>25</option>
-                                <option value="50" {% if current_per_page == 50 %}selected{% endif %}>50</option>
-                            </select>
-                        </div>
-                        <div>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="icon-base ti tabler-search me-1"></i>Search
-                            </button>
-                        </div>
-                        {% if search_query %}
-                        <div>
-                            <a href="{{ url_for('staking.staking_home') }}" class="btn btn-outline-secondary">
-                                <i class="icon-base ti tabler-x me-1"></i>Clear
-                            </a>
-                        </div>
-                        {% endif %}
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    {% if search_query %}
-    <div class="row mb-3">
-        <div class="col-md-8 col-lg-6 mx-auto">
-            <div class="alert alert-info">
-                <i class="icon-base ti tabler-info-circle me-1"></i>
-                Found {{ pagination.total }} result(s) for "{{ search_query }}"
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    {# ------------------------------------------------------------------- #}
-    {#  ASSET LIST                                                       #}
-    {# ------------------------------------------------------------------- #}
+    {# CARD WITH TABS for Staking and Positions #}
     <div class="row">
-        <div class="col-md-8 col-lg-6 mx-auto">
+        <div class="col-12">
             <div class="card">
-                <div class="card-datatable table-responsive pt-0">
-                    <table class="datatables-basic table">
-                        <thead>
-                            <tr>
-                                <th></th>
-                                <th>Asset</th>
-                                <th>APR</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for asset in assets %}
-                            <tr>
-                                <td></td>
-                                <td>
-                                    <div class="d-flex align-items-center">
-                                        <div class="avatar flex-shrink-0 me-3">
-                                            {% if asset.image %}
-                                                <img src="{{ asset.image }}" alt="{{ asset.name }} logo" class="rounded-circle" style="width:32px;height:32px;">
-                                            {% else %}
-                                                <div class="avatar-initial rounded-circle bg-label-primary">
-                                                    {{ asset.symbol[0] if asset.symbol else 'A' }}
+                <div class="card-header">
+                    <div class="nav-align-top">
+                        <ul class="nav nav-pills mb-3" role="tablist">
+                            <li class="nav-item">
+                                <button type="button" class="nav-link active" role="tab" data-bs-toggle="tab"
+                                        data-bs-target="#navs-pills-tab-stake-assets"
+                                        aria-controls="navs-pills-tab-stake-assets" aria-selected="true">
+                                    Stake Assets
+                                </button>
+                            </li>
+                            <li class="nav-item">
+                                <button type="button" class="nav-link" role="tab" data-bs-toggle="tab"
+                                        data-bs-target="#navs-pills-tab-my-positions"
+                                        aria-controls="navs-pills-tab-my-positions" aria-selected="false">
+                                    My Staking Positions
+                                </button>
+                            </li>
+                            {# Add other tabs here if needed, e.g., "Earnings History" #}
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="tab-content p-0">
+                        {# ------------- TAB 1: STAKE ASSETS ------------- #}
+                        <div class="tab-pane fade show active" id="navs-pills-tab-stake-assets" role="tabpanel">
+                            {# SEARCH / FILTER CARD (existing code from your staking_home.html) #}
+                            <div class="row mb-4">
+                                <div class="col-md-10 col-lg-8 mx-auto">
+                                    <div class="card shadow-sm">
+                                        <div class="card-body">
+                                            <form method="GET" action="{{ url_for('staking.staking_home') }}#navs-pills-tab-stake-assets" class="d-flex flex-wrap gap-3 align-items-end">
+                                                {# Ensure form action includes hash to return to the correct tab #}
+                                                <div class="flex-grow-1">
+                                                    <label for="search" class="form-label">Search Assets</label>
+                                                    <input type="text" id="search" name="search" class="form-control" placeholder="Search by symbol or name…" value="{{ search_query }}" autocomplete="off">
                                                 </div>
-                                            {% endif %}
-                                        </div>
-                                        <div>
-                                            <h6 class="mb-0">{{ asset.symbol }}</h6>
-                                            <small class="text-body">{{ asset.name }}</small>
+                                                <div style="min-width: 80px;">
+                                                    <label for="per_page" class="form-label">Per Page</label>
+                                                    <select name="per_page" id="per_page" class="form-select" style="width: auto;">
+                                                        <option value="5"  {% if current_per_page == 5  %}selected{% endif %}>5</option>
+                                                        <option value="10" {% if current_per_page == 10 %}selected{% endif %}>10</option>
+                                                        <option value="25" {% if current_per_page == 25 %}selected{% endif %}>25</option>
+                                                        <option value="50" {% if current_per_page == 50 %}selected{% endif %}>50</option>
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <button type="submit" class="btn btn-primary">
+                                                        <i class="icon-base ti tabler-search me-1"></i>Search
+                                                    </button>
+                                                </div>
+                                                {% if search_query %}
+                                                <div>
+                                                    <a href="{{ url_for('staking.staking_home') }}#navs-pills-tab-stake-assets" class="btn btn-outline-secondary">
+                                                        <i class="icon-base ti tabler-x me-1"></i>Clear
+                                                    </a>
+                                                </div>
+                                                {% endif %}
+                                            </form>
                                         </div>
                                     </div>
-                                </td>
-                                <td><span class="badge bg-label-success">4.5%</span></td>
-                                <td>
-                                    <button class="btn btn-primary btn-sm stake-btn"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#stakingModal"
-                                            data-asset-id="{{ asset.id }}"
-                                            data-asset-symbol="{{ asset.symbol }}"
-                                            data-asset-name="{{ asset.name }}"
-                                            data-asset-image="{{ asset.image }}">
-                                        <i class="icon-base ti tabler-coins me-1"></i>Stake
-                                    </button>
-                                </td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="4" class="text-center py-4">
-                                    <div class="text-muted">
-                                        <i class="icon-base ti tabler-search icon-lg d-block mx-auto mb-2"></i>
-                                        {% if search_query %}
-                                            No assets found matching "{{ search_query }}"
-                                        {% else %}
-                                            No assets available for staking
+                                </div>
+                            </div>
+
+                            {% if search_query %}
+                            <div class="row mb-3">
+                                <div class="col-md-10 col-lg-8 mx-auto">
+                                    <div class="alert alert-info">
+                                        <i class="icon-base ti tabler-info-circle me-1"></i>
+                                        Found {{ pagination.total }} result(s) for "{{ search_query }}"
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            {# ASSET LIST (existing code from your staking_home.html) #}
+                            <div class="row">
+                                <div class="col-md-10 col-lg-8 mx-auto">
+                                    <div class="card shadow-sm">
+                                        <div class="card-datatable table-responsive pt-0">
+                                            <table class="datatables-basic table">
+                                                <thead>
+                                                    <tr>
+                                                        <th></th>
+                                                        <th>Asset</th>
+                                                        <th>APR</th>
+                                                        <th>Action</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for asset in assets %}
+                                                    <tr>
+                                                        <td></td>
+                                                        <td>
+                                                            <div class="d-flex align-items-center">
+                                                                <div class="avatar flex-shrink-0 me-3">
+                                                                    {% if asset.image %}
+                                                                        <img src="{{ asset.image }}" alt="{{ asset.name }} logo" class="rounded-circle" style="width:32px;height:32px;">
+                                                                    {% else %}
+                                                                        <div class="avatar-initial rounded-circle bg-label-primary">
+                                                                            {{ asset.symbol[0] if asset.symbol else 'A' }}
+                                                                        </div>
+                                                                    {% endif %}
+                                                                </div>
+                                                                <div>
+                                                                    <h6 class="mb-0">{{ asset.symbol }}</h6>
+                                                                    <small class="text-body">{{ asset.name }}</small>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td><span class="badge bg-label-success">4.5%</span></td> {# This APR should be dynamic from asset data if available #}
+                                                        <td>
+                                                            <button class="btn btn-primary btn-sm stake-btn"
+                                                                    data-bs-toggle="modal"
+                                                                    data-bs-target="#stakingModal"
+                                                                    data-asset-id="{{ asset.id }}"
+                                                                    data-asset-symbol="{{ asset.symbol }}"
+                                                                    data-asset-name="{{ asset.name }}"
+                                                                    data-asset-image="{{ asset.image or '' }}">
+                                                                <i class="icon-base ti tabler-coins me-1"></i>Stake
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                    {% else %}
+                                                    <tr>
+                                                        <td colspan="4" class="text-center py-4">
+                                                            <div class="text-muted">
+                                                                <i class="icon-base ti tabler-search icon-lg d-block mx-auto mb-2"></i>
+                                                                {% if search_query %}
+                                                                    No assets found matching "{{ search_query }}"
+                                                                {% else %}
+                                                                    No assets available for staking at the moment.
+                                                                {% endif %}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        {# PAGINATION (existing code - ensure links point to the correct tab with hash) #}
+                                        {% if pagination and pagination.pages > 1 %}
+                                        <div class="card-footer d-flex justify-content-center">
+                                            <nav aria-label="Asset list navigation">
+                                                <ul class="pagination">
+                                                    <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                                                        <a class="page-link" href="{{ url_for('staking.staking_home', page=pagination.prev_num, per_page=current_per_page, search=search_query) if pagination.has_prev else '#'}}#navs-pills-tab-stake-assets"><i class="ti ti-chevron-left"></i></a>
+                                                    </li>
+                                                    {% for p_num in pagination.iter_pages %}
+                                                        {% if p_num %}
+                                                            <li class="page-item {% if p_num == pagination.page %}active{% endif %}">
+                                                                <a class="page-link" href="{{ url_for('staking.staking_home', page=p_num, per_page=current_per_page, search=search_query) }}#navs-pills-tab-stake-assets">{{ p_num }}</a>
+                                                            </li>
+                                                        {% else %}
+                                                            <li class="page-item disabled"><span class="page-link">…</span></li>
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                    <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                                                        <a class="page-link" href="{{ url_for('staking.staking_home', page=pagination.next_num, per_page=current_per_page, search=search_query) if pagination.has_next else '#'}}#navs-pills-tab-stake-assets"><i class="ti ti-chevron-right"></i></a>
+                                                    </li>
+                                                </ul>
+                                            </nav>
+                                        </div>
                                         {% endif %}
                                     </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+                                </div>
+                            </div>
+                        </div>{# /#navs-pills-tab-stake-assets #}
 
-                {# Pagination block kept unchanged – omitted for brevity #}
-                {# …                                                             #}
-            </div>
-        </div>
-    </div>
+                        {# ------------- TAB 2: MY STAKING POSITIONS ------------- #}
+                        <div class="tab-pane fade" id="navs-pills-tab-my-positions" role="tabpanel">
+                            <h4 class="mb-3 pt-3">Your Active Stakes</h4>
+                            <p>Total Positions: <span class="fw-bold">{{ total_positions }}</span> | Currently Active: <span class="fw-bold text-success">{{ active_positions }}</span></p>
 
-    {# =================================================================== #}
-    {#  MODAL 1 – ENTER DETAILS (NO FORM SUBMIT)                           #}
-    {# =================================================================== #}
+                            {% if user_positions %}
+                            <div class="table-responsive text-nowrap">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Asset</th>
+                                            <th>Amount Staked</th>
+                                            <th>Period</th>
+                                            <th>APR</th>
+                                            <th>Est. Rewards</th>
+                                            <th>Start Date</th>
+                                            <th>End Date / Unlock</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="table-border-bottom-0">
+                                        {% for pos in user_positions %}
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    {% if pos.asset_image %}
+                                                        <img src="{{ pos.asset_image }}" alt="{{ pos.asset_symbol }}" class="avatar avatar-xs rounded-circle me-2">
+                                                    {% else %}
+                                                        <div class="avatar avatar-xs avatar-initial rounded-circle bg-label-secondary me-2">{{ pos.asset_symbol[0] if pos.asset_symbol else '?' }}</div>
+                                                    {% endif %}
+                                                    <div>
+                                                        <span class="fw-medium">{{ pos.asset_symbol }}</span><br>
+                                                        <small class="text-muted">{{ pos.asset_name }}</small>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>{{ "%.8f"|format(pos.amount|float) }}</td>
+                                            <td>{{ pos.period_display }}</td> {# Assuming StakingService provides this #}
+                                            <td><span class="badge bg-label-info">{{ pos.apr }}%</span></td> {# Assuming StakingService provides this #}
+                                            <td>{{ pos.estimated_rewards }}</td>
+                                            <td>{{ pos.start_date.strftime('%Y-%m-%d %H:%M') if pos.start_date else 'N/A' }}</td>
+                                            <td>{{ pos.end_date.strftime('%Y-%m-%d %H:%M') if pos.end_date else 'Flexible' }}</td>
+                                            <td>
+                                                <span class="badge rounded-pill
+                                                    {% if pos.status == 'active' %} bg-label-success
+                                                    {% elif pos.status == 'completed' %} bg-label-primary
+                                                    {% elif pos.status == 'unstaked' %} bg-label-warning
+                                                    {% else %} bg-label-secondary {% endif %}">
+                                                    {{ pos.status|capitalize }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                {% if pos.status == 'active' and pos.can_unstake %} {# Assuming StakingService provides can_unstake #}
+                                                <button type="button" class="btn btn-danger btn-sm unstake-pos-btn"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#unstakePositionModal"
+                                                        data-position-id="{{ pos.id }}"
+                                                        data-asset-symbol="{{ pos.asset_symbol }}"
+                                                        data-staked-amount="{{ "%.8f"|format(pos.amount|float) }}">
+                                                    <i class="ti ti-logout me-1 ti-xs"></i>Unstake
+                                                </button>
+                                                {% elif pos.status == 'active' and not pos.can_unstake %}
+                                                    <span class="text-muted small fst-italic">Locked</span>
+                                                {% else %}
+                                                    <span class="text-muted small fst-italic">-</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="text-center py-5">
+                                <i class="ti ti-ghost ti-lg mb-2 d-block mx-auto text-muted"></i>
+                                <p class="text-muted">You have no staking positions yet.</p>
+                                <p><small>Explore assets in the "Stake Assets" tab to get started!</small></p>
+                            </div>
+                            {% endif %}
+                        </div>{# /#navs-pills-tab-my-positions #}
+                    </div>
+                </div>{# /.card-body #}
+            </div>{# /.card #}
+        </div>{# /.col-12 #}
+    </div>{# /.row #}
+
+    {# MODAL 1 – ENTER DETAILS (NO FORM SUBMIT) - (existing code from your staking_home.html) #}
     <div class="modal fade" id="stakingModal" tabindex="-1" aria-labelledby="stakingModalLabel" aria-hidden="true">
+        {# ... Your existing modal content for staking ... #}
+        {# Ensure IDs like 'modal-asset-image', 'modal-asset-symbol', 'stakeAmount', etc. are correct #}
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
@@ -218,13 +346,11 @@
                         <i class="icon-base ti tabler-arrow-right me-1"></i>Review &amp; Confirm
                     </button>
                 </div>
-            </div>
+            </div> 
         </div>
     </div>
 
-    {# =================================================================== #}
-    {#  MODAL 2 – CONFIRM + WTForms SUBMIT                                #}
-    {# =================================================================== #}
+    {# MODAL 2 – CONFIRM + WTForms SUBMIT - (existing code from your staking_home.html) #}
     <div class="modal fade" id="stakingConfirmModal" tabindex="-1" aria-labelledby="stakingConfirmModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -232,10 +358,7 @@
                     {{ staking_form.csrf_token }}
                     {{ staking_form.asset_id(id='form-asset-id', type='hidden') }}
                     {{ staking_form.amount(id='form-amount', type='hidden') }}
-                    <!-- Force the period field to be hidden -->
                     <input type="hidden" id="form-period" name="{{ staking_form.period.name }}" value="">
-
-
                     <div class="modal-header">
                         <h5 class="modal-title" id="stakingConfirmModalLabel"><i class="icon-base ti tabler-shield-check me-2"></i>Confirm Staking</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -273,231 +396,337 @@
         </div>
     </div>
 
+    {# NEW MODAL: UNSTAKE POSITION CONFIRMATION #}
+    {% if unstake_form %} {# Check if the form is passed #}
+    <div class="modal fade" id="unstakePositionModal" tabindex="-1" aria-labelledby="unstakePositionModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form id="confirmUnstakeForm" method="POST" action="{{ url_for('staking.unstake_position') }}">
+                    {{ unstake_form.csrf_token }}
+                    {{ unstake_form.position_id(id='unstake-form-position-id', type='hidden') }} {# Hidden input for position_id #}
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="unstakePositionModalLabel"><i class="ti ti-alert-triangle me-2 text-warning"></i>Confirm Unstake</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Are you sure you want to unstake <strong id="unstake-modal-amount-symbol"></strong>?</p>
+                        <p class="small text-danger">Please note: Unstaking locked positions before the term ends may result in the forfeiture of accrued rewards, or other penalties, as per the staking agreement.</p>
+                        <div class="form-check mt-3">
+                            {{ unstake_form.confirm_unstake(class="form-check-input", id="unstakeModalConfirmCheckbox") }}
+                            <label class="form-check-label" for="unstakeModalConfirmCheckbox">
+                                I understand the consequences and wish to proceed with unstaking.
+                            </label>
+                            {% if unstake_form.confirm_unstake.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in unstake_form.confirm_unstake.errors %}<span>{{ error }}</span><br>{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" id="unstakeModalSubmitBtn" class="btn btn-danger" disabled><i class="ti ti-logout me-1"></i>Confirm Unstake</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
 </div>
 {% endblock %}
 
 {% block extra_js %}
+{# Include existing JS from staking_home.html for staking modals, search, etc. #}
 <script src="{{ url_for('static', filename='js/ui-modals.js') }}"></script>
-<script src="{{ url_for('static', filename='js/cards-advance.js') }}"></script>
-<script src="{{ url_for('static', filename='js/tables-datatables-basic.js') }}"></script>
+<script src="{{ url_for('static', filename='js/cards-advance.js') }}"></script> {# If needed for other card functionalities #}
+{# <script src="{{ url_for('static', filename='js/tables-datatables-basic.js') }}"></script> #} {# If you plan to use DataTables for the asset list #}
+
 <script>
-// Debounced search and per‑page quick‑submit – unchanged
-// Auto-submit form on per_page change
-document.getElementById('per_page').addEventListener('change', function() {
-    this.form.submit();
-});
+document.addEventListener('DOMContentLoaded', function () {
+    // --- Existing JS for search, per_page, and staking modals (Modal 1 & 2) ---
+    // (Make sure the JavaScript from your `staking_home.html` for these features is here)
+    // For example, the debounced search, per_page submit, and all the logic
+    // related to `stakingModal` and `stakingConfirmModal` including:
+    // - .stake-btn click listener
+    // - fetchAssetBalance function
+    // - validateStakeAmount function
+    // - addUseMaxButton function
+    // - updateStakingSummary function
+    // - proceedToConfirm click listener
+    // - agreeTerms change listener
+    // Debounced search and per‑page quick‑submit – unchanged
+    // Auto-submit form on per_page change
+    document.getElementById('per_page').addEventListener('change', function() {
+        this.form.submit();
+    });
 
-// Enhanced search with debouncing
-let searchTimeout;
-document.getElementById('search').addEventListener('input', function() {
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => {
-        // Auto-submit after 500ms of no typing
-        if (this.value.length === 0 || this.value.length >= 2) {
-            this.form.submit();
+    // Enhanced search with debouncing
+    let searchTimeout;
+    document.getElementById('search').addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            // Auto-submit after 500ms of no typing
+            if (this.value.length === 0 || this.value.length >= 2) {
+                this.form.submit();
+            }
+        }, 500);
+    });
+    // … (existing code at top)
+
+    let currentStakingData = {};
+    const proceedBtn = document.getElementById('proceedToConfirm');
+    const stakeAmountInput = document.getElementById('stakeAmount');
+    const stakingPeriodSelect = document.getElementById('stakingPeriod');
+
+
+    //Start------------>
+    // Function to fetch and display asset balance
+    async function fetchAssetBalance(assetId, assetSymbol) {
+    try {
+        // Show loading state
+        document.getElementById('balance-amount').textContent = 'Loading...';
+        document.getElementById('balance-currency').textContent = '';
+        
+        const response = await fetch(`/staking/api/balance/${assetId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+        // Update balance display
+        document.getElementById('balance-amount').textContent = parseFloat(data.balance).toFixed(8);
+        document.getElementById('balance-currency').textContent = data.asset_symbol;
+        
+        // Store balance for validation
+        currentStakingData.balance = parseFloat(data.balance);
+        currentStakingData.canStake = data.can_stake;
+        
+        // Update stake amount input max attribute
+        stakeAmountInput.max = data.balance;
+        
+        // Add balance validation
+        validateStakeAmount();
+        } else {
+        // Handle error
+        document.getElementById('balance-amount').textContent = 'Error';
+        document.getElementById('balance-currency').textContent = '';
+        console.error('Failed to fetch balance:', data.error);
         }
-    }, 500);
-});
-// … (existing code at top)
+    } catch (error) {
+        document.getElementById('balance-amount').textContent = 'Error';
+        document.getElementById('balance-currency').textContent = '';
+        console.error('Error fetching balance:', error);
+    }
+    }
 
-let currentStakingData = {};
-const proceedBtn = document.getElementById('proceedToConfirm');
-const stakeAmountInput = document.getElementById('stakeAmount');
-const stakingPeriodSelect = document.getElementById('stakingPeriod');
-
-
-//Start------------>
-// Function to fetch and display asset balance
-async function fetchAssetBalance(assetId, assetSymbol) {
-  try {
-    // Show loading state
-    document.getElementById('balance-amount').textContent = 'Loading...';
-    document.getElementById('balance-currency').textContent = '';
+    // Function to validate stake amount against balance
+    function validateStakeAmount() {
+    const amount = parseFloat(stakeAmountInput.value) || 0;
+    const balanceError = document.getElementById('balance-error');
     
-    const response = await fetch(`/staking/api/balance/${assetId}`);
-    const data = await response.json();
+    // Remove existing error if it exists
+    if (balanceError) {
+        balanceError.remove();
+    }
     
-    if (data.success) {
-      // Update balance display
-      document.getElementById('balance-amount').textContent = parseFloat(data.balance).toFixed(8);
-      document.getElementById('balance-currency').textContent = data.asset_symbol;
-      
-      // Store balance for validation
-      currentStakingData.balance = parseFloat(data.balance);
-      currentStakingData.canStake = data.can_stake;
-      
-      // Update stake amount input max attribute
-      stakeAmountInput.max = data.balance;
-      
-      // Add balance validation
-      validateStakeAmount();
+    // Check if amount exceeds balance
+    if (amount > 0 && currentStakingData.balance !== undefined && amount > currentStakingData.balance) {
+        // Add error message
+        const errorDiv = document.createElement('div');
+        errorDiv.id = 'balance-error';
+        errorDiv.className = 'invalid-feedback d-block';
+        errorDiv.textContent = 'Amount exceeds available balance';
+        stakeAmountInput.parentNode.appendChild(errorDiv);
+        stakeAmountInput.classList.add('is-invalid');
+        return false;
     } else {
-      // Handle error
-      document.getElementById('balance-amount').textContent = 'Error';
-      document.getElementById('balance-currency').textContent = '';
-      console.error('Failed to fetch balance:', data.error);
+        stakeAmountInput.classList.remove('is-invalid');
+        return true;
     }
-  } catch (error) {
-    document.getElementById('balance-amount').textContent = 'Error';
-    document.getElementById('balance-currency').textContent = '';
-    console.error('Error fetching balance:', error);
-  }
-}
-
-// Function to validate stake amount against balance
-function validateStakeAmount() {
-  const amount = parseFloat(stakeAmountInput.value) || 0;
-  const balanceError = document.getElementById('balance-error');
-  
-  // Remove existing error if it exists
-  if (balanceError) {
-    balanceError.remove();
-  }
-  
-  // Check if amount exceeds balance
-  if (amount > 0 && currentStakingData.balance !== undefined && amount > currentStakingData.balance) {
-    // Add error message
-    const errorDiv = document.createElement('div');
-    errorDiv.id = 'balance-error';
-    errorDiv.className = 'invalid-feedback d-block';
-    errorDiv.textContent = 'Amount exceeds available balance';
-    stakeAmountInput.parentNode.appendChild(errorDiv);
-    stakeAmountInput.classList.add('is-invalid');
-    return false;
-  } else {
-    stakeAmountInput.classList.remove('is-invalid');
-    return true;
-  }
-}
-
-// Add "Use Max" button functionality
-function addUseMaxButton() {
-  const balanceDiv = document.querySelector('.form-text');
-  
-  // Remove existing max button if present
-  const existingMaxBtn = document.getElementById('use-max-btn');
-  if (existingMaxBtn) {
-    existingMaxBtn.remove();
-  }
-  
-  // Add "Use Max" button
-  const maxButton = document.createElement('button');
-  maxButton.id = 'use-max-btn';
-  maxButton.type = 'button';
-  maxButton.className = 'btn btn-link btn-sm p-0 ms-2';
-  maxButton.style.fontSize = '0.75rem';
-  maxButton.textContent = 'Use Max';
-  maxButton.onclick = () => {
-    if (currentStakingData.balance !== undefined) {
-      stakeAmountInput.value = currentStakingData.balance.toFixed(8);
-      updateStakingSummary();
     }
-  };
-  
-  balanceDiv.appendChild(maxButton);
-}
 
-
-//End-------------->
-
-// Attach click handler to each stake button → open modal 1
-// Update your existing stake button click handler
-[...document.querySelectorAll('.stake-btn')].forEach(btn => {
-  btn.addEventListener('click', async () => {
-    currentStakingData = {
-      id: btn.dataset.assetId,
-      symbol: btn.dataset.assetSymbol,
-      name: btn.dataset.assetName,
-      image: btn.dataset.assetImage
-    };
-
-    // Populate modal 1 static bits
-    document.getElementById('modal-asset-symbol').textContent = currentStakingData.symbol;
-    document.getElementById('modal-asset-name').textContent = currentStakingData.name;
-    document.getElementById('stake-currency-symbol').textContent = currentStakingData.symbol;
-    document.getElementById('balance-currency').textContent = currentStakingData.symbol;
+    // Add "Use Max" button functionality
+    function addUseMaxButton() {
+    const balanceDiv = document.querySelector('.form-text');
     
-    if (currentStakingData.image) {
-      document.getElementById('modal-asset-image').src = currentStakingData.image;
-      document.getElementById('modal-asset-image').alt = `${currentStakingData.name} logo`;
+    // Remove existing max button if present
+    const existingMaxBtn = document.getElementById('use-max-btn');
+    if (existingMaxBtn) {
+        existingMaxBtn.remove();
     }
-
-    // Reset inputs / summary
-    stakeAmountInput.value = '';
-    stakingPeriodSelect.value = '';
-    document.getElementById('stakingSummary').style.display = 'none';
-    proceedBtn.disabled = true;
-    
-    // Remove any existing validation errors
-    stakeAmountInput.classList.remove('is-invalid');
-    const existingError = document.getElementById('balance-error');
-    if (existingError) {
-      existingError.remove();
-    }
-    
-    // Fetch the actual balance for this asset
-    await fetchAssetBalance(currentStakingData.id, currentStakingData.symbol);
     
     // Add "Use Max" button
-    addUseMaxButton();
-  });
-});
+    const maxButton = document.createElement('button');
+    maxButton.id = 'use-max-btn';
+    maxButton.type = 'button';
+    maxButton.className = 'btn btn-link btn-sm p-0 ms-2';
+    maxButton.style.fontSize = '0.75rem';
+    maxButton.textContent = 'Use Max';
+    maxButton.onclick = () => {
+        if (currentStakingData.balance !== undefined) {
+        stakeAmountInput.value = currentStakingData.balance.toFixed(8);
+        updateStakingSummary();
+        }
+    };
+    
+    balanceDiv.appendChild(maxButton);
+    }
 
-// Update your existing updateStakingSummary function to include validation
-function updateStakingSummary() {
-  const amount = parseFloat(stakeAmountInput.value) || 0;
-  const period = stakingPeriodSelect.value;
-  
-  // Validate amount against balance
-  const isValidAmount = validateStakeAmount();
-  
-  if (amount > 0 && period && isValidAmount) {
+
+    //End-------------->
+
+    // Attach click handler to each stake button → open modal 1
+    // Update your existing stake button click handler
+    [...document.querySelectorAll('.stake-btn')].forEach(btn => {
+    btn.addEventListener('click', async () => {
+        currentStakingData = {
+        id: btn.dataset.assetId,
+        symbol: btn.dataset.assetSymbol,
+        name: btn.dataset.assetName,
+        image: btn.dataset.assetImage
+        };
+
+        // Populate modal 1 static bits
+        document.getElementById('modal-asset-symbol').textContent = currentStakingData.symbol;
+        document.getElementById('modal-asset-name').textContent = currentStakingData.name;
+        document.getElementById('stake-currency-symbol').textContent = currentStakingData.symbol;
+        document.getElementById('balance-currency').textContent = currentStakingData.symbol;
+        
+        if (currentStakingData.image) {
+        document.getElementById('modal-asset-image').src = currentStakingData.image;
+        document.getElementById('modal-asset-image').alt = `${currentStakingData.name} logo`;
+        }
+
+        // Reset inputs / summary
+        stakeAmountInput.value = '';
+        stakingPeriodSelect.value = '';
+        document.getElementById('stakingSummary').style.display = 'none';
+        proceedBtn.disabled = true;
+        
+        // Remove any existing validation errors
+        stakeAmountInput.classList.remove('is-invalid');
+        const existingError = document.getElementById('balance-error');
+        if (existingError) {
+        existingError.remove();
+        }
+        
+        // Fetch the actual balance for this asset
+        await fetchAssetBalance(currentStakingData.id, currentStakingData.symbol);
+        
+        // Add "Use Max" button
+        addUseMaxButton();
+    });
+    });
+
+    // Update your existing updateStakingSummary function to include validation
+    function updateStakingSummary() {
+    const amount = parseFloat(stakeAmountInput.value) || 0;
+    const period = stakingPeriodSelect.value;
+    
+    // Validate amount against balance
+    const isValidAmount = validateStakeAmount();
+    
+    if (amount > 0 && period && isValidAmount) {
+        const aprMap = { 'flexible': 4.5, '30': 5.0, '60': 5.5, '90': 6.0 };
+        const apr = aprMap[period];
+        const rewards = (amount * apr) / 100;
+        
+        document.getElementById('summary-amount').textContent = `${amount.toFixed(8)} ${currentStakingData.symbol}`;
+        document.getElementById('summary-rewards').textContent = `${rewards.toFixed(8)} ${currentStakingData.symbol}`;
+        document.getElementById('stakingSummary').style.display = 'block';
+        proceedBtn.disabled = false;
+    } else {
+        document.getElementById('stakingSummary').style.display = 'none';
+        proceedBtn.disabled = true;
+    }
+    }
+    stakeAmountInput.addEventListener('input', updateStakingSummary);
+    stakingPeriodSelect.addEventListener('change', updateStakingSummary);
+
+    // When user proceeds → populate hidden WTForms inputs + confirmation UI
+    proceedBtn.addEventListener('click', () => {
+    const amount = parseFloat(stakeAmountInput.value);
+    const period = stakingPeriodSelect.value;
     const aprMap = { 'flexible': 4.5, '30': 5.0, '60': 5.5, '90': 6.0 };
     const apr = aprMap[period];
     const rewards = (amount * apr) / 100;
-    
-    document.getElementById('summary-amount').textContent = `${amount.toFixed(8)} ${currentStakingData.symbol}`;
-    document.getElementById('summary-rewards').textContent = `${rewards.toFixed(8)} ${currentStakingData.symbol}`;
-    document.getElementById('stakingSummary').style.display = 'block';
-    proceedBtn.disabled = false;
-  } else {
-    document.getElementById('stakingSummary').style.display = 'none';
-    proceedBtn.disabled = true;
-  }
-}
-stakeAmountInput.addEventListener('input', updateStakingSummary);
-stakingPeriodSelect.addEventListener('change', updateStakingSummary);
 
-// When user proceeds → populate hidden WTForms inputs + confirmation UI
-proceedBtn.addEventListener('click', () => {
-  const amount = parseFloat(stakeAmountInput.value);
-  const period = stakingPeriodSelect.value;
-  const aprMap = { 'flexible': 4.5, '30': 5.0, '60': 5.5, '90': 6.0 };
-  const apr = aprMap[period];
-  const rewards = (amount * apr) / 100;
+    // hidden form inputs (modal 2)
+    document.getElementById('form-asset-id').value = currentStakingData.id;
+    document.getElementById('form-amount').value   = amount.toFixed(8);
+    document.getElementById('form-period').value   = period;
 
-  // hidden form inputs (modal 2)
-  document.getElementById('form-asset-id').value = currentStakingData.id;
-  document.getElementById('form-amount').value   = amount.toFixed(8);
-  document.getElementById('form-period').value   = period;
+    // confirmation UI
+    if (currentStakingData.image) document.getElementById('confirm-asset-image').src = currentStakingData.image;
+    document.getElementById('confirm-asset').textContent   = `${currentStakingData.name} (${currentStakingData.symbol})`;
+    document.getElementById('confirm-amount').textContent  = `${amount.toFixed(8)} ${currentStakingData.symbol}`;
+    document.getElementById('confirm-period').textContent  = period === 'flexible' ? 'Flexible' : `${period} Days`;
+    document.getElementById('confirm-apr').textContent     = `${apr}%`;
+    document.getElementById('confirm-rewards').textContent = `${rewards.toFixed(8)} ${currentStakingData.symbol}`;
 
-  // confirmation UI
-  if (currentStakingData.image) document.getElementById('confirm-asset-image').src = currentStakingData.image;
-  document.getElementById('confirm-asset').textContent   = `${currentStakingData.name} (${currentStakingData.symbol})`;
-  document.getElementById('confirm-amount').textContent  = `${amount.toFixed(8)} ${currentStakingData.symbol}`;
-  document.getElementById('confirm-period').textContent  = period === 'flexible' ? 'Flexible' : `${period} Days`;
-  document.getElementById('confirm-apr').textContent     = `${apr}%`;
-  document.getElementById('confirm-rewards').textContent = `${rewards.toFixed(8)} ${currentStakingData.symbol}`;
+    // reset agree‑checkbox / submit‑button state
+    document.getElementById('agreeTerms').checked = false;
+    document.getElementById('confirmStaking').disabled = true;
+    });
 
-  // reset agree‑checkbox / submit‑button state
-  document.getElementById('agreeTerms').checked = false;
-  document.getElementById('confirmStaking').disabled = true;
-});
+    // Enable submit only if terms are ticked
+    const agreeTerms = document.getElementById('agreeTerms');
+    agreeTerms.addEventListener('change', () => {
+    document.getElementById('confirmStaking').disabled = !agreeTerms.checked;
+    });
+    // --- (Your existing JS code block from `staking_home.html`) ---
 
-// Enable submit only if terms are ticked
-const agreeTerms = document.getElementById('agreeTerms');
-agreeTerms.addEventListener('change', () => {
-  document.getElementById('confirmStaking').disabled = !agreeTerms.checked;
+
+    // --- JavaScript for Tab Handling & URL Hash ---
+    var hash = window.location.hash;
+    if (hash) {
+        var triggerEl = document.querySelector('.nav-pills button[data-bs-target="' + hash + '"]');
+        if (triggerEl) {
+            var tab = new bootstrap.Tab(triggerEl);
+            tab.show();
+        }
+    }
+    // Update URL hash when a new tab is shown
+    var tabElms = document.querySelectorAll('.nav-pills button[data-bs-toggle="tab"]');
+    tabElms.forEach(function(tabElm) {
+        tabElm.addEventListener('shown.bs.tab', function(event) {
+            // Using replaceState to avoid filling up browser history
+            history.replaceState(null, null, event.target.dataset.bsTarget);
+            // Scroll to top of tab content might be useful
+            // document.querySelector(event.target.dataset.bsTarget).scrollTop = 0;
+        });
+    });
+
+
+    // --- NEW JavaScript for Unstake Position Modal ---
+    const unstakePositionModalElement = document.getElementById('unstakePositionModal');
+    if (unstakePositionModalElement) {
+        // const unstakeModal = new bootstrap.Modal(unstakePositionModalElement); // Modal instance already handled by data-bs attributes
+        const unstakeModalConfirmCheckbox = document.getElementById('unstakeModalConfirmCheckbox');
+        const unstakeModalSubmitBtn = document.getElementById('unstakeModalSubmitBtn');
+        const unstakeModalAmountSymbolText = document.getElementById('unstake-modal-amount-symbol');
+        const unstakeFormPositionIdInput = document.getElementById('unstake-form-position-id');
+
+        document.querySelectorAll('.unstake-pos-btn').forEach(button => {
+            button.addEventListener('click', function () {
+                const positionId = this.dataset.positionId;
+                const assetSymbol = this.dataset.assetSymbol;
+                const stakedAmount = this.dataset.stakedAmount;
+
+                if(unstakeFormPositionIdInput) unstakeFormPositionIdInput.value = positionId;
+                if(unstakeModalAmountSymbolText) unstakeModalAmountSymbolText.textContent = `${stakedAmount} ${assetSymbol}`;
+                
+                // Reset modal state
+                if(unstakeModalConfirmCheckbox) unstakeModalConfirmCheckbox.checked = false;
+                if(unstakeModalSubmitBtn) unstakeModalSubmitBtn.disabled = true;
+            });
+        });
+
+        if (unstakeModalConfirmCheckbox && unstakeModalSubmitBtn) {
+            unstakeModalConfirmCheckbox.addEventListener('change', function () {
+                unstakeModalSubmitBtn.disabled = !this.checked;
+            });
+        }
+    }
 });
 </script>
 {% endblock %}

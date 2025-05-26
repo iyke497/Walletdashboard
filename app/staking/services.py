@@ -164,7 +164,7 @@ class StakingService:
             }
     
     @staticmethod
-    def get_user_staking_positions(user_id):
+    def get_user_staking_positions_old(user_id):
         """Get all staking positions for a user"""
         positions = StakingPosition.query.filter_by(
             user_id=user_id
@@ -177,16 +177,73 @@ class StakingService:
                 'asset_id': position.asset_id,
                 'asset_symbol': position.asset.symbol,
                 'asset_name': position.asset.name,
+                'asset_image': position.asset.images.get('small', ''),
                 'amount': str(position.amount),
                 'apr': str(position.apy) if position.apy else '0',
                 'locked_until': position.locked_until.isoformat() if position.locked_until else None,
                 'is_flexible': position.locked_until is None,
                 'created_at': position.created_at.isoformat(),
-                'status': 'active' if not position.locked_until or position.locked_until > datetime.utcnow() else 'unlocked'
+                
             })
         
         return result
     
+    # <-------------------Start----------------->
+    @staticmethod
+    def get_user_staking_positions(user_id):
+        """Get all staking positions for a user with formatted data for the template."""
+        positions = StakingPosition.query.filter_by(user_id=user_id).join(Asset).order_by(StakingPosition.created_at.desc()).all()
+        now = datetime.utcnow()
+        result = []
+
+        for position in positions:
+            # Calculate period display (Flexible or X Days)
+            period_display = "Flexible"
+            if position.locked_until:
+                if position.created_at:
+                    delta_days = (position.locked_until - position.created_at).days
+                    period_display = f"{delta_days} Days" if delta_days > 0 else "Flexible"
+                else:
+                    period_display = f"Locked until {position.locked_until.strftime('%Y-%m-%d')}"
+
+            # Calculate estimated rewards
+            days_staked = (now - position.created_at).days if position.created_at else 0
+            estimated_rewards = Decimal('0')
+            if position.apy and days_staked > 0:
+                daily_rate = position.apy / Decimal('100') / Decimal('365')
+                estimated_rewards = position.amount * daily_rate * Decimal(days_staked)
+
+            # Determine status and unstake eligibility
+            status = 'active'
+            can_unstake = False
+            if position.locked_until:
+                if position.locked_until > now:
+                    status = 'active'  # Still locked
+                    can_unstake = False
+                else:
+                    status = 'completed'  # Lock period ended
+                    can_unstake = True
+            else:
+                can_unstake = True  # Flexible can unstake anytime
+
+            result.append({
+                'id': position.id,
+                'asset_symbol': position.asset.symbol,
+                'asset_name': position.asset.name,
+                'asset_image': position.asset.images.get('small', '') if position.asset.images else None,
+                'amount': str(position.amount),
+                'apr': f"{position.apy:.1f}",  # Format APR as string with one decimal
+                'start_date': position.created_at,
+                'end_date': position.locked_until,
+                'period_display': period_display,
+                'estimated_rewards': f"{estimated_rewards.quantize(Decimal('0.00000001'))}",
+                'status': status,
+                'can_unstake': can_unstake
+            })
+        return result
+
+
+    # <------------------End-------------------->
     @staticmethod
     def unstake_position(user_id, position_id):
         """Unstake a position (if it's flexible or lock period has ended)"""
