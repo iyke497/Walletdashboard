@@ -104,7 +104,7 @@ class CoinGeckoService:
         crypto_assets = Asset.query.filter(
             Asset.asset_type == AssetType.CRYPTO,
             Asset.coingecko_id.isnot(None)
-        ).all()
+        ).limit(150).all()
         
         # Get all fiat quote assets
         fiat_assets = Asset.query.filter(
