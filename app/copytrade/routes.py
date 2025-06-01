@@ -1,6 +1,6 @@
 from flask import render_template, request, jsonify, flash, redirect, url_for
 from app.copytrade import copytrade_bp
-from app.copytrade.services import get_list_of_traders
+from app.copytrade.services import get_list_of_traders, get_trader_by_id
 from app.copytrade.forms import CopyTraderForm
 #@copytrade_bp.route('/traders')
 def trader_list_old():
@@ -60,6 +60,26 @@ def trader_list():
                          current_params=request.args)
 
 
-@copytrade_bp.route('/trader-profile')
-def trader_profile():
+@copytrade_bp.route('/trader-profile/<int:trader_id>')
+def trader_profile(trader_id):
+    # Get the specific trader by ID
+    trader = get_trader_by_id(trader_id)
+
+    # Handle case where trader doesn't exist
+    if not trader:
+        flash('Trader not found', 'error')
+        return redirect(url_for('copytrade.trader_list'))
+
+    # You can add additional data processing here
+    # For example, get trader's recent trades, performance history, etc.
+    # recent_trades = get_trader_recent_trades(trader_id)
+    # performance_data = get_trader_performance_data(trader_id)
+    # portfolio_data = get_trader_portfolio(trader_id)
+    
+    return render_template('copytrade/trader_profile.html', 
+                        trader=trader)
+                        # recent_trades=recent_trades,
+                        # performance_data=performance_data,
+                        # portfolio_data=portfolio_data)
+
     return render_template('copytrade/trader_profile.html')

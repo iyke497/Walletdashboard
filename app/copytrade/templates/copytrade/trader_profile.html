@@ -17,14 +17,16 @@
                     <div class="col">
                         <div class="d-flex align-items-center">
                             <div class="me-3">
-                                <img src="{{ url_for('static', filename='img/avatars/1.png') }}" alt="Anders Jensen" class="rounded" width="70" height="70">
+                                <img src="{{ trader.avatar_url or url_for('static', filename='img/avatars/1.png') }}" alt="{{ trader.user.username }}" class="rounded" width="70" height="70">
                             </div>
                             <div>
                                 <h3 class="mb-0 d-flex align-items-center">
-                                    Anders Jensen 
-                                    <i class="fas fa-check-circle text-primary ms-1"></i>
+                                  {{ trader.user.username }}
+                                  {% if trader.is_verified %}
+                                  <i class="fas fa-check-circle text-primary ms-1"></i>
+                                  {% endif %}
                                 </h3>
-                                <p class="mb-0 text-muted">@Anders_</p>
+                                <p class="mb-0 text-muted">@{{ trader.user.username }}</p>
                             </div>
                         </div>
                     </div>
@@ -119,9 +121,9 @@
                                         <h5 class="mb-0 card-title">Total Earning</h5>
                                     </div>
                                     <div class="d-flex align-items-center mt-2">
-                                        <h2 class="mb-0 me-2">87%</h2>
+                                        <h2 class="mb-0 me-2">{{ trader.win_rate }}</h2>
                                         <i class="ti ti-chevron-up text-success me-1"></i>
-                                        <h6 class="text-success mb-0">25.8%</h6>
+                                        <h6 class="text-success mb-0">{{ trader.avg_monthly_return }}</h6>
                                     </div>
                                 </div>
                                 <div class="card-body">
@@ -161,32 +163,33 @@
                                 <div class="col-12">
                                     <div class="card text-center info-card">
                                         <div class="card-header">
-                                            <h5 class="mb-0">About JeppeKirkBonde</h5>
+                                            <h5 class="mb-0">About {{ trader.user.username }}</h5>
                                             <span class="badge rounded-pill badge-outline-primary">Country</span>
                                         </div>
                                         <div class="card-body d-flex flex-column justify-content-center">
-                                            <p class="card-text">The most copied Popular investor on eToro. 20,000+ investors copy with over $50 million.</p>
+                                            <p class="card-text">{{ trader.bio or 'No bio available' }}</p>
                                             <div class="mt-auto">
                                                 <a>Show Full Bio</a>
                                             </div>
                                             <div>
-                                                <span class="badge rounded-pill badge-outline-primary">Tech</span>
-                                                <span class="badge rounded-pill badge-outline-primary">Tech</span>
+                                              {% for tag in trader.tags.split(',') if trader.tags %}
+                                              <span class="badge rounded-pill badge-outline-primary">{{ tag.strip() }}</span>
+                                              {% endfor %}
                                             </div>
                                             
                                         </div>
                                         <div class="card-footer text-body-secondary">
                                             <div class="row text-center">
                                                 <div class="col-6">
-                                                    <h6 class="mb-0 text-dark">22.7K</h6>
+                                                    <h6 class="mb-0 text-dark">{{ trader.copiers_count or 0 }}</h6>
                                                     <small>Copiers</small>
                                                 </div>
                                                 <div class="col-6">
-                                                    <h6 class="mb-0 text-dark">254.5K</h6>
+                                                    <h6 class="mb-0 text-dark">{{ trader.followers|length or 0 }}</h6>
                                                     <small>Followers</small>
                                                 </div>
                                             </div>
-                                         </div>
+                                        </div>
                                     </div>
                                 </div>
         
@@ -257,6 +260,13 @@
                 <!--Stats-->
                 <div class="tab-pane fade" id="navs-justified-profile" role="tabpanel">
                   <!--Barchart showing the years performance by year-->
+                  <div class="row g-4">
+                    
+                    <div class="chart-placeholder mb-4">
+                      <div id="barChart"></div>
+                    </div>
+                  </div>
+
                   <!--Borderless table showing percentages of performance correlating to the barchart-->
                   <div class="table-responsive text-nowrap">
                     <table class="table table-borderless">
@@ -551,27 +561,35 @@
 <script src="{{ url_for('static', filename='js/cards-analytics.js') }}"></script>
 
 <script>
+
 document.addEventListener('DOMContentLoaded', function() {
-    // Your chart code here
     // Define the missing color variables
     const chartColors = {
-            column: {
-                bg: '#f8f9fa',
-                series1: '#696cff',
-                series2: '#8592a3'
-            }
-        };
+        column: {
+            bg: '#f8f9fa',
+            series1: '#696cff',
+            series2: '#8592a3'
+        }
+    };
     const legendColor = '#566a7f';
     const borderColor = '#eceef1';
     const labelColor = '#a1acb8';
 
-    // Your original chart configuration
-    const barChartEl = document.querySelector('#barChart'),
-    barChartConfig = {
+    const positiveColor = '#28a745'; // Green for positive
+    const negativeColor = '#dc3545'; // Red for negative
+
+    // Define your data first
+    const performanceData = [85, 100, 30, -40, 95, 90, -30, 110, 62, -20];
+    
+    // Create colors array based on the data
+    const barColors = performanceData.map(value => value >= 0 ? positiveColor : negativeColor);
+
+    // Chart configuration
+    const barChartEl = document.querySelector('#barChart');
+    const barChartConfig = {
         chart: {
             height: 400,
             type: 'bar',
-            stacked: true,
             parentHeightOffset: 0,
             toolbar: {
                 show: false
@@ -579,7 +597,9 @@ document.addEventListener('DOMContentLoaded', function() {
         },
         plotOptions: {
             bar: {
-                columnWidth: '15%',
+                columnWidth: '65%',
+                borderRadius: 8,
+                distributed: true, // This allows individual colors for each bar
                 colors: {
                     backgroundBarColors: [
                         chartColors.column.bg,
@@ -593,18 +613,21 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         },
         dataLabels: {
-            enabled: false
+            enabled: true,
+            formatter: function(val) {
+                return val > 0 ? `+${val}%` : `${val}%`;
+            },
+            style: {
+                colors: ['#fff'],
+                fontSize: '12px',
+                fontWeight: 'bold'
+            },
+            offsetY: -10
         },
         legend: {
-            show: true,
-            position: 'top',
-            horizontalAlign: 'start',
-            labels: {
-                colors: legendColor,
-                useSeriesColors: false
-            }
+            show: false
         },
-        colors: [chartColors.column.series1, chartColors.column.series2],
+        colors: barColors, // Use the pre-calculated colors array
         stroke: {
             show: true,
             colors: ['transparent']
@@ -615,16 +638,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 lines: {
                     show: true
                 }
+            },
+            yaxis: {
+                lines: {
+                    show: true
+                }
             }
         },
         series: [
             {
-                name: 'Apple',
-                data: [90, 120, 55, 100, 80, 125, 175, 70, 88, 180]
-            },
-            {
-                name: 'Samsung',
-                data: [85, 100, 30, 40, 95, 90, 30, 110, 62, 20]
+                name: 'Performance',
+                data: performanceData
             }
         ],
         xaxis: {
@@ -643,10 +667,13 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         },
         yaxis: {
-            min: 0,
-            max: 240,
-            tickAmount: 4,
+            min: -150,
+            max: 150,
+            tickAmount: 6,
             labels: {
+                formatter: function(val) {
+                    return val > 0 ? `+${val}%` : `${val}%`;
+                },
                 style: {
                     colors: labelColor,
                     fontSize: '13px'
@@ -655,10 +682,27 @@ document.addEventListener('DOMContentLoaded', function() {
         },
         fill: {
             opacity: 1
+        },
+        tooltip: {
+            y: {
+                formatter: function(val) {
+                    return val > 0 ? `+${val}%` : `${val}%`;
+                }
+            }
+        },
+        // Add zero line annotation
+        annotations: {
+            yaxis: [{
+                y: 0,
+                borderColor: labelColor,
+                borderWidth: 2,
+                strokeDashArray: 0,
+                opacity: 0.8
+            }]
         }
     };
 
-    if (typeof barChartEl !== undefined && barChartEl !== null) {
+    if (typeof barChartEl !== 'undefined' && barChartEl !== null) {
         const barChart = new ApexCharts(barChartEl, barChartConfig);
         barChart.render();
     }
