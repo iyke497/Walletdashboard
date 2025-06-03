@@ -6,6 +6,7 @@ from flask_login import UserMixin
 from .extensions import db, cache
 from werkzeug.security import generate_password_hash, check_password_hash
 import requests
+import secrets
 
 
 # Configure soft-delete query
@@ -101,6 +102,11 @@ class User(db.Model, UserMixin, TimestampMixin, SoftDeleteMixin):
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(128), nullable=False)
     display_currency_id = db.Column(db.Integer, db.ForeignKey('assets.id'), nullable=True)
+
+    # Email verification fields
+    email_verified = db.Column(db.Boolean, nullable=False, default=False)
+    email_verification_token = db.Column(db.String(100), unique=True, nullable=True)
+    email_verification_sent_at = db.Column(db.DateTime, nullable=True)
     
     # Enhanced relationships
     display_currency = db.relationship('Asset', foreign_keys=[display_currency_id])
@@ -116,12 +122,37 @@ class User(db.Model, UserMixin, TimestampMixin, SoftDeleteMixin):
     def __repr__(self):
         return f"<User {self.username}>"
     
+    # Auth
     def set_password(self, raw: str):
         self.password_hash = generate_password_hash(raw)
 
     def check_password(self, raw: str) -> bool:
         return check_password_hash(self.password_hash, raw)
 
+    def generate_verification_token(self):
+        """Generate a unique verification token"""
+        self.email_verification_token = secrets.token_urlsafe(32)
+        self.email_verification_sent_at = datetime.utcnow()
+        return self.email_verification_token
+    
+    def is_verification_token_valid(self, token, expiry_hours=24):
+        """Check if verification token is valid and not expired"""
+        if not self.email_verification_token or self.email_verification_token != token:
+            return False
+        
+        if not self.email_verification_sent_at:
+            return False
+            
+        expiry_time = self.email_verification_sent_at + timedelta(hours=expiry_hours)
+        return datetime.utcnow() <= expiry_time
+    
+    def verify_email(self):
+        """Mark email as verified and clear verification token"""
+        self.email_verified = True
+        self.email_verification_token = None
+        self.email_verification_sent_at = None
+
+    # ------------------->
     def get_portfolio_value(self, base_currency_id):
         """Calculate portfolio value in the specified base currency"""
         # Implementation would use exchange rates and sum holdings
