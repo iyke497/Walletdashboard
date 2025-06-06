@@ -43,11 +43,26 @@
             </a>
           </div>
           <!-- /Logo -->
+          <!--Form Errors-->
+          {% with messages = get_flashed_messages(category_filter=["account_error"]) %}
+            {% if messages %}
+            <div class="alert alert-danger">
+              {{ messages[0] }}
+            </div>
+            {% endif %}
+          {% endwith %}
+
+          <!--Form Errors-->
           <h4 class="mb-1">Adventure starts here 🚀</h4>
           <p class="mb-6">Make your app management easy and fun!</p>
 
           <form id="formAuthentication" class="mb-4" method="POST" action="{{ url_for('auth.register') }}">
             {{ form.hidden_tag() }}
+            {% if form.errors %}
+            <div class="alert alert-danger">
+              Please correct the errors below.
+            </div>
+            {% endif %}
             
             <div class="mb-6 form-control-validation">
               {{ form.username.label(class="form-label") }}

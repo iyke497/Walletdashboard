@@ -1,0 +1,114 @@
+{% extends "layouts/vertical.html" %}
+{% block title %}Verify Email{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="../../assets/vendor/css/pages/page-auth.css" />
+{% endblock %}
+
+{% block content %}
+<!-- Verify Email Notice -->
+<div class="card">
+    <div class="card-body">
+        <!-- Logo -->
+        <div class="app-brand justify-content-center mb-6">
+            <a href="" class="app-brand-link">
+                <span class="app-brand-logo demo">
+                    <span class="text-primary">
+                        <svg width="32" height="22" viewBox="0 0 32 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path
+                                fill-rule="evenodd"
+                                clip-rule="evenodd"
+                                d="M0.00172773 0V6.85398C0.00172773 6.85398 -0.133178 9.01207 1.98092 10.8388L13.6912 21.9964L19.7809 21.9181L18.8042 9.88248L16.4951 7.17289L9.23799 0H0.00172773Z"
+                                fill="currentColor" />
+                            <path
+                                opacity="0.06"
+                                fill-rule="evenodd"
+                                clip-rule="evenodd"
+                                d="M7.69824 16.4364L12.5199 3.23696L16.5541 7.25596L7.69824 16.4364Z"
+                                fill="#161616" />
+                            <path
+                                opacity="0.06"
+                                fill-rule="evenodd"
+                                clip-rule="evenodd"
+                                d="M8.07751 15.9175L13.9419 4.63989L16.5849 7.28475L8.07751 15.9175Z"
+                                fill="#161616" />
+                            <path
+                                fill-rule="evenodd"
+                                clip-rule="evenodd"
+                                d="M7.77295 16.3566L23.6563 0H32V6.88383C32 6.88383 31.8262 9.17836 30.6591 10.4057L19.7824 22H13.6938L7.77295 16.3566Z"
+                                fill="currentColor" />
+                        </svg>
+                    </span>
+                </span>
+                <span class="app-brand-text demo text-heading fw-bold">Vuexy</span>
+            </a>
+        </div>
+        <!-- /Logo -->
+        
+        <h4 class="mb-1">Verify your email ✉️</h4>
+        <p class="text-start mb-4">
+            Account activation link sent to your email address:
+            <span class="fw-medium">{{ email or 'your email address' }}</span>
+        </p>
+        <p class="text-start mb-4">
+            Please follow the link inside to continue. The verification link will expire in 24 hours.
+        </p>
+        
+        <!-- Action Buttons -->
+        <div class="d-grid gap-2 mb-4">
+            {% if email %}
+            <a class="btn btn-primary" href="{{ url_for('auth.resend_verification', email=email) }}">
+                Resend Verification Email
+            </a>
+            {% endif %}
+            <a class="btn btn-outline-secondary" href="{{ url_for('auth.login') }}">
+                Back to Login
+            </a>
+        </div>
+        
+        <!-- Help Text -->
+        <div class="alert alert-info" role="alert">
+            <h6 class="alert-heading mb-2">
+                <i class="ti ti-info-circle me-2"></i>
+                Didn't receive the email?
+            </h6>
+            <ul class="mb-0 small">
+                <li>Check your spam/junk folder</li>
+                <li>Make sure the email address is correct</li>
+                <li>Wait a few minutes for delivery</li>
+                <li>Click "Resend Verification Email" if needed</li>
+            </ul>
+        </div>
+        
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="mt-3">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+    </div>
+</div>
+<!-- /Verify Email Notice -->
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-hide success alerts after 5 seconds
+document.addEventListener('DOMContentLoaded', function() {
+    const alerts = document.querySelectorAll('.alert-success');
+    alerts.forEach(function(alert) {
+        setTimeout(function() {
+            const bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+        }, 5000);
+    });
+});
+</script>
+{% endblock %}
