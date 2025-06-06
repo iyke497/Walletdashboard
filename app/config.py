@@ -24,13 +24,27 @@ class BaseConfig:
     ASSETS_DEBUG = os.environ.get('ASSETS_DEBUG', 'False') == 'True'
     ASSETS_AUTO_BUILD = True
 
+    # Email Configuration
+    MAIL_SERVER = os.environ.get('MAIL_SERVER') or 'smtp.mail.yahoo.com'
+    MAIL_PORT = int(os.environ.get('MAIL_PORT') or 587)
+    MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', 'true').lower() in ['true', 'on', '1']
+    MAIL_USE_SSL = os.environ.get('MAIL_USE_SSL', 'false').lower() in ['true', 'on', '1']
+    MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
+    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
+    MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER') or MAIL_USERNAME
+
 class DevelopmentConfig(BaseConfig):
     DEBUG = True
     ENV = "development"
 
+    MAIL_DEBUG = True
+    MAIL_SUPPRESS_SEND = False
+
 class ProductionConfig(BaseConfig):
     DEBUG = False
     ENV = "production"
+
+    MAIL_SUPPRESS_SEND = False
 
 # factory to pick config
 config_by_name = dict(

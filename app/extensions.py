@@ -3,6 +3,7 @@ from flask_migrate import Migrate
 from flask_login import LoginManager
 from flask_caching import Cache
 from flask_assets import Environment, Bundle
+from flask_mail import Mail
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -10,6 +11,7 @@ login_manager = LoginManager()
 login_manager.login_view = "auth.login"
 cache = Cache(config={'CACHE_TYPE': 'SimpleCache'})
 assets = Environment()
+mail = Mail()
 
 # Define bundles
 css_bundle = Bundle(

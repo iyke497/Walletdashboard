@@ -1,9 +1,10 @@
 import os
 from flask import Flask
 from .config import config_by_name
-from .extensions import db, migrate, login_manager, cache, assets, css_bundle, js_bundle
+from .extensions import db, migrate, login_manager, cache, assets, css_bundle, js_bundle, mail
 from .commands import init_app as init_commands
 from .filters import init_app as init_filters
+from app.auth.services import EmailService
 
 def create_app(config_name=None):
     app = Flask(__name__, instance_relative_config=True)
@@ -20,6 +21,10 @@ def create_app(config_name=None):
     login_manager.init_app(app)
     cache.init_app(app)
     assets.init_app(app)
+    mail.init_app(app)
+
+    # Connect EmailService to mail extension
+    EmailService.mail = mail
 
     # Register commands
     init_commands(app)
