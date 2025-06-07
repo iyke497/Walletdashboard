@@ -107,6 +107,10 @@ class User(db.Model, UserMixin, TimestampMixin, SoftDeleteMixin):
     email_verified = db.Column(db.Boolean, nullable=False, default=False)
     email_verification_token = db.Column(db.String(100), unique=True, nullable=True)
     email_verification_sent_at = db.Column(db.DateTime, nullable=True)
+
+    # Password reset fields
+    password_reset_token = db.Column(db.String(100), nullable=True)
+    password_reset_expires = db.Column(db.DateTime, nullable=True)
     
     # Enhanced relationships
     display_currency = db.relationship('Asset', foreign_keys=[display_currency_id])
@@ -129,6 +133,23 @@ class User(db.Model, UserMixin, TimestampMixin, SoftDeleteMixin):
     def check_password(self, raw: str) -> bool:
         return check_password_hash(self.password_hash, raw)
 
+    def generate_password_reset_token(self):
+        """Generate a password reset token"""
+        self.password_reset_token = secrets.token_urlsafe(32)
+        self.password_reset_expires = datetime.utcnow() + timedelta(hours=1)  # Token expires in 1 hour
+        return self.password_reset_token
+    
+    def is_password_reset_token_valid(self, token):
+        """Check if password reset token is valid and not expired"""
+        return (self.password_reset_token == token and 
+                self.password_reset_expires and 
+                datetime.utcnow() < self.password_reset_expires)
+    
+    def clear_password_reset_token(self):
+        """Clear password reset token after use"""
+        self.password_reset_token = None
+        self.password_reset_expires = None
+    
     def generate_verification_token(self):
         """Generate a unique verification token"""
         self.email_verification_token = secrets.token_urlsafe(32)

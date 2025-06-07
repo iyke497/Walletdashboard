@@ -4,9 +4,9 @@ from flask import (
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import login_user, logout_user, login_required, current_user
 from .services import EmailService
-from app.auth.background_tasks import queue_verification_email, queue_welcome_email
+from app.auth.background_tasks import queue_verification_email, queue_welcome_email, queue_password_changed_notification, queue_password_reset_email
 from . import auth_bp
-from .forms import RegistrationForm, LoginForm
+from .forms import RegistrationForm, LoginForm, ForgotPasswordForm, ResetPasswordForm
 from ..extensions import db, login_manager
 from ..models import User
 from functools import wraps
@@ -146,6 +146,78 @@ def logout():
     logout_user()
     flash('You\'ve been logged out.', 'info')
     return redirect(url_for('auth.login'))
+
+# --------> Forgot Password <---------
+@auth_bp.route('/forgot-password', methods=['GET','POST'])
+def forgot_password():
+    """Takes in User Email and sends password reset link."""
+    form = ForgotPasswordForm()
+    
+    if form.validate_on_submit():
+        user = User.query.filter_by(email=form.email.data).first()
+        
+        try:
+            # Just queue the email - the background task will handle URL generation
+            queue_password_reset_email(user.id)
+            
+            flash('Password reset link has been sent to your email. Please check your inbox.', 'success')
+            return redirect(url_for('auth.login'))
+        except Exception as e:
+            current_app.logger.error(f'Failed to send password reset email: {str(e)}')
+            flash('Failed to send password reset email. Please try again later.', 'danger')
+    
+    return render_template('auth/forgot-password.html', form=form)
+
+@auth_bp.route('/reset-password/<token>', methods=['GET','POST'])
+def reset_password(token):
+    """Sets the User password to the new value"""
+    # Find user by token
+    user = User.query.filter_by(password_reset_token=token).first()
+    
+    if not user or not user.is_password_reset_token_valid(token):
+        flash('Invalid or expired password reset link.', 'danger')
+        return redirect(url_for('auth.forgot_password'))
+    
+    form = ResetPasswordForm()
+    
+    if form.validate_on_submit():
+        # Update user's password
+        user.password_hash = generate_password_hash(form.password.data)
+        user.clear_password_reset_token()
+        db.session.commit()
+        
+        # Send password change notification (optional but recommended)
+        try:
+            queue_password_changed_notification(user.id)
+        except Exception as e:
+            current_app.logger.error(f'Failed to send password change notification: {str(e)}')
+            # Don't fail the password reset if notification fails
+        
+        flash('Your password has been updated successfully. You can now log in with your new password.', 'success')
+        return redirect(url_for('auth.login'))
+    
+    return render_template('auth/reset-password.html', form=form, token=token)
+
+# --------> User Profile <---------
+@auth_bp.route('/user-profile')
+@login_required
+def user_profile():
+
+    return render_template('auth/user-profile.html')
+
+
+# --------> User Settings <---------
+@auth_bp.route('/user-settings')
+@login_required
+def user_settings():
+    return render_template('auth/user-settings-account.html')
+
+@auth_bp.route('/user-settings-security')
+@login_required
+def user_settings_security():
+    return render_template('auth/user-settings-security.html')
+
+
 
 @login_manager.user_loader
 def load_user(user_id):

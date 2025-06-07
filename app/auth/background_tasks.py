@@ -3,12 +3,12 @@
 
 import threading
 import time
-from flask import current_app
+from flask import current_app, url_for
 from app.auth.services import EmailService
 from app.models import User
 from app.extensions import db
 
-def send_email_in_background(app, user_id, email_type='verification'):
+def send_email_in_background(app, user_id, email_type='verification', extra_data=None):
     """Send email in background thread"""
     with app.app_context():
         try:
@@ -39,6 +39,32 @@ def send_email_in_background(app, user_id, email_type='verification'):
                     current_app.logger.info(f'✅ Background welcome email sent to {user.email}')
                 else:
                     current_app.logger.error(f'❌ Background welcome email failed for {user.email}')
+            
+            elif email_type == 'password_reset':
+                current_app.logger.info(f'Background thread: Sending password reset email to {user.email}')
+                
+                # Generate token first
+                token = user.generate_password_reset_token()
+                db.session.commit()  # Save the token to database first
+                
+                # Create the reset URL with the actual token
+                reset_url = url_for('auth.reset_password', token=token, _external=True)
+                
+                result = EmailService.send_password_reset_email(user, reset_url)
+                
+                if result:
+                    current_app.logger.info(f'✅ Background password reset email sent to {user.email}')
+                else:
+                    current_app.logger.error(f'❌ Background password reset email failed for {user.email}')
+            
+            elif email_type == 'password_changed':
+                current_app.logger.info(f'Background thread: Sending password change notification to {user.email}')
+                result = EmailService.send_password_changed_notification(user)
+                
+                if result:
+                    current_app.logger.info(f'✅ Background password change notification sent to {user.email}')
+                else:
+                    current_app.logger.error(f'❌ Background password change notification failed for {user.email}')
                     
         except Exception as e:
             current_app.logger.error(f'Background email thread failed: {str(e)}')
@@ -65,11 +91,24 @@ def queue_welcome_email(user_id):
     thread.start()
     current_app.logger.info(f'Queued welcome email for user ID {user_id}')
 
-# To use this, modify your routes.py:
-# Replace the try/except block in register() with:
-# queue_verification_email(user.id)
+def queue_password_reset_email(user_id):
+    """Queue password reset email to be sent in background"""
+    app = current_app._get_current_object()
+    thread = threading.Thread(
+        target=send_email_in_background,
+        args=(app, user_id, 'password_reset'),
+        daemon=True
+    )
+    thread.start()
+    current_app.logger.info(f'Queued password reset email for user ID {user_id}')
 
-# And in verify_email() replace:
-# EmailService.send_welcome_email(user)
-# with:
-# queue_welcome_email(user.id)
+def queue_password_changed_notification(user_id):
+    """Queue password change notification to be sent in background"""
+    app = current_app._get_current_object()
+    thread = threading.Thread(
+        target=send_email_in_background,
+        args=(app, user_id, 'password_changed'),
+        daemon=True
+    )
+    thread.start()
+    current_app.logger.info(f'Queued password change notification for user ID {user_id}')

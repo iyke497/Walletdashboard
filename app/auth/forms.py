@@ -25,3 +25,18 @@ class LoginForm(FlaskForm):
     password          = PasswordField('Password', validators=[DataRequired()])
     remember          = BooleanField('Remember Me')
     submit            = SubmitField('Login')
+
+class ForgotPasswordForm(FlaskForm):
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    submit = SubmitField('Send Reset Link')
+    
+    def validate_email(self, field):
+        user = User.query.filter_by(email=field.data).first()
+        if not user:
+            raise ValidationError('No account found with that email address.')
+        
+class ResetPasswordForm(FlaskForm):
+    password = PasswordField('New Password', validators=[DataRequired()])
+    confirm = PasswordField('Confirm New Password', 
+                           validators=[DataRequired(), EqualTo('password')])
+    submit = SubmitField('Reset Password')
