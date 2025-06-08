@@ -1,12 +1,12 @@
 from flask import (
-    render_template, redirect, url_for, flash, request, current_app
+    render_template, redirect, url_for, flash, jsonify, request, current_app
 )
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import login_user, logout_user, login_required, current_user
 from .services import EmailService
 from app.auth.background_tasks import queue_verification_email, queue_welcome_email, queue_password_changed_notification, queue_password_reset_email
 from . import auth_bp
-from .forms import RegistrationForm, LoginForm, ForgotPasswordForm, ResetPasswordForm
+from .forms import RegistrationForm, LoginForm, ForgotPasswordForm, ResetPasswordForm, UserSettingsForm, ChangePasswordForm, VerifyTwoFactorForm, EnableTwoFactorForm, DisableTwoFactorForm
 from ..extensions import db, login_manager
 from ..models import User
 from functools import wraps
@@ -207,18 +207,215 @@ def user_profile():
 
 
 # --------> User Settings <---------
-@auth_bp.route('/user-settings')
+@auth_bp.route('/user-settings', methods=['GET','POST'])
 @login_required
 def user_settings():
-    return render_template('auth/user-settings-account.html')
+    form = UserSettingsForm(current_user=current_user)
+    
+    if form.validate_on_submit():
+        # Update user data
+        current_user.first_name = form.first_name.data
+        current_user.last_name = form.last_name.data
+        current_user.phone_number = form.phone_number.data
+        current_user.address = form.address.data
+        current_user.state = form.state.data
+        current_user.zip_code = form.zip_code.data
+        current_user.country = form.country.data
+        current_user.language = form.language.data
+        current_user.timezone = form.timezone.data
+        current_user.display_currency_id = form.display_currency_id.data
+        
+        try:
+            db.session.commit()
+            flash('Your settings have been updated successfully!', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash('An error occurred while updating your settings. Please try again.', 'error')
+        
+        return redirect(url_for('auth.user_settings'))
+    
+    elif request.method == 'GET':
+        # Pre-populate form with current user data
+        form.email.data = current_user.email
+        form.first_name.data = current_user.first_name
+        form.last_name.data = current_user.last_name
+        form.phone_number.data = current_user.phone_number
+        form.address.data = current_user.address
+        form.state.data = current_user.state
+        form.zip_code.data = current_user.zip_code
+        form.country.data = current_user.country
+        form.language.data = current_user.language
+        form.timezone.data = current_user.timezone
+        form.display_currency_id.data = current_user.display_currency_id
+    
+    return render_template('auth/user-settings-account.html', form=form)
 
-@auth_bp.route('/user-settings-security')
+@auth_bp.route('/user-settings-security', methods=['GET', 'POST'])
 @login_required
 def user_settings_security():
-    return render_template('auth/user-settings-security.html')
+    password_form = ChangePasswordForm(current_user=current_user)
+    two_factor_form = VerifyTwoFactorForm()
+    disable_two_factor_form = DisableTwoFactorForm()
+    
+    # Handle password change form submission
+    if password_form.validate_on_submit():
+        try:
+            # Update user password
+            current_user.password_hash = generate_password_hash(password_form.new_password.data)
+            db.session.commit()
+            flash('Your password has been updated successfully!', 'success')
+            
+            # Clear the form by redirecting
+            return redirect(url_for('auth.user_settings_security'))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash('An error occurred while updating your password. Please try again.', 'error')
+            print(f"Password update error: {e}")  # For debugging
+    
+    return render_template('auth/user-settings-security.html', password_form=password_form, two_factor_form=two_factor_form, disable_two_factor_form=disable_two_factor_form)
 
+@auth_bp.route('/generate-qr-code', methods=['POST'])
+@login_required
+def generate_qr_code():
+    """Generate TOTP secret and QR code for the user"""
+    try:
+        # Generate new TOTP secret
+        current_user.generate_totp_secret()
+        db.session.commit()
+        
+        # Generate QR code
+        qr_code = current_user.get_qr_code()
+        
+        return jsonify({
+            'success': True,
+            'qr_code': qr_code,
+            'secret': current_user.totp_secret
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': 'Error generating QR code'
+        }), 500
 
+@auth_bp.route('/verify-setup-two-factor', methods=['POST'])
+@login_required
+def verify_setup_two_factor():
+    """Verify the TOTP code and enable 2FA"""
+    
+    # Create the form instance to handle validation and CSRF
+    two_factor_form = VerifyTwoFactorForm()
+    
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        # AJAX request
+        if not two_factor_form.validate_on_submit():
+            # Form validation failed
+            errors = []
+            for field, field_errors in two_factor_form.errors.items():
+                errors.extend(field_errors)
+            
+            return jsonify({
+                'success': False,
+                'message': errors[0] if errors else 'Form validation failed'
+            })
+        
+        verification_code = two_factor_form.verification_code.data.strip()
+        
+        if not current_user.totp_secret:
+            return jsonify({
+                'success': False,
+                'message': 'Two-factor setup not initiated'
+            })
+        
+        # Verify the TOTP code
+        verification_result = current_user.verify_totp(verification_code)
+        print(f"DEBUG: TOTP verification result: {verification_result}")
+        
+        if verification_result:
+            try:
+                # Enable 2FA
+                current_user.two_factor_enabled = True
+                db.session.commit()
+                
+                return jsonify({
+                    'success': True,
+                    'message': 'Two-factor authentication enabled successfully!'
+                })
+            except Exception as e:
+                db.session.rollback()
+                current_app.logger.error(f'Error enabling 2FA: {str(e)}')
+                return jsonify({
+                    'success': False,
+                    'message': 'Error enabling two-factor authentication'
+                })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Invalid verification code. Please try again.'
+            })
+    
+    # Non-AJAX fallback
+    if two_factor_form.validate_on_submit():
+        verification_code = two_factor_form.verification_code.data.strip()
+        
+        if current_user.totp_secret and current_user.verify_totp(verification_code):
+            current_user.two_factor_enabled = True
+            db.session.commit()
+            flash('Two-factor authentication enabled successfully!', 'success')
+        else:
+            flash('Invalid verification code. Please try again.', 'error')
+    else:
+        flash('Please enter a valid 6-digit verification code.', 'error')
+    
+    return redirect(url_for('auth.user_settings_security'))
 
+@auth_bp.route('/disable-two-factor', methods=['POST'])
+@login_required
+def disable_two_factor():
+    """Disable two-factor authentication"""
+    if not current_user.two_factor_enabled:
+        flash('Two-factor authentication is not enabled.', 'info')
+        return redirect(url_for('auth.user_settings_security'))
+    
+    disable_form = DisableTwoFactorForm()
+    
+    if disable_form.validate_on_submit():
+        entered_code = disable_form.verification_code.data.strip()
+        
+        # Debug logging
+        print(f"DEBUG: Entered code: '{entered_code}'")
+        print(f"DEBUG: User TOTP secret exists: {bool(current_user.totp_secret)}")
+        print(f"DEBUG: User TOTP secret: {current_user.totp_secret}")
+        
+        # Get current expected code for debugging
+        if hasattr(current_user, 'get_current_totp'):
+            current_expected = current_user.get_current_totp()
+            print(f"DEBUG: Current expected TOTP: {current_expected}")
+        
+        if current_user.verify_totp(entered_code):
+            try:
+                # Disable 2FA for the user
+                current_user.two_factor_enabled = False
+                current_user.totp_secret = None
+                db.session.commit()
+                
+                flash('Two-factor authentication has been disabled successfully.', 'success')
+                return redirect(url_for('auth.user_settings_security'))
+                
+            except Exception as e:
+                db.session.rollback()
+                print(f'Error disabling 2FA: {str(e)}')
+                flash('An error occurred while disabling two-factor authentication.', 'error')
+        else:
+            flash('Invalid verification code. Please try again.', 'error')
+    else:
+        # Form validation failed
+        for field, errors in disable_form.errors.items():
+            for error in errors:
+                flash(f'{field}: {error}', 'error')
+    
+    return redirect(url_for('auth.user_settings_security'))
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))

@@ -1,0 +1,289 @@
+{% extends "layouts/vertical.html" %}
+
+{% block extra_css %}
+
+{% endblock %}
+
+
+{% block content %}
+
+
+<!-- Content wrapper -->
+<div class="content-wrapper">
+    <!-- Content -->
+    <div class="container-xxl flex-grow-1 container-p-y">
+      <div class="row">
+        <div class="col-md-12">
+          <div class="nav-align-top">
+            <ul class="nav nav-pills flex-column flex-md-row mb-6 gap-md-0 gap-2">
+              <li class="nav-item">
+                <a class="nav-link active" href="{{ url_for('auth.user_settings')}}"
+                  ><i class="icon-base ti tabler-users icon-sm me-1_5"></i> Account</a
+                >
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('auth.user_settings_security') }}"
+                  ><i class="icon-base ti tabler-lock icon-sm me-1_5"></i> Security</a
+                >
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="pages-account-settings-notifications.html"
+                  ><i class="icon-base ti tabler-bell icon-sm me-1_5"></i> Notifications</a
+                >
+              </li>
+            </ul>
+          </div>
+          
+          <!-- Flash Messages -->
+          {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+              {% for category, message in messages %}
+                <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                  {{ message }}
+                  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+              {% endfor %}
+            {% endif %}
+          {% endwith %}
+          
+          <div class="card mb-6">
+            <!-- Account -->
+            <div class="card-body">
+              <div class="d-flex align-items-start align-items-sm-center gap-6">
+                <img
+                  src="{{ url_for('static', filename='img/avatars/1.png') }}"
+                  alt="user-avatar"
+                  class="d-block w-px-100 h-px-100 rounded"
+                  id="uploadedAvatar" />
+                
+              </div>
+            </div>
+            <div class="card-body pt-4">
+              <form id="formAccountSettings" method="POST">
+                {{ form.hidden_tag() }}
+                <div class="row gy-4 gx-6 mb-6">
+                  <!-- Username -->
+                  <div class="col-md-6 form-control-validation">
+                    {{ form.username.label(class="form-label") }}
+                    {{ form.username(class="form-control", value=current_user.username) }}
+                    {% if form.username.errors %}
+                      <div class="text-danger">
+                        {% for error in form.username.errors %}
+                          <small>{{ error }}</small>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                  </div>
+                  
+                  <!-- Email -->
+                  <div class="col-md-6 form-control-validation">
+                    {{ form.email.label(class="form-label") }}
+                    {{ form.email(class="form-control", value=current_user.email) }}
+                    {% if form.email.errors %}
+                      <div class="text-danger">
+                        {% for error in form.email.errors %}
+                          <small>{{ error }}</small>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                  </div>
+                  
+                  <!-- First Name -->
+                  <div class="col-md-6 form-control-validation">
+                    {{ form.first_name.label(class="form-label") }}
+                    {{ form.first_name(class="form-control", 
+                         value=current_user.first_name if current_user.first_name else '',
+                         placeholder="Enter your first name") }}
+                    {% if form.first_name.errors %}
+                      <div class="text-danger">
+                        {% for error in form.first_name.errors %}
+                          <small>{{ error }}</small>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                  </div>
+                  
+                  <!-- Last Name -->
+                  <div class="col-md-6 form-control-validation">
+                    {{ form.last_name.label(class="form-label") }}
+                    {{ form.last_name(class="form-control", 
+                         value=current_user.last_name if current_user.last_name else '',
+                         placeholder="Enter your last name") }}
+                    {% if form.last_name.errors %}
+                      <div class="text-danger">
+                        {% for error in form.last_name.errors %}
+                          <small>{{ error }}</small>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                  </div>
+                  
+                  <!-- Phone Number -->
+                  <div class="col-md-6">
+                    {{ form.phone_number.label(class="form-label") }}
+                    <div class="input-group input-group-merge">
+                      <span class="input-group-text">US (+1)</span>
+                      {{ form.phone_number(class="form-control", 
+                           value=current_user.phone_number if current_user.phone_number else '',
+                           placeholder="202 555 0111") }}
+                    </div>
+                    {% if form.phone_number.errors %}
+                      <div class="text-danger">
+                        {% for error in form.phone_number.errors %}
+                          <small>{{ error }}</small>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                  </div>
+                  
+                  <!-- Address -->
+                  <div class="col-md-6">
+                    {{ form.address.label(class="form-label") }}
+                    {{ form.address(class="form-control", 
+                         value=current_user.address if current_user.address else '',
+                         placeholder="Enter your address") }}
+                    {% if form.address.errors %}
+                      <div class="text-danger">
+                        {% for error in form.address.errors %}
+                          <small>{{ error }}</small>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                  </div>
+                  
+                  <!-- State -->
+                  <div class="col-md-6">
+                    {{ form.state.label(class="form-label") }}
+                    {{ form.state(class="form-control", 
+                         value=current_user.state if current_user.state else '',
+                         placeholder="California") }}
+                    {% if form.state.errors %}
+                      <div class="text-danger">
+                        {% for error in form.state.errors %}
+                          <small>{{ error }}</small>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                  </div>
+                  
+                  <!-- Zip Code -->
+                  <div class="col-md-6">
+                    {{ form.zip_code.label(class="form-label") }}
+                    {{ form.zip_code(class="form-control", 
+                         value=current_user.zip_code if current_user.zip_code else '',
+                         placeholder="231465", maxlength="10") }}
+                    {% if form.zip_code.errors %}
+                      <div class="text-danger">
+                        {% for error in form.zip_code.errors %}
+                          <small>{{ error }}</small>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                  </div>
+                  
+                  <!-- Country -->
+                  <div class="col-md-6">
+                    {{ form.country.label(class="form-label") }}
+                    <select name="country" id="country" class="select2 form-select">
+                      {% for value, label in form.country.choices %}
+                        <option value="{{ value }}" 
+                          {{ 'selected' if current_user.country == value else '' }}>
+                          {{ label }}
+                        </option>
+                      {% endfor %}
+                    </select>
+                    {% if form.country.errors %}
+                      <div class="text-danger">
+                        {% for error in form.country.errors %}
+                          <small>{{ error }}</small>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                  </div>
+                  
+                  <!-- Language -->
+                  <div class="col-md-6">
+                    {{ form.language.label(class="form-label") }}
+                    <select name="language" id="language" class="select2 form-select">
+                      {% for value, label in form.language.choices %}
+                        <option value="{{ value }}" 
+                          {{ 'selected' if current_user.language == value else '' }}>
+                          {{ label }}
+                        </option>
+                      {% endfor %}
+                    </select>
+                    {% if form.language.errors %}
+                      <div class="text-danger">
+                        {% for error in form.language.errors %}
+                          <small>{{ error }}</small>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                  </div>
+                  
+                  <!-- Timezone -->
+                  <div class="col-md-6">
+                    {{ form.timezone.label(class="form-label") }}
+                    <select name="timezone" id="timeZones" class="select2 form-select">
+                      {% for value, label in form.timezone.choices %}
+                        <option value="{{ value }}" 
+                          {{ 'selected' if current_user.timezone == value else '' }}>
+                          {{ label }}
+                        </option>
+                      {% endfor %}
+                    </select>
+                    {% if form.timezone.errors %}
+                      <div class="text-danger">
+                        {% for error in form.timezone.errors %}
+                          <small>{{ error }}</small>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                  </div>
+                  
+                  <!-- Currency -->
+                  <div class="col-md-6">
+                    {{ form.display_currency_id.label(class="form-label") }}
+                    <select name="display_currency_id" id="display_currency_id" class="select2 form-select">
+                      {% for value, label in form.display_currency_id.choices %}
+                        <option value="{{ value if value is not none else '' }}" 
+                          {{ 'selected' if current_user.display_currency_id == value else '' }}>
+                          {{ label }}
+                        </option>
+                      {% endfor %}
+                    </select>
+                    {% if form.display_currency_id.errors %}
+                      <div class="text-danger">
+                        {% for error in form.display_currency_id.errors %}
+                          <small>{{ error }}</small>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="mt-2">
+                  <button class="btn btn-primary" type="submit">
+                    {{ form.submit.label.text }}
+                  </button>
+                  <button type="reset" class="btn btn-label-secondary">Cancel</button>
+                </div>
+              </form>
+            </div>
+            <!-- /Account -->
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- / Content -->
+
+    <div class="content-backdrop fade"></div>
+</div>
+<!-- Content wrapper -->
+
+{% endblock %}
+
+
+{% block extra_js %}
+<script src="../../assets/js/pages-account-settings-account.js"></script>
+
+{% endblock %}

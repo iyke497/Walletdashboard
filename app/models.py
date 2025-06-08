@@ -1,12 +1,16 @@
 from datetime import datetime, timedelta
 from enum import Enum
+import requests
+import secrets
+import pyotp
+import qrcode
+import io
+import base64
 from sqlalchemy import Enum as SQLAlchemyEnum, CheckConstraint
 from sqlalchemy import orm, event
 from flask_login import UserMixin
 from .extensions import db, cache
 from werkzeug.security import generate_password_hash, check_password_hash
-import requests
-import secrets
 
 
 # Configure soft-delete query
@@ -101,6 +105,21 @@ class User(db.Model, UserMixin, TimestampMixin, SoftDeleteMixin):
     username = db.Column(db.String(64), unique=True, nullable=False, index=True)
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(128), nullable=False)
+
+    # Personal Information
+    first_name = db.Column(db.String(50), nullable=True)
+    last_name = db.Column(db.String(50), nullable=True)
+    phone_number = db.Column(db.String(20), nullable=True)
+
+    # Address Information
+    address = db.Column(db.String(200), nullable=True)
+    state = db.Column(db.String(50), nullable=True)
+    zip_code = db.Column(db.String(10), nullable=True)
+    country = db.Column(db.String(50), nullable=True)
+
+    # Preferences
+    language = db.Column(db.String(5), nullable=True, default='en')
+    timezone = db.Column(db.String(10), nullable=True)
     display_currency_id = db.Column(db.Integer, db.ForeignKey('assets.id'), nullable=True)
 
     # Email verification fields
@@ -111,12 +130,19 @@ class User(db.Model, UserMixin, TimestampMixin, SoftDeleteMixin):
     # Password reset fields
     password_reset_token = db.Column(db.String(100), nullable=True)
     password_reset_expires = db.Column(db.DateTime, nullable=True)
+
+    # Two-Factor Authentication using TOTP
+    two_factor_enabled = db.Column(db.Boolean, nullable=False, default=False)
+    totp_secret = db.Column(db.String(32), nullable=True)  # Base32 encoded secret
+
     
     # Enhanced relationships
     display_currency = db.relationship('Asset', foreign_keys=[display_currency_id])
     holdings = db.relationship('Holding', back_populates='user', cascade='all, delete-orphan')
     transactions = db.relationship('Transaction', back_populates='user', cascade='all, delete-orphan')
     staking_positions = db.relationship('StakingPosition', back_populates='user', cascade='all, delete-orphan')
+
+
 
     __table_args__ = (
         CheckConstraint('LENGTH(username) >= 3', name='ck_username_min_length'),
@@ -173,6 +199,48 @@ class User(db.Model, UserMixin, TimestampMixin, SoftDeleteMixin):
         self.email_verification_token = None
         self.email_verification_sent_at = None
 
+    def generate_totp_secret(self):
+        """Generate a new TOTP secret for the user"""
+        self.totp_secret = pyotp.random_base32()
+        return self.totp_secret
+
+    def get_totp_uri(self, app_name="Crypto Dashboard"):
+        """Get the TOTP URI for QR code generation"""
+        if not self.totp_secret:
+            self.generate_totp_secret()
+        
+        return pyotp.totp.TOTP(self.totp_secret).provisioning_uri(
+            name=self.email,
+            issuer_name=app_name
+        )
+
+    def verify_totp(self, token):
+        """Verify a TOTP token"""
+        if not self.totp_secret:
+            return False
+        
+        totp = pyotp.TOTP(self.totp_secret)
+        return totp.verify(token, valid_window=1)  # Allow 1 window of tolerance
+
+    def get_qr_code(self):
+        """Generate QR code as base64 string for display"""
+        if not self.totp_secret:
+            self.generate_totp_secret()
+        
+        uri = self.get_totp_uri()
+        qr = qrcode.QRCode(version=1, box_size=10, border=5)
+        qr.add_data(uri)
+        qr.make(fit=True)
+        
+        img = qr.make_image(fill_color="black", back_color="white")
+        
+        # Convert to base64 for HTML embedding
+        buffer = io.BytesIO()
+        img.save(buffer, format='PNG')
+        buffer.seek(0)
+        img_base64 = base64.b64encode(buffer.getvalue()).decode()
+        
+        return f"data:image/png;base64,{img_base64}"
     # ------------------->
     def get_portfolio_value(self, base_currency_id):
         """Calculate portfolio value in the specified base currency"""
