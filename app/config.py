@@ -33,18 +33,28 @@ class BaseConfig:
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
     MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER') or MAIL_USERNAME
 
+    # SERVER NAME
+    SERVER_NAME = 'localhost:45000'  # or 'localhost:5000' for development
+    APPLICATION_ROOT = '/'
+    PREFERRED_URL_SCHEME = 'http'
+
 class DevelopmentConfig(BaseConfig):
     DEBUG = True
     ENV = "development"
 
     MAIL_DEBUG = True
     MAIL_SUPPRESS_SEND = False
-
+    
+    SERVER_NAME = 'localhost:45000' #TODO: For generating url's within the application context.
+    PREFERRED_URL_SCHEME = 'http'
 class ProductionConfig(BaseConfig):
     DEBUG = False
     ENV = "production"
 
     MAIL_SUPPRESS_SEND = False
+
+    SERVER_NAME = ''
+    PREFERRED_URL_SCHEME = 'https'
 
 # factory to pick config
 config_by_name = dict(

@@ -9,3 +9,5 @@ tree*
 *.log
 *.txt
 *.json
+scratch.py
+.webassets-cache*
