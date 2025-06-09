@@ -56,7 +56,7 @@
 
         <aside id="layout-menu" class="layout-menu menu-vertical menu">
           <div class="app-brand demo">
-            <a href="{{ url_for('dashboard.index') }}" class="app-brand-link">
+            <a href="{{ url_for('main.index') }}" class="app-brand-link">
               <span class="app-brand-logo demo">
                 <span class="text-primary">
                   <svg width="32" height="22" viewBox="0 0 32 22" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -97,13 +97,18 @@
           <div class="menu-inner-shadow"></div>
 
           <ul class="menu-inner py-1">
-            <!-- Wallet -->
+            <!-- Portfolio -->
             <li class="menu-item">
               <a href="" class="menu-link menu-toggle">
                 <i class="menu-icon icon-base ti tabler-wallet"></i>
-                <div data-i18n="Wallet">Wallet</div>
+                <div data-i18n="Wallet">Portfolio</div>
               </a>
               <ul class="menu-sub">
+                <li class="menu-item">
+                  <a href="{{ url_for('dashboard.show_portfolio') }}" class="menu-link">
+                    <div data-i18n="Assets">Assets</div>
+                  </a>
+                </li>
                 <li class="menu-item">
                   <a href="{{ url_for('wallet.deposit_crypto') }}" class="menu-link">
                     <div data-i18n="Deposit">Deposit</div>
@@ -116,37 +121,17 @@
                 </li>
               </ul>
             </li>
-            
-            <!-- Investments -->
-            <li class="menu-item">
-              <a href="" class="menu-link menu-toggle">
-                <i class="menu-icon icon-base ti tabler-chart-pie"></i>
-                <div data-i18n="Investments">Investments</div>
-              </a>
-              <ul class="menu-sub">
-                <li class="menu-item">
-                  <a href="{{ url_for('dashboard.show_portfolio') }}" class="menu-link">
-                    <div data-i18n="Portfolio">Portfolio</div>
-                  </a>
-                </li>
-                <li class="menu-item">
-                  <a href="{{ url_for('staking.staking_home') }}" class="menu-link">
-                    <div data-i18n="Earn">Earn</div>
-                  </a>
-                </li>
-              </ul>
-            </li>
-            
-            <!-- Trading -->
+
+            <!-- Trade -->
             <li class="menu-item">
               <a href="" class="menu-link menu-toggle">
                 <i class="menu-icon icon-base ti tabler-exchange"></i>
-                <div data-i18n="Trading">Trading</div>
+                <div data-i18n="Trading">Trade</div>
               </a>
               <ul class="menu-sub">
                 <li class="menu-item">
                   <a href="{{ url_for('trading.limit_trade') }}" class="menu-link">
-                    <div data-i18n="Limit Trade">Limit Trade</div>
+                    <div data-i18n="Limit Trade">Swap</div>
                   </a>
                 </li>
                 <li class="menu-item">
@@ -154,7 +139,69 @@
                     <div data-i18n="Copy Trade">Copy Trade</div>
                   </a>
                 </li>
+                <li class="menu-item">
+                  <a href="#" class="menu-link">
+                    <div data-i18n="Bot Trade">Bot Trade</div>
+                  </a>
+                </li>
+                <li class="menu-item">
+                  <a href="#" class="menu-link">
+                    <div data-i18n="Arbitrage Trade">Arbitrage Trade</div>
+                  </a>
+                </li>
               </ul>
+            </li>
+            
+            <!-- Earn -->
+            <li class="menu-item">
+              <a href="" class="menu-link menu-toggle">
+                <i class="menu-icon icon-base ti tabler-chart-pie"></i>
+                <div data-i18n="Earn">Earn</div>
+              </a>
+              <ul class="menu-sub">
+                <li class="menu-item">
+                  <a href="#" class="menu-link">
+                    <div data-i18n="Mining">Mining</div>
+                  </a>
+                </li>
+                <li class="menu-item">
+                  <a href="{{ url_for('staking.staking_home') }}" class="menu-link">
+                    <div data-i18n="Stakin">Staking</div>
+                  </a>
+                </li>
+              </ul>
+            </li>
+            
+            <!-- Transfer Balance -->
+            <li class="menu-item">
+              <a href="" class="menu-link">
+                <i class="menu-icon icon-base ti tabler-arrows-transfer-up"></i>
+                <div data-i18n="Transfer">Transfer</div>
+              </a>
+            </li>
+
+            <!-- Transaction History -->
+            <li class="menu-item">
+              <a href="" class="menu-link">
+                <i class="menu-icon icon-base ti tabler-history-toggle"></i>
+                <div data-i18n="Transaction History">Transaction History</div>
+              </a>
+            </li>
+
+            <!-- Referals -->
+            <li class="menu-item">
+              <a href="" class="menu-link">
+                <i class="menu-icon icon-base ti tabler-refresh-dot"></i>
+                <div data-i18n="Referals">Referals</div>
+              </a>
+            </li>
+
+            <!-- Support -->
+            <li class="menu-item">
+              <a href="{{ url_for('main.contact') }}" class="menu-link">
+                <i class="menu-icon icon-base ti tabler-help-circle"></i>
+                <div data-i18n="Support">Tickets/Support</div>
+              </a>
             </li>
           </ul>
         </aside>
@@ -296,28 +343,74 @@
             <!-- / Content -->
 
             <!-- Footer -->
-            <footer class="content-footer footer bg-footer-theme">
-              <div class="container-xxl">
-                <div
-                  class="footer-container d-flex align-items-center justify-content-between py-4 flex-md-row flex-column">
-                  <div class="text-body">
-                    ©
-                    <script>
-                      document.write(new Date().getFullYear());
-                    </script>
-                    , made with ❤️ by <a href="https://pixinvent.com" target="_blank" class="footer-link">Pixinvent</a>
-                  </div>
-                  <div class="d-none d-lg-inline-block">
-                    <a
-                      href="https://demos.pixinvent.com/vuexy-html-admin-template/documentation/"
-                      target="_blank"
-                      class="footer-link me-4"
-                      >Documentation</a
-                    >
+            <section id="adv-footer">
+
+              <footer class="footer bg-secondary">
+                <div class="container-fluid container-p-x pt-12 pb-6">
+                  <div class="row">
+                    <div class="col-12 col-sm-6 col-md-4 mb-6 mb-sm-0">
+                      <h4 class="fw-bold mb-4">
+                        <a
+                          href="#"
+                          target="_blank"
+                          class="footer-text"
+                          >Vuexy
+                        </a>
+                      </h4>
+                      <span>Get ready for better world</span>
+                      <div class="social-icon my-4">
+                        <a href="javascript:void(0)" class="btn btn-icon btn-sm btn-facebook me-2"
+                          ><i class="icon-base ti tabler-brand-facebook icon-20px"></i
+                        ></a>
+                        <a href="javascript:void(0)" class="btn btn-icon btn-sm btn-twitter me-2"
+                          ><i class="icon-base ti tabler-brand-twitter icon-20px"></i
+                        ></a>
+                        <a href="javascript:void(0)" class="btn btn-icon btn-sm btn-linkedin me-2"
+                          ><i class="icon-base ti tabler-brand-linkedin icon-20px"></i
+                        ></a>
+                        <a href="javascript:void(0)" class="btn btn-icon btn-sm btn-github"
+                          ><i class="icon-base ti tabler-brand-github icon-20px"></i
+                        ></a>
+                      </div>
+                      <p class="pt-6">
+                        <script>
+                          document.write(new Date().getFullYear());
+                        </script>
+                        © Bloxxxchain
+                      </p>
+                    </div>
+                    <div class="col-12 col-sm-6 col-md-4 mb-6 mb-md-0">
+                      <h5>Company</h5>
+                      <ul class="list-unstyled">
+                        <li><a href="javascript:void(0)" class="footer-link d-block pb-2">About</a></li>
+                        <li>
+                          <a href="javascript:void(0)" class="footer-link d-block pb-2"
+                            >Career <span class="badge bg-label-primary text-capitalize">We're hiring</span></a
+                          >
+                        </li>
+                        <li><a href="javascript:void(0)" class="footer-link d-block pb-2">Blog</a></li>
+                        <li><a href="javascript:void(0)" class="footer-link d-block pb-2">Customers</a></li>
+                        <li><a href="javascript:void(0)" class="footer-link d-block pb-2">Hire us</a></li>
+                        <li><a href="javascript:void(0)" class="footer-link d-block pb-2">FAQs</a></li>
+                      </ul>
+                    </div>
+                    <div class="col-12 col-sm-6 col-md-4 mb-6 mb-sm-0">
+                      <h5>Products</h5>
+                      <ul class="list-unstyled">
+                        <li><a href="javascript:void(0)" class="footer-link d-block pb-2">Admin Template</a></li>
+                        <li>
+                          <a href="javascript:void(0)" class="footer-link d-block pb-2">UI Kit</a>
+                        </li>
+                        <li><a href="javascript:void(0)" class="footer-link d-block pb-2">Styleguide</a></li>
+                        <li><a href="javascript:void(0)" class="footer-link d-block pb-2">API</a></li>
+                        <li><a href="javascript:void(0)" class="footer-link d-block pb-2">Documentation</a></li>
+                        <li><a href="javascript:void(0)" class="footer-link d-block pb-2">Changelog</a></li>
+                      </ul>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </footer>
+              </footer>
+            </section>
             <!-- / Footer -->
 
             <div class="content-backdrop fade"></div>

@@ -1,0 +1,33 @@
+
+{% extends 'layouts/vertical.html' %}
+
+{% block content %}
+<!-- Error -->
+<div class="container-xxl container-p-y d-flex justify-content-center align-items-center min-vh-100">
+    <div class="row justify-content-center w-100">
+        <div class="col-md-8 col-lg-6 text-center">
+            <div class="misc-wrapper">
+                <h1 class="display-1 fw-bold mb-3" style="font-size: 6rem; line-height: 1">403</h1>
+                <h4 class="mb-3">Permission Denied⚠️</h4>
+                <p class="mb-4">You are not allowed to perform this action.</p>
+                <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary">Back to home</a>
+                <div class="mt-4">
+                  <img
+                    src="{{ url_for('static', filename='img/illustrations/page-misc-error.png') }}"
+                    alt="page-misc-error-light"
+                    width="225"
+                    class="img-fluid" />
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="misc-bg-wrapper position-fixed bottom-0 start-0 w-100 text-center" style="z-index: -1; opacity: 0.1;">
+    <img
+        src="{{ url_for('static', filename='img/illustrations/bg-shape-image-light.png') }}"
+        alt="page-misc-error"
+        class="img-fluid"
+        style="max-height: 50vh; width: auto;">
+</div>
+{% endblock %}

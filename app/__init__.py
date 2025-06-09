@@ -5,6 +5,7 @@ from .extensions import db, migrate, login_manager, cache, assets, css_bundle, j
 from .commands import init_app as init_commands
 from .filters import init_app as init_filters
 from app.auth.services import EmailService
+from app.utils.template_filters import register_template_filters
 
 def create_app(config_name=None):
     app = Flask(__name__, instance_relative_config=True)
@@ -23,6 +24,9 @@ def create_app(config_name=None):
     assets.init_app(app)
     mail.init_app(app)
 
+    # Register template filters
+    register_template_filters(app)
+
     # Connect EmailService to mail extension
     EmailService.mail = mail
 
@@ -37,18 +41,22 @@ def create_app(config_name=None):
     assets.register('js_all', js_bundle) # TODO: _all or _bundle
 
     # register blueprints
+    from .main import main_bp
     from .auth import auth_bp
     from .dashboard import dashboard_bp
     from .wallet import wallet_bp
     from .trading import trading_bp
     from .copytrade import copytrade_bp
     from .staking import staking_bp
+    from .errors import error_bp
 
+    app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(dashboard_bp, url_prefix="/dashboard")
     app.register_blueprint(wallet_bp, url_prefix="/wallet")
     app.register_blueprint(trading_bp, url_prefix="/trading")
     app.register_blueprint(copytrade_bp, url_prefix="/copytrade")
     app.register_blueprint(staking_bp, url_prefix="/staking")
+    app.register_blueprint(error_bp)
     
     return app
