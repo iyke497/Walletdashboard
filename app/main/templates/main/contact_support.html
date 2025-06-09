@@ -44,7 +44,7 @@
                     <div>
                       <p class="mb-0">Email</p>
                       <h6 class="mb-0">
-                        <a href="mailto:example@gmail.com" class="text-heading">example@gmail.com</a>
+                        <a href="mailto:info@bloxxxchain.com" class="text-heading">info@bloxxxchain.com</a>
                       </h6>
                     </div>
                   </div>
@@ -73,30 +73,49 @@
                   class="d-none d-lg-block" />
                 partnerships, or have pre-sales questions, you’re at the right place.
               </p>
-              <form>
+              {{ form.hidden_tag() }}
+              <form method="POST" action="{{ url_for('main.contact') }}">
                 <div class="row g-4">
                   <div class="col-md-6">
-                    <label class="form-label" for="contact-form-fullname">Full Name</label>
-                    <input type="text" class="form-control" id="contact-form-fullname" placeholder="john" />
+                    {{ form.full_name.label(class="form-label") }}
+                    {{ form.full_name() }}
+                    {% if form.full_name.errors %}
+                      <div class="text-danger">
+                        {% for error in form.full_name.errors %}
+                          <small>{{ error }}</small><br>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
                   </div>
+                  
                   <div class="col-md-6">
-                    <label class="form-label" for="contact-form-email">Email</label>
-                    <input
-                      type="text"
-                      id="contact-form-email"
-                      class="form-control"
-                      placeholder="johndoe@gmail.com" />
+                    {{ form.email.label(class="form-label") }}
+                    {{ form.email() }}
+                    {% if form.email.errors %}
+                      <div class="text-danger">
+                        {% for error in form.email.errors %}
+                          <small>{{ error }}</small><br>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
                   </div>
+                  
                   <div class="col-12">
-                    <label class="form-label" for="contact-form-message">Message</label>
-                    <textarea
-                      id="contact-form-message"
-                      class="form-control"
-                      rows="7"
-                      placeholder="Write a message"></textarea>
+                    {{ form.message.label(class="form-label") }}
+                    {{ form.message() }}
+                    {% if form.message.errors %}
+                      <div class="text-danger">
+                        {% for error in form.message.errors %}
+                          <small>{{ error }}</small><br>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
                   </div>
+                  
                   <div class="col-12">
-                    <button type="submit" class="btn btn-primary">Send inquiry</button>
+                    <button class="btn btn-primary" type="submit">
+                      {{ form.submit.label.text }}
+                    </button>
                   </div>
                 </div>
               </form>
