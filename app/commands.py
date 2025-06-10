@@ -1,5 +1,6 @@
 # app/commands.py
 import click
+from decimal import Decimal
 import json
 import time
 import math
@@ -8,9 +9,10 @@ from sqlalchemy import exc
 from flask.cli import with_appcontext
 from datetime import datetime
 from .extensions import db
-from .models import Asset, User, NetworkType, AssetType, Holding, DepositAddress
+from .models import Asset, User, NetworkType, AssetType, Holding, DepositAddress, Trader
 from .dashboard.services import CoinGeckoService
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from app.utils.network_symbol import get_network_symbol
 
 @click.command('seed-db')
 @with_appcontext
@@ -215,7 +217,7 @@ def fetch_rates_command():
 @click.command('load-crypto-assets')
 @click.argument('json_file', type=click.Path(exists=True))
 @with_appcontext
-def load_crypto_assets_command(json_file):
+def load_crypto_assets_command_old(json_file):
     """Load cryptocurrency asset data from a JSON file into the database,
     populating the new JSON 'networks' field with platform keys, committing per entry
     and logging any integrity errors to a separate file.
@@ -276,6 +278,181 @@ def load_crypto_assets_command(json_file):
     # Summary output
     click.echo(f"Created {new_count} new assets, updated {update_count} assets, {fail_count} failures.")
     click.echo(f"Integrity errors logged to {error_log_path}")
+
+@click.command('load-crypto-assets')
+@click.argument('json_file', type=click.Path(exists=True))
+@with_appcontext
+def load_crypto_assets_command(json_file):
+    """Load cryptocurrency asset data from a JSON file into the database,
+    with structured network data in the proper format.
+    """
+
+    error_log_path = 'load_crypto_assets_errors.log'
+    new_count = 0
+    update_count = 0
+    fail_count = 0
+
+    # Load the JSON data
+    with open(json_file, 'r') as f:
+        data = json.load(f)
+
+    for entry in data:
+        coingecko_id = entry.get('id')
+        symbol = entry.get('symbol')
+        name = entry.get('name')
+        platforms = entry.get('platforms', {}) or {}
+        
+        # Convert platforms to structured network data
+        networks_data = []
+        
+        # Handle assets with empty platforms (native blockchains)
+        if not platforms:
+            networks_data.append({
+                "id": coingecko_id,
+                "symbol": symbol,
+                "deposit_address": "",
+                "contract_address": "",
+                "minimum_deposit": "0.001",
+                "fees": "0.0001"
+            })
+        else:
+            # Process platforms for tokens
+            for network_id, contract_address in platforms.items():
+                # Skip empty contract addresses
+                if not contract_address:
+                    continue
+                
+                network_entry = {
+                    "id": network_id,
+                    "symbol": get_network_symbol(network_id),
+                    "deposit_address": "",
+                    "contract_address": contract_address,
+                    "minimum_deposit": "0.001",
+                    "fees": "0.001"
+                }
+                
+                networks_data.append(network_entry)
+
+        # Disable autoflush during query
+        with db.session.no_autoflush:
+            asset = Asset.query.filter_by(coingecko_id=coingecko_id).first()
+
+        if asset:
+            action = 'Update'
+            asset.symbol = symbol
+            asset.name = name
+            asset.networks = networks_data
+        else:
+            action = 'Create'
+            asset = Asset(
+                symbol=symbol,
+                name=name,
+                coingecko_id=coingecko_id,
+                networks=networks_data
+            )
+            db.session.add(asset)
+
+        # Commit per asset and handle integrity errors
+        try:
+            db.session.commit()
+            if action == 'Create':
+                new_count += 1
+            else:
+                update_count += 1
+            click.echo(f"{action} successful for {coingecko_id}")
+        except IntegrityError as err:
+            db.session.rollback()
+            fail_count += 1
+            # Log the failure
+            with open(error_log_path, 'a') as log_file:
+                log_file.write(f"{coingecko_id}: {err}\n")
+            click.echo(f"Skipped {action} for {coingecko_id} due to integrity error")
+            continue
+
+    # Summary output
+    click.echo(f"Created {new_count} new assets, updated {update_count} assets, {fail_count} failures.")
+    click.echo(f"Integrity errors logged to {error_log_path}")
+
+
+@click.command('update-network-structure')
+@with_appcontext
+def update_network_structure():
+    """
+    Simple script to convert network data from list of strings to structured format.
+    
+    Converts:
+      ["ethereum", "tron"]
+    
+    To:
+      [
+        {"id": "ethereum", "symbol": "ERC20", "deposit_address": "", "contract_address": "", "minimum_deposit": "0.001", "fees": "0.0005"},
+        {"id": "tron", "symbol": "TRC20", "deposit_address": "", "contract_address": "", "minimum_deposit": "10", "fees": "1"}
+      ]
+    
+    For assets with empty networks, creates a single entry using the asset's ID.
+    """
+    
+    # Network defaults
+    network_defaults = {
+        "ethereum": {"minimum_deposit": "0.001", "fees": "0.0005"},
+        "tron": {"minimum_deposit": "10", "fees": "1"},
+        "binance-smart-chain": {"minimum_deposit": "0.002", "fees": "0.0002"}
+    }
+    
+    # Get all assets
+    assets = Asset.query.all()
+    count = 0
+    
+    for asset in assets:
+        # Skip assets that already have structured networks
+        if asset.networks and isinstance(asset.networks, list) and len(asset.networks) > 0:
+            if isinstance(asset.networks[0], dict) and "id" in asset.networks[0]:
+                continue
+        
+        # Handle case where networks is empty or None
+        if not asset.networks:
+            # For assets without networks (like Bitcoin), create a single entry
+            structured_networks = [{
+                "id": asset.coingecko_id,
+                "symbol": get_network_symbol(asset.coingecko_id),
+                "deposit_address": "",
+                "contract_address": "",
+                "minimum_deposit": "0.001",
+                "fees": "0.0001"
+            }]
+        else:
+            # Convert string list to structured format
+            structured_networks = []
+            
+            for network_id in asset.networks:
+                network_entry = {
+                    "id": network_id,
+                    "symbol": get_network_symbol(network_id),
+                    "deposit_address": "",
+                    "contract_address": "",
+                    "minimum_deposit": "0.001",
+                    "fees": "0.001"
+                }
+                
+                # Apply defaults for known networks
+                if network_id in network_defaults:
+                    network_entry.update(network_defaults[network_id])
+                
+                structured_networks.append(network_entry)
+        
+        # Update the asset
+        asset.networks = structured_networks
+        count += 1
+        
+        # Commit every 50 records to avoid memory issues
+        if count % 50 == 0:
+            db.session.commit()
+            click.echo(f"Processed {count} assets")
+    
+    # Final commit
+    db.session.commit()
+    click.echo(f"Successfully updated {count} assets")
+
 
 @click.command('fetch-crypto-images')
 @click.argument('json_file', type=click.Path(exists=True))
@@ -399,6 +576,119 @@ def fetch_crypto_images_command(json_file, top):
     click.echo(f"Errors logged in {error_log_path}")
 
 
+@click.command('seed-traders')
+@click.argument('json_file', type=click.Path(exists=True))
+@with_appcontext
+def seed_traders_command(json_file):
+    """
+    Seed the database with trader profiles from a JSON file.
+    
+    This command creates or updates trader profiles along with their performance metrics.
+    It also creates associated user accounts if they don't already exist.
+    
+    Example:
+        flask seed-traders data/sample_traders.json
+    """
+   
+    
+    created_users = 0
+    created_traders = 0
+    updated_traders = 0
+    errors = []
+    
+    # Load data from JSON file
+    try:
+        with open(json_file, 'r') as file:
+            traders_data = json.load(file)
+        
+        click.echo(f"Processing {len(traders_data)} traders from {json_file}...")
+        
+        # Process each trader
+        for trader_data in traders_data:
+            try:
+                username = trader_data.get('username')
+                if not username:
+                    errors.append("Skipped entry with missing username")
+                    continue
+                
+                # Check if user exists by username
+                user = User.query.filter_by(username=username).first()
+                
+                # If user doesn't exist, create one
+                if not user:
+                    user = User(
+                        username=username,
+                        email=f"{username.lower()}@example.com"
+                    )
+                    # Set a default password
+                    user.set_password("password123")
+                    db.session.add(user)
+                    db.session.flush()  # Get the user ID without committing
+                    created_users += 1
+                
+                # Check if trader profile exists
+                trader = Trader.query.filter_by(user_id=user.id).first()
+                
+                performance_metrics = trader_data.get('performance_metrics', {})
+                
+                if trader:
+                    # Update existing trader
+                    trader.bio = trader_data.get('bio', '')
+                    trader.tags = trader_data.get('tags', '')
+                    trader.win_rate = Decimal(str(trader_data.get('win_rate', 0)))
+                    trader.avg_monthly_return = Decimal(str(trader_data.get('avg_monthly_return', 0)))
+                    trader.max_drawdown = Decimal(str(trader_data.get('max_drawdown', 0)))
+                    trader.risk_score = trader_data.get('risk_score', 'medium')
+                    trader.is_verified = trader_data.get('is_verified', False)
+                    
+                    # Update performance metrics JSON
+                    if performance_metrics:
+                        trader.performance_metrics = performance_metrics
+                    
+                    updated_traders += 1
+                    click.echo(f"Updated trader: {username}")
+                else:
+                    # Create new trader
+                    trader = Trader(
+                        user_id=user.id,
+                        bio=trader_data.get('bio', ''),
+                        tags=trader_data.get('tags', ''),
+                        win_rate=Decimal(str(trader_data.get('win_rate', 0))),
+                        avg_monthly_return=Decimal(str(trader_data.get('avg_monthly_return', 0))),
+                        max_drawdown=Decimal(str(trader_data.get('max_drawdown', 0))),
+                        risk_score=trader_data.get('risk_score', 'medium'),
+                        is_verified=trader_data.get('is_verified', False),
+                        performance_metrics=performance_metrics
+                    )
+                    db.session.add(trader)
+                    created_traders += 1
+                    click.echo(f"Created trader: {username}")
+                
+            except Exception as e:
+                db.session.rollback()
+                errors.append(f"Error processing trader {trader_data.get('username', 'unknown')}: {str(e)}")
+                click.echo(f"Error: {str(e)}", err=True)
+        
+        # Commit all changes
+        try:
+            db.session.commit()
+            click.echo(f"\nTrader data import complete!")
+            click.echo(f"Created users: {created_users}")
+            click.echo(f"Created traders: {created_traders}")
+            click.echo(f"Updated traders: {updated_traders}")
+            
+            if errors:
+                click.echo("\nErrors encountered:")
+                for error in errors:
+                    click.echo(f"- {error}")
+                
+        except Exception as e:
+            db.session.rollback()
+            click.echo(f"Database commit failed: {str(e)}", err=True)
+            
+    except Exception as e:
+        click.echo(f"Failed to load JSON file: {str(e)}", err=True)
+
 def init_app(app):
     app.cli.add_command(seed_db_command)
     app.cli.add_command(seed_holdings_command)
@@ -406,3 +696,5 @@ def init_app(app):
     app.cli.add_command(fetch_rates_command)
     app.cli.add_command(load_crypto_assets_command)
     app.cli.add_command(fetch_crypto_images_command)
+    app.cli.add_command(seed_traders_command)
+    app.cli.add_command(update_network_structure)
