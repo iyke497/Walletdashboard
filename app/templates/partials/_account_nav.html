@@ -1,0 +1,22 @@
+<div class="nav-align-top">
+    <ul class="nav nav-pills flex-column flex-md-row mb-6 gap-md-0 gap-2">
+      <li class="nav-item">
+        <a class="nav-link {{ 'active' if current_page == 'account' else '' }}" 
+           href="{{ url_for('auth.user_settings') }}">
+          <i class="icon-base ti tabler-users icon-sm me-1_5"></i> Account
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {{ 'active' if current_page == 'security' else '' }}" 
+           href="{{ url_for('auth.user_settings_security') }}">
+          <i class="icon-base ti tabler-lock icon-sm me-1_5"></i> Security
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {{ 'active' if current_page == 'notifications' else '' }}" 
+           href="">
+          <i class="icon-base ti tabler-bell icon-sm me-1_5"></i> Notifications
+        </a>
+      </li>
+    </ul>
+</div>
