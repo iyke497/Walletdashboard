@@ -20,6 +20,8 @@ def show_portfolio():
     base_currency_id = current_user.display_currency_id
     data = PortfolioService.get_portfolio_details(current_user.id, base_currency_id)
 
+    day_change = PortfolioService.get_portfolio_24h_change(current_user.id, current_user.display_currency_id)
+
     currency_symbol = ""
     if base_currency_id:
         asset = Asset.query.get(base_currency_id)
@@ -29,5 +31,6 @@ def show_portfolio():
         'dashboard/portfolio.html',
         portfolio=data['holdings'],
         total_value=data['total_value'],
-        currency=currency_symbol
+        currency=currency_symbol,
+        day_change=day_change
     )
