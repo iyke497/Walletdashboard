@@ -22,10 +22,10 @@
                         <div class="d-flex align-items-center mb-1">
                             <div class="avatar me-4">
                             <span class="avatar-initial rounded bg-label-primary"
-                                ><i class="icon-base ti tabler-truck icon-28px"></i
+                                ><i class="icon-base ti tabler-user-dollar icon-28px"></i
                             ></span>
                             </div>
-                            <h4 class="mb-0">$14,256.89</h4>
+                            <h4 class="mb-0">${{ portfolio_value }}</h4>
                         </div>
                         <p class="mb-1">Your Portfolio Value</p>
                         <p class="mb-0">
@@ -41,16 +41,12 @@
                         <div class="d-flex align-items-center mb-1">
                             <div class="avatar me-4">
                             <span class="avatar-initial rounded bg-label-primary"
-                                ><i class="icon-base ti tabler-truck icon-28px"></i
+                                ><i class="icon-base ti tabler-user-circle icon-28px"></i
                             ></span>
                             </div>
-                            <h4 class="mb-0">8</h4>
+                            <h4 class="mb-0">{{ active_traders_count }}</h4>
                         </div>
                         <p class="mb-1">Active Traders Following</p>
-                        <p class="mb-0">
-                            <span class="text-heading fw-medium me-2">+2 new</span>
-                            <small class="text-body-secondary">this month</small>
-                        </p>
                         </div>
                     </div>
                 </div>
@@ -60,7 +56,7 @@
                         <div class="d-flex align-items-center mb-1">
                             <div class="avatar me-4">
                             <span class="avatar-initial rounded bg-label-primary"
-                                ><i class="icon-base ti tabler-truck icon-28px"></i
+                                ><i class="icon-base ti tabler-arrow-autofit-height icon-28px"></i
                             ></span>
                             </div>
                             <h4 class="mb-0">+$1,238.53</h4>
@@ -79,10 +75,10 @@
                         <div class="d-flex align-items-center mb-1">
                             <div class="avatar me-4">
                             <span class="avatar-initial rounded bg-label-primary"
-                                ><i class="icon-base ti tabler-truck icon-28px"></i
+                                ><i class="icon-base ti tabler-flag-pin icon-28px"></i
                             ></span>
                             </div>
-                            <h4 class="mb-0">5</h4>
+                            <h4 class="mb-0">{{ active_traders_count }}</h4>
                         </div>
                         <p class="mb-1">Open Positions</p>
                         <p class="mb-0">
@@ -109,7 +105,7 @@
                                 </button>
                                 <ul class="dropdown-menu">
                                     {% for sort_option in [('win_rate', 'Win Rate'), ('avg_monthly_return', 'Monthly Return'), 
-                                                        ('max_drawdown', 'Max Drawdown'), ('followers', 'Followers')] %}
+                                                        ('max_drawdown', 'Max Drawdown')] %}
                                     <li>
                                         <a class="dropdown-item {% if current_params.sort_by == sort_option[0] %}active{% endif %}"
                                         href="{{ url_for('copytrade.trader_list', 
@@ -246,7 +242,7 @@
                             </div>
                             
                             <!-- Trader Chart -->
-                            <div id="revenueGenerated"></div>
+                            <div id="trader-chart-{{ trader.id }}" class="trader-performance-chart"></div>
                             
                             <!-- Recent Trades Header -->
                             <div class="d-flex justify-content-between align-items-center pt-1 px-3">
@@ -254,39 +250,37 @@
                                 <small class="text-primary cursor-pointer">View All</small>
                             </div>
                             
-                            <!-- Recent Trades List -->
+                            <!-- Recent Trades List (Dynamic) -->
                             <div class="px-3 pb-3">
                                 <div class="list-group list-group-flush">
-                                    <div class="list-group-item px-0 d-flex justify-content-between border-0 py-1">
-                                        <div>
-                                            <span class="fw-semibold">EUR/USD</span>
-                                            <span class="badge bg-label-success ms-1">Buy</span>
+                                    {% if trader.performance_metrics and trader.performance_metrics.recent_trades %}
+                                        {% for trade in trader.performance_metrics.recent_trades %}
+                                        <div class="list-group-item px-0 d-flex justify-content-between border-0 py-1">
+                                            <div>
+                                                <span class="fw-semibold">{{ trade.pair }}</span>
+                                                <span class="badge bg-label-{{ 'success' if trade.direction == 'buy' else 'danger' }} ms-1">
+                                                    {{ trade.direction|capitalize }}
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <small class="text-muted me-2">{{ trade.date|strftime }}</small>
+                                                <span class="text-{{ 'success' if trade.profit_loss > 0 else 'danger' }}">
+                                                    {{ '+' if trade.profit_loss > 0 else '' }}{{ trade.profit_loss }}%
+                                                </span>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <small class="text-muted me-2">May 4</small>
-                                            <span class="text-success">+2.1%</span>
+                                        {% endfor %}
+                                    {% else %}
+                                        <!-- Fallback for missing data -->
+                                        <div class="list-group-item px-0 d-flex justify-content-between border-0 py-1">
+                                            <div>
+                                                <span class="fw-semibold">No recent trades</span>
+                                            </div>
+                                            <div>
+                                                <small class="text-muted">-</small>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div class="list-group-item px-0 d-flex justify-content-between border-0 py-1">
-                                        <div>
-                                            <span class="fw-semibold">GBP/JPY</span>
-                                            <span class="badge bg-label-danger ms-1">Sell</span>
-                                        </div>
-                                        <div>
-                                            <small class="text-muted me-2">May 2</small>
-                                            <span class="text-success">+1.8%</span>
-                                        </div>
-                                    </div>
-                                    <div class="list-group-item px-0 d-flex justify-content-between border-0 py-1">
-                                        <div>
-                                            <span class="fw-semibold">USD/CAD</span>
-                                            <span class="badge bg-label-success ms-1">Buy</span>
-                                        </div>
-                                        <div>
-                                            <small class="text-muted me-2">Apr 29</small>
-                                            <span class="text-danger">-0.7%</span>
-                                        </div>
-                                    </div>
+                                    {% endif %}
                                 </div>
                             </div>
                             
@@ -295,7 +289,13 @@
                                 <div class="d-flex justify-content-between align-items-center">
                                     <div>
                                         <i class="fas fa-users text-muted"></i>
-                                        <span class="text-muted ms-1">4,521 followers</span>
+                                        <span class="text-muted ms-1">
+                                            {% if trader.performance_metrics and trader.performance_metrics.followers_count %}
+                                                {{ trader.performance_metrics.followers_count|number_format }} followers
+                                            {% else %}
+                                                0 followers
+                                            {% endif %}
+                                        </span>
                                     </div>
                                     <div class="d-flex gap-2">
                                         <button class="btn btn-sm btn-outline-primary">
