@@ -10,6 +10,9 @@
 <div class="container-xxl flex-grow-1 container-p-y">
   <h4 class="fw-bold py-3 mb-4">Deposit</h4>
 
+  <!-- Toast container - Missing in original -->
+  <div id="toastContainer" class="toast-container position-fixed top-0 end-0 p-3"></div>
+
   <div class="row">
     <div class="col-md-8">
       <div class="card mb-4">
@@ -38,7 +41,7 @@
                       <li class="asset-item">
                         <a class="dropdown-item d-flex align-items-center coin-option" href="#" data-value="{{ asset.symbol }}">
                           <div class="avatar avatar-xs me-2">
-                            <img src="{{ asset.images }}" alt="{{ asset.name }} logo" class="rounded-circle">
+                            <img src="{{ asset.images }}" alt="{{ asset.name }} logo" class="rounded-circle" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjEwIi8+PHBhdGggZD0iTTkuMDkgOWEzIDMgMCAwIDEgNS44MyAxYzAgMi0zIDMtMy4zIDMiLz48bGluZSB4MT0iMTIiIHkxPSIxNyIgeDI9IjEyLjAxIiB5Mj0iMTciLz48L3N2Zz4='">
                           </div>
                           <span>{{ asset.name }} ({{ asset.symbol }})</span>
                         </a>
@@ -196,127 +199,234 @@
 <script src="{{ url_for('static', filename='js/ui-modals.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  // ---------------- Toast helper ----------------
-  function showToast(message, variant = 'primary') {
-    const el = document.createElement('div');
-    el.className = `toast align-items-center text-bg-${variant} border-0`;
-    el.setAttribute('role', 'alert');
-    el.setAttribute('aria-live', 'assertive');
-    el.setAttribute('aria-atomic', 'true');
-    el.innerHTML = `<div class="d-flex"><div class="toast-body">${message}</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button></div>`;
-    const container = document.getElementById('toastContainer');
-    container.appendChild(el);
-    const bsToast = bootstrap.Toast.getOrCreateInstance(el, { delay: 3000 });
-    bsToast.show();
-    el.addEventListener('hidden.bs.toast', () => el.remove());
-  }
-
-  // -------------- state -----------------
-  let selectedCoin = null;
-  let selectedNet  = null;
-  let amountOk     = false;
-
-  const btnLaunch  = document.getElementById('launchModalBtn');
-  const coinMenu   = document.querySelector('.dropdown-menu[aria-labelledby="coinDropdown"]');
-  const netMenu    = document.getElementById('networkOptions');
-  const amountInput = document.getElementById('amountInput');
-
-  // ---------- fetch QR + address --------
-  async function maybeEnable() {
-    const ready = selectedCoin && selectedNet && amountOk;
-    btnLaunch.disabled = !ready;
-    if (!ready) return;
-
-    try {
-      const res  = await fetch(`/wallet/deposit-info/${selectedCoin}/${selectedNet}`);
-      if (!res.ok) throw new Error('fetch failed');
-      const info = await res.json();
-      document.getElementById('depositQr').src = info.qr;
-      document.getElementById('depositAddress').value = info.address;
-      document.getElementById('depositMeta').textContent = `Min ${info.minimum_deposit || '—'}  •  Fee ${info.fees || '—'}`;
-    } catch (err) {
-      console.error(err);
-      showToast('Unable to fetch deposit info', 'danger');
-      btnLaunch.disabled = true;
+    // ---------------- Toast helper ----------------
+    function showToast(message, variant = 'primary') {
+      const el = document.createElement('div');
+      el.className = `toast align-items-center text-bg-${variant} border-0`;
+      el.setAttribute('role', 'alert');
+      el.setAttribute('aria-live', 'assertive');
+      el.setAttribute('aria-atomic', 'true');
+      el.innerHTML = `<div class="d-flex"><div class="toast-body">${message}</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button></div>`;
+      const container = document.getElementById('toastContainer');
+      container.appendChild(el);
+      const bsToast = bootstrap.Toast.getOrCreateInstance(el, { delay: 3000 });
+      bsToast.show();
+      el.addEventListener('hidden.bs.toast', () => el.remove());
     }
-  }
-
-  // --------------- coin picker ----------------
-  coinMenu.addEventListener('click', async (e) => {
-    const opt = e.target.closest('.coin-option');
-    if (!opt) return;
-    e.preventDefault();
-
-    document.getElementById('selectedCoin').textContent = opt.textContent.trim();
-    document.getElementById('assetInput').value = opt.dataset.value;
-
-    selectedCoin = opt.dataset.value;
-    selectedNet  = null;
-    btnLaunch.disabled = true;
-
-    document.getElementById('selectedNetwork').textContent = 'Select network';
-    document.getElementById('networkInput').value = '';
-    netMenu.innerHTML = '<li class="text-muted px-3">Loading…</li>';
-
-    const r = await fetch(`/wallet/get-networks/${selectedCoin}`);
-    const arr = r.ok ? await r.json() : [];
-    netMenu.innerHTML = arr.length ? arr.map(n => `<li><a class="dropdown-item network-option" href="#" data-value="${n.id}" data-display="${n.symbol}">${n.symbol.toUpperCase()}</a></li>`).join('') : '<li class="text-muted px-3">No networks available</li>';
-  });
-
-  // --------------- network picker --------------
-  netMenu.addEventListener('click', (e) => {
-    const opt = e.target.closest('.network-option');
-    if (!opt) return;
-    e.preventDefault();
-
-    document.getElementById('selectedNetwork').textContent = opt.dataset.display;
-    document.getElementById('networkInput').value = opt.dataset.value;
-
-    selectedNet = opt.dataset.value;
-    maybeEnable();
-  });
-
-  // --------------- copy button -----------------
-  const copyBtn = document.getElementById('copyBtn');
-  if (!copyBtn.dataset.bound) {
-    copyBtn.addEventListener('click', () => {
-      navigator.clipboard.writeText(document.getElementById('depositAddress').value).then(() => showToast('Address copied!', 'success'));
+  
+    // -------------- state -----------------
+    let selectedCoin = null;
+    let selectedNet  = null;
+    let amountOk     = false;
+    let searchTimeout = null; // For debouncing search requests
+  
+    const btnLaunch  = document.getElementById('launchModalBtn');
+    const coinMenu   = document.querySelector('.dropdown-menu[aria-labelledby="coinDropdown"]');
+    const netMenu    = document.getElementById('networkOptions');
+    const amountInput = document.getElementById('amountInput');
+    const coinSearch = document.getElementById('coinSearch');
+  
+    // Initial popular assets (first 20)
+    let initialAssets = {{ crypto_assets|tojson|safe }};
+  
+    // ---------- Search functionality ----------
+    async function searchAssets(searchTerm) {
+      if (!searchTerm.trim()) {
+        // Show initial popular assets when search is empty
+        displayAssets(initialAssets);
+        return;
+      }
+  
+      // Show loading state
+      clearAssetItems();
+      const li = document.createElement('li');
+      li.className = 'asset-item';
+      li.innerHTML = '<div class="px-3 py-2 text-muted"><i class="ti ti-loader ti-spin me-2"></i>Searching...</div>';
+      coinMenu.appendChild(li);
+  
+      try {
+        const response = await fetch(`/wallet/search-assets/${encodeURIComponent(searchTerm)}`);
+        if (!response.ok) throw new Error('Search failed');
+        
+        const searchResults = await response.json();
+        displayAssets(searchResults);
+      } catch (error) {
+        console.error('Search error:', error);
+        clearAssetItems();
+        const li = document.createElement('li');
+        li.className = 'asset-item';
+        li.innerHTML = '<div class="px-3 py-2 text-danger"><i class="ti ti-alert-circle me-2"></i>Search failed. Please try again.</div>';
+        coinMenu.appendChild(li);
+      }
+    }
+  
+    function clearAssetItems() {
+      const assetItems = coinMenu.querySelectorAll('.asset-item');
+      assetItems.forEach(item => item.remove());
+    }
+  
+    function displayAssets(assets) {
+      clearAssetItems();
+      
+      if (assets.length === 0) {
+        const li = document.createElement('li');
+        li.className = 'asset-item';
+        li.innerHTML = '<div class="px-3 py-2 text-muted"><i class="ti ti-search-off me-2"></i>No cryptocurrencies found</div>';
+        coinMenu.appendChild(li);
+        return;
+      }
+  
+      assets.forEach(asset => {
+        const li = document.createElement('li');
+        li.className = 'asset-item';
+        li.innerHTML = `
+          <a class="dropdown-item d-flex align-items-center coin-option" href="#" data-value="${asset.symbol}">
+            <div class="avatar avatar-xs me-2">
+              <img src="${asset.images || asset.image || ''}" alt="${asset.name} logo" class="rounded-circle" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjEwIi8+PHBhdGggZD0iTTkuMDkgOWEzIDMgMCAwIDEgNS44MyAxYzAgMi0zIDMtMy4zIDMiLz48bGluZSB4MT0iMTIiIHkxPSIxNyIgeDI9IjEyLjAxIiB5Mj0iMTciLz48L3N2Zz4='">
+            </div>
+            <span>${asset.name} (${asset.symbol})</span>
+          </a>
+        `;
+        coinMenu.appendChild(li);
+      });
+    }
+  
+    // Debounced search to avoid too many API calls
+    function debouncedSearch(searchTerm) {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        searchAssets(searchTerm);
+      }, 300); // Wait 300ms after user stops typing
+    }
+  
+    // Search input event listeners
+    coinSearch.addEventListener('input', (e) => {
+      debouncedSearch(e.target.value);
     });
-    copyBtn.dataset.bound = 'true';
-  }
-
-  // --------------- amount listener -------------
-  amountInput.addEventListener('input', () => {
-    const v = parseFloat(amountInput.value);
-    amountOk = !isNaN(v) && v > 0;
-    maybeEnable();
-  });
-
-  // --------------- deposit submit --------------
-  document.getElementById('makeDepositBtn').addEventListener('click', async () => {
-    const amt = parseFloat(amountInput.value);
-    if (isNaN(amt) || amt <= 0) {
-      showToast('Enter a valid amount', 'warning');
-      return;
+  
+    // Prevent form submission when pressing Enter in search
+    coinSearch.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    });
+  
+    // Reset search when dropdown closes
+    document.addEventListener('hide.bs.dropdown', (e) => {
+      if (e.target.id === 'coinDropdown') {
+        coinSearch.value = '';
+        displayAssets(initialAssets); // Reset to show initial popular assets
+      }
+    });
+  
+    // Initialize with popular assets on page load
+    displayAssets(initialAssets);
+  
+    // ---------- fetch QR + address --------
+    async function maybeEnable() {
+      const ready = selectedCoin && selectedNet && amountOk;
+      btnLaunch.disabled = !ready;
+      if (!ready) return;
+  
+      try {
+        const res  = await fetch(`/wallet/deposit-info/${selectedCoin}/${selectedNet}`);
+        if (!res.ok) throw new Error('fetch failed');
+        const info = await res.json();
+        document.getElementById('depositQr').src = info.qr;
+        document.getElementById('depositAddress').value = info.address;
+        document.getElementById('depositMeta').textContent = `Min ${info.minimum_deposit || '—'}  •  Fee ${info.fees || '—'}`;
+      } catch (err) {
+        console.error(err);
+        showToast('Unable to fetch deposit info', 'danger');
+        btnLaunch.disabled = true;
+      }
     }
-
-    const data = new URLSearchParams();
-    data.append('asset', selectedCoin);
-    data.append('network', selectedNet);
-    data.append('amount', amt);
-   
-
-    try {
-      const r = await fetch('/wallet/deposit/crypto', { method: 'POST', body: data });
-      const res = await r.json();
-      if (!r.ok) throw new Error(res.error || 'Deposit failed');
-      showToast('Deposit recorded', 'success');
-      bootstrap.Modal.getInstance(document.getElementById('animationModal')).hide();
-    } catch (err) {
-      console.error(err);
-      showToast(err.message, 'danger');
+  
+    // --------------- coin picker ----------------
+    coinMenu.addEventListener('click', async (e) => {
+      const opt = e.target.closest('.coin-option');
+      if (!opt) return;
+      e.preventDefault();
+  
+      document.getElementById('selectedCoin').textContent = opt.textContent.trim();
+      document.getElementById('assetInput').value = opt.dataset.value;
+  
+      selectedCoin = opt.dataset.value;
+      selectedNet  = null;
+      btnLaunch.disabled = true;
+  
+      document.getElementById('selectedNetwork').textContent = 'Select network';
+      document.getElementById('networkInput').value = '';
+      netMenu.innerHTML = '<li class="text-muted px-3">Loading…</li>';
+  
+      try {
+        const r = await fetch(`/wallet/get-networks/${selectedCoin}`);
+        if (!r.ok) throw new Error('Failed to fetch networks');
+        const arr = await r.json();
+        netMenu.innerHTML = arr.length 
+          ? arr.map(n => `<li><a class="dropdown-item network-option" href="#" data-value="${n.id}" data-display="${n.symbol}">${n.symbol.toUpperCase()}</a></li>`).join('') 
+          : '<li class="text-muted px-3">No networks available</li>';
+      } catch (error) {
+        console.error('Network fetch error:', error);
+        netMenu.innerHTML = '<li class="text-muted px-3">Failed to load networks</li>';
+        showToast('Failed to load networks', 'danger');
+      }
+    });
+  
+    // --------------- network picker --------------
+    netMenu.addEventListener('click', (e) => {
+      const opt = e.target.closest('.network-option');
+      if (!opt) return;
+      e.preventDefault();
+  
+      document.getElementById('selectedNetwork').textContent = opt.dataset.display;
+      document.getElementById('networkInput').value = opt.dataset.value;
+  
+      selectedNet = opt.dataset.value;
+      maybeEnable();
+    });
+  
+    // --------------- copy button -----------------
+    const copyBtn = document.getElementById('copyBtn');
+    if (!copyBtn.dataset.bound) {
+      copyBtn.addEventListener('click', () => {
+        navigator.clipboard.writeText(document.getElementById('depositAddress').value).then(() => showToast('Address copied!', 'success'));
+      });
+      copyBtn.dataset.bound = 'true';
     }
-  });
+  
+    // --------------- amount listener -------------
+    amountInput.addEventListener('input', () => {
+      const v = parseFloat(amountInput.value);
+      amountOk = !isNaN(v) && v > 0;
+      maybeEnable();
+    });
+  
+    // --------------- deposit submit --------------
+    document.getElementById('makeDepositBtn').addEventListener('click', async () => {
+      const amt = parseFloat(amountInput.value);
+      if (isNaN(amt) || amt <= 0) {
+        showToast('Enter a valid amount', 'warning');
+        return;
+      }
+  
+      const data = new URLSearchParams();
+      data.append('asset', selectedCoin);
+      data.append('network', selectedNet);
+      data.append('amount', amt);
+  
+      try {
+        const r = await fetch('/wallet/deposit/crypto', { method: 'POST', body: data });
+        const res = await r.json();
+        if (!r.ok) throw new Error(res.error || 'Deposit failed');
+        showToast('Deposit recorded', 'success');
+        bootstrap.Modal.getInstance(document.getElementById('animationModal')).hide();
+      } catch (err) {
+        console.error(err);
+        showToast(err.message, 'danger');
+      }
+    });
 });
 </script>
 {% endblock %}

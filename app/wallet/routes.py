@@ -2,6 +2,7 @@ from flask import request, jsonify, render_template, flash, redirect, url_for, s
 from flask_login import login_required, current_user
 import base64
 from . import wallet_bp
+from app.extensions import db
 from .services import WalletService
 from .forms import WithdrawForm, DepositForm
 from app.models import Asset, AssetType, Holding
@@ -10,17 +11,20 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
+# ********** Deposit **********
+
 @wallet_bp.route('/deposit/crypto', methods=['GET'])
 @login_required
 def deposit_crypto_form():
     """Render the crypto deposit form"""
     form = DepositForm()
-    # Get all active crypto assets
+    # Get first 20 most popular crypto assets for initial display
     crypto_assets = Asset.query.filter_by(
         asset_type=AssetType.CRYPTO,
         is_active=True,
         deleted_at=None
-    ).limit(1000).all()
+    ).limit(20).all() 
 
     # Convert assets to serializable format with CoinGecko icons
     serialized_assets = [
@@ -39,6 +43,33 @@ def deposit_crypto_form():
                            form=form, 
                            crypto_assets=serialized_assets, 
                            recent_deposits=recent_deposits)
+
+@wallet_bp.route('/search-assets/<search_term>')
+@login_required
+def search_assets(search_term):
+    """Search crypto assets by name or symbol"""
+    # Search in database with ILIKE for case-insensitive partial matching
+    crypto_assets = Asset.query.filter(
+        Asset.asset_type == AssetType.CRYPTO,
+        Asset.is_active == True,
+        Asset.deleted_at == None,
+        db.or_(
+            Asset.name.ilike(f'%{search_term}%'),
+            Asset.symbol.ilike(f'%{search_term}%')
+        )
+    ).limit(50).all()
+
+    # Convert to JSON format
+    serialized_assets = [
+        {
+            'symbol': asset.symbol,
+            'name': asset.name,
+            'images': asset.images.get('thumb') if asset.images else None
+        }
+        for asset in crypto_assets
+    ]
+
+    return jsonify(serialized_assets)
 
 @wallet_bp.route('/get-networks/<asset_symbol>')
 def get_networks(asset_symbol):
