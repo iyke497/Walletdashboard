@@ -92,7 +92,7 @@ class OrderBookService:
         if not base_asset or not quote_asset:
             raise ValueError("Invalid asset IDs")
             
-        symbol = f"{base_asset.symbol}/{quote_asset.symbol}"
+        symbol = f"{base_asset.symbol.upper()}/{quote_asset.symbol.upper()}"
         
         try:
             # Get order book from exchange
@@ -130,7 +130,7 @@ class OrderBookService:
         except Exception as e:
             print(f"Error getting order book from exchange: {e}")
             # Fallback to database order book if exchange fails
-            return OrderBookService._get_local_order_book(base_asset_id, quote_asset_id, limit)
+            return "Error in Order book service"
 
     @staticmethod
     def place_limit_order(user_id: int, base_asset: Asset, quote_asset: Asset,
@@ -364,7 +364,8 @@ class TradingService:
     @staticmethod
     def get_ticker(base_asset: Asset, quote_asset: Asset) -> Decimal:
         """Get latest ticker information from exchange service"""
-        symbol = f"{base_asset.symbol}/{quote_asset.symbol}"
+        print(base_asset)
+        symbol = f"{base_asset.symbol.upper()}/{quote_asset.symbol.upper()}"
         ticker = exchange_service.get_ticker(symbol)
         return ticker
     

@@ -72,8 +72,11 @@ def limit_trade():
     assets = Asset.query.filter_by(is_active=True).all()
     
     # Get default trading pair (e.g., BTC/USDT)
-    default_base = Asset.query.filter_by(symbol='BTC').first()
-    default_quote = Asset.query.filter_by(symbol='USDT').first()
+    default_base = Asset.query.filter_by(symbol='btc').first()
+    default_quote = Asset.query.filter_by(symbol='usdt').first()
+
+    print("*"*50)
+    print(default_base)
     
     # Get market data
     ticker = TradingService.get_ticker(default_base, default_quote)
@@ -94,17 +97,19 @@ def limit_trade():
     # Initialize forms
     market_order_form = MarketOrderForm()
     limit_order_form = LimitOrderForm()
+
+    return render_template('main/under-maintenance.html')
     
-    return render_template('trading/limit.html',
-                         assets=assets,
-                         trading_pairs=trading_pairs,
-                         current_price=current_price,
-                         price_change=price_change,
-                         daily_volume=daily_volume,
-                         order_book=order_book,
-                         recent_trades=recent_trades,
-                         market_order_form=market_order_form,
-                         limit_order_form=limit_order_form)
+    # return render_template('trading/limit.html',
+    #                      assets=assets,
+    #                      trading_pairs=trading_pairs,
+    #                      current_price=current_price,
+    #                      price_change=price_change,
+    #                      daily_volume=daily_volume,
+    #                      order_book=order_book,
+    #                      recent_trades=recent_trades,
+    #                      market_order_form=market_order_form,
+    #                      limit_order_form=limit_order_form) y2fhRxSzU4oub2u
 
 
 
