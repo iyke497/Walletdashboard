@@ -25,7 +25,7 @@ class BaseConfig:
     ASSETS_AUTO_BUILD = True
 
     # Email Configuration
-    MAIL_SERVER = os.environ.get('MAIL_SERVER') or 'smtp.mail.yahoo.com'
+    MAIL_SERVER = os.environ.get('MAIL_SERVER')
     MAIL_PORT = int(os.environ.get('MAIL_PORT') or 587)
     MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', 'true').lower() in ['true', 'on', '1']
     MAIL_USE_SSL = os.environ.get('MAIL_USE_SSL', 'false').lower() in ['true', 'on', '1']
@@ -34,9 +34,7 @@ class BaseConfig:
     MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER') or MAIL_USERNAME
 
     # SERVER NAME
-    SERVER_NAME = 'localhost:45000'  # or 'localhost:5000' for development
     APPLICATION_ROOT = '/'
-    PREFERRED_URL_SCHEME = 'http'
 
 class DevelopmentConfig(BaseConfig):
     DEBUG = True
@@ -53,7 +51,7 @@ class ProductionConfig(BaseConfig):
 
     MAIL_SUPPRESS_SEND = False
 
-    SERVER_NAME = ''
+    SERVER_NAME = 'bloxxxchain.com'
     PREFERRED_URL_SCHEME = 'https'
 
 # factory to pick config
