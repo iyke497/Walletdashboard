@@ -96,6 +96,42 @@ class NetworkType(Enum):
     TRON = "tron"
     OTHER = "other"
 
+class MiningAlgorithm(Enum):
+    SHA256 = "sha256"
+    SCRYPT = "scrypt"
+    ETHASH = "ethash"
+    X11 = "x11"
+    EQUIHASH = "equihash"
+    CRYPTONIGHT = "cryptonight"
+    BLAKE2B = "blake2b"
+    RANDOMX = "randomx"
+
+class MiningDifficulty(Enum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    VERY_HIGH = "very_high"
+
+class MiningContractStatus(Enum):
+    PENDING = "pending"           # Contract created, payment pending
+    ACTIVE = "active"             # Mining in progress
+    PAUSED = "paused"             # Temporarily stopped
+    COMPLETED = "completed"       # Contract term finished
+    CANCELLED = "cancelled"       # Cancelled before completion
+    EXPIRED = "expired"           # Contract expired
+
+class MiningEarningsStatus(Enum):
+    PENDING = "pending"           # Earnings calculated but not paid
+    PAID = "paid"                 # Paid to user's wallet
+    CANCELLED = "cancelled"       # Earnings cancelled (e.g., contract issues)
+
+class HashrateUnit(Enum):
+    HASH_S = "H/s"               # Hash per second
+    KILOHASH_S = "KH/s"          # Kilohash per second  
+    MEGAHASH_S = "MH/s"          # Megahash per second
+    GIGAHASH_S = "GH/s"          # Gigahash per second
+    TERAHASH_S = "TH/s"          # Terahash per second
+    PETAHASH_S = "PH/s"          # Petahash per second
 
 # ---- Models ----
 class User(db.Model, UserMixin, TimestampMixin, SoftDeleteMixin):
@@ -489,6 +525,258 @@ class CopyTrade(db.Model, TimestampMixin, SoftDeleteMixin):
 
     def __repr__(self):
         return f"<CopyTrade {self.follower.username} -> {self.trader.user.username}>"
+
+# ---- Mining Models ----
+class MiningPool(db.Model, TimestampMixin, SoftDeleteMixin):
+    """Mining pools available for different cryptocurrencies"""
+    __tablename__ = 'mining_pools'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    asset_id = db.Column(db.Integer, db.ForeignKey('assets.id'), nullable=False, index=True)
+    name = db.Column(db.String(100), nullable=False)  # e.g., "Bitcoin Mining Pool"
+    algorithm = db.Column(SQLAlchemyEnum(MiningAlgorithm), nullable=False, index=True)
+    pool_fee = db.Column(db.Numeric(5, 4), nullable=False)  # Fee as decimal (0.015 = 1.5%)
+    difficulty = db.Column(SQLAlchemyEnum(MiningDifficulty), nullable=False)
+    min_hashrate = db.Column(db.Numeric(20, 8), nullable=False)  # Minimum hashrate required
+    min_hashrate_unit = db.Column(SQLAlchemyEnum(HashrateUnit), nullable=False)
+    estimated_daily_earnings_per_unit = db.Column(db.Numeric(20, 8), nullable=False)  # USD per hashrate unit
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    
+    # Pool statistics
+    total_hashrate = db.Column(db.Numeric(20, 8), nullable=True)  # Current total pool hashrate
+    total_hashrate_unit = db.Column(SQLAlchemyEnum(HashrateUnit), nullable=True)
+    active_miners = db.Column(db.Integer, default=0)
+    blocks_found_24h = db.Column(db.Integer, default=0)
+    
+    # Relationships
+    asset = db.relationship('Asset', backref='mining_pools')
+    contracts = db.relationship('MiningContract', back_populates='pool', cascade='all, delete-orphan')
+    
+    __table_args__ = (
+        CheckConstraint('pool_fee >= 0 AND pool_fee <= 1', name='ck_pool_fee_range'),
+        CheckConstraint('min_hashrate > 0', name='ck_min_hashrate_positive'),
+        CheckConstraint('estimated_daily_earnings_per_unit >= 0', name='ck_earnings_non_negative'),
+        db.Index('idx_mining_pool_algorithm', 'algorithm'),
+        db.Index('idx_mining_pool_active', 'is_active'),
+    )
+    
+    def __repr__(self):
+        return f"<MiningPool {self.asset.symbol} {self.algorithm.value}>"
+    
+class HashratePackage(db.Model, TimestampMixin, SoftDeleteMixin):
+    """Predefined hashrate packages for easy selection"""
+    __tablename__ = 'hashrate_packages'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    pool_id = db.Column(db.Integer, db.ForeignKey('mining_pools.id'), nullable=False, index=True)
+    name = db.Column(db.String(50), nullable=False)  # "Basic", "Pro", "Enterprise"
+    hashrate = db.Column(db.Numeric(20, 8), nullable=False)
+    hashrate_unit = db.Column(SQLAlchemyEnum(HashrateUnit), nullable=False)
+    monthly_cost_usd = db.Column(db.Numeric(10, 2), nullable=False)
+    power_consumption_watts = db.Column(db.Integer, nullable=True)
+    is_active = db.Column(db.Boolean, default=True)
+    sort_order = db.Column(db.Integer, default=0)  # For display ordering
+    
+    # Relationships
+    pool = db.relationship('MiningPool', backref='hashrate_packages')
+    
+    __table_args__ = (
+        CheckConstraint('hashrate > 0', name='ck_hashrate_positive'),
+        CheckConstraint('monthly_cost_usd > 0', name='ck_cost_positive'),
+        CheckConstraint('power_consumption_watts >= 0', name='ck_power_non_negative'),
+    )
+    
+    def __repr__(self):
+        return f"<HashratePackage {self.name}: {self.hashrate} {self.hashrate_unit.value}>"
+    
+class MiningContract(db.Model, TimestampMixin, SoftDeleteMixin):
+    """User's mining contracts - like staking positions but for mining"""
+    __tablename__ = 'mining_contracts'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    pool_id = db.Column(db.Integer, db.ForeignKey('mining_pools.id'), nullable=False, index=True)
+    package_id = db.Column(db.Integer, db.ForeignKey('hashrate_packages.id'), nullable=True)  # Null for custom
+    
+    # Contract details
+    name = db.Column(db.String(100), nullable=True)  # User-defined name like "BTC Miner #1"
+    hashrate = db.Column(db.Numeric(20, 8), nullable=False)
+    hashrate_unit = db.Column(SQLAlchemyEnum(HashrateUnit), nullable=False)
+    duration_months = db.Column(db.Integer, nullable=False)
+    monthly_cost_usd = db.Column(db.Numeric(10, 2), nullable=False)
+    total_cost_usd = db.Column(db.Numeric(10, 2), nullable=False)  # After discounts
+    
+    # Contract lifecycle
+    status = db.Column(SQLAlchemyEnum(MiningContractStatus), default=MiningContractStatus.PENDING, index=True)
+    start_date = db.Column(db.DateTime, nullable=True)
+    end_date = db.Column(db.DateTime, nullable=True)
+    payment_date = db.Column(db.DateTime, nullable=True)
+    
+    # Performance tracking
+    current_hashrate = db.Column(db.Numeric(20, 8), nullable=True)  # Real-time hashrate
+    uptime_percentage = db.Column(db.Numeric(5, 2), default=0)  # 0-100%
+    total_earnings_usd = db.Column(db.Numeric(15, 8), default=0)
+    last_active_at = db.Column(db.DateTime, nullable=True)
+    
+    # Hardware simulation data
+    power_consumption_watts = db.Column(db.Integer, nullable=True)
+    hardware_type = db.Column(db.String(100), nullable=True)  # "Antminer S19", "RTX 4090 Rig"
+    
+    # Relationships
+    user = db.relationship('User', backref='mining_contracts')
+    pool = db.relationship('MiningPool', back_populates='contracts')
+    package = db.relationship('HashratePackage', backref='contracts')
+    earnings = db.relationship('MiningEarnings', back_populates='contract', cascade='all, delete-orphan')
+    
+    __table_args__ = (
+        CheckConstraint('hashrate > 0', name='ck_contract_hashrate_positive'),
+        CheckConstraint('duration_months > 0', name='ck_duration_positive'),
+        CheckConstraint('monthly_cost_usd > 0', name='ck_monthly_cost_positive'),
+        CheckConstraint('total_cost_usd > 0', name='ck_total_cost_positive'),
+        CheckConstraint('uptime_percentage >= 0 AND uptime_percentage <= 100', name='ck_uptime_range'),
+        db.Index('idx_mining_contract_user_status', 'user_id', 'status'),
+        db.Index('idx_mining_contract_dates', 'start_date', 'end_date'),
+    )
+    
+    def __repr__(self):
+        return f"<MiningContract {self.user.username}: {self.hashrate} {self.hashrate_unit.value} {self.pool.asset.symbol}>"
+    
+    @property
+    def is_active(self):
+        """Check if contract is currently active"""
+        return (self.status == MiningContractStatus.ACTIVE and 
+                self.start_date and self.start_date <= datetime.utcnow() and
+                (not self.end_date or self.end_date > datetime.utcnow()))
+    
+    @property
+    def can_pause(self):
+        """Check if contract can be paused"""
+        return self.status == MiningContractStatus.ACTIVE
+    
+    @property
+    def can_resume(self):
+        """Check if contract can be resumed"""
+        return self.status == MiningContractStatus.PAUSED and self.is_within_term
+    
+    @property
+    def can_cancel(self):
+        """Check if contract can be cancelled"""
+        return self.status in [MiningContractStatus.PENDING, MiningContractStatus.ACTIVE, MiningContractStatus.PAUSED]
+    
+    @property
+    def is_within_term(self):
+        """Check if contract is within its term period"""
+        if not self.start_date or not self.end_date:
+            return False
+        now = datetime.utcnow()
+        return self.start_date <= now <= self.end_date
+    
+    @property
+    def days_remaining(self):
+        """Get days remaining in contract"""
+        if not self.end_date:
+            return None
+        remaining = self.end_date - datetime.utcnow()
+        return max(0, remaining.days)
+    
+    @property
+    def estimated_daily_earnings(self):
+        """Calculate estimated daily earnings based on pool rates"""
+        if not self.pool:
+            return 0
+        
+        # Convert hashrate to pool's unit if needed (simplified)
+        earnings_per_unit = self.pool.estimated_daily_earnings_per_unit
+        return float(self.hashrate) * float(earnings_per_unit)
+
+class MiningEarnings(db.Model, TimestampMixin, SoftDeleteMixin):
+    """Daily mining earnings records - similar to staking rewards"""
+    __tablename__ = 'mining_earnings'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    contract_id = db.Column(db.Integer, db.ForeignKey('mining_contracts.id'), nullable=False, index=True)
+    
+    # Earnings details
+    date = db.Column(db.Date, nullable=False, index=True)  # Earning date
+    amount_mined = db.Column(db.Numeric(30, 18), nullable=False)  # Amount in cryptocurrency
+    amount_usd = db.Column(db.Numeric(15, 8), nullable=False)  # USD value at time of mining
+    hashrate_used = db.Column(db.Numeric(20, 8), nullable=False)  # Actual hashrate for this period
+    uptime_hours = db.Column(db.Numeric(4, 2), default=24.0)  # Hours active (max 24)
+    
+    # Pool information
+    pool_fee_amount = db.Column(db.Numeric(30, 18), default=0)  # Fee paid to pool
+    blocks_found = db.Column(db.Integer, default=0)  # Blocks found by this miner
+    
+    # Status and processing
+    status = db.Column(SQLAlchemyEnum(MiningEarningsStatus), default=MiningEarningsStatus.PENDING, index=True)
+    paid_at = db.Column(db.DateTime, nullable=True)
+    transaction_id = db.Column(db.Integer, db.ForeignKey('transactions.id'), nullable=True)  # Link to payout transaction
+    
+    # Relationships
+    contract = db.relationship('MiningContract', back_populates='earnings')
+    payout_transaction = db.relationship('Transaction', foreign_keys=[transaction_id])
+    
+    __table_args__ = (
+        db.UniqueConstraint('contract_id', 'date', name='uq_contract_earning_date'),
+        CheckConstraint('amount_mined >= 0', name='ck_amount_mined_non_negative'),
+        CheckConstraint('amount_usd >= 0', name='ck_amount_usd_non_negative'),
+        CheckConstraint('hashrate_used >= 0', name='ck_hashrate_used_non_negative'),
+        CheckConstraint('uptime_hours >= 0 AND uptime_hours <= 24', name='ck_uptime_hours_range'),
+        CheckConstraint('pool_fee_amount >= 0', name='ck_pool_fee_non_negative'),
+        db.Index('idx_mining_earnings_date_status', 'date', 'status'),
+    )
+    
+    def __repr__(self):
+        return f"<MiningEarnings {self.contract_id}: {self.amount_mined} on {self.date}>"
+    
+    @property
+    def net_earnings_crypto(self):
+        """Net earnings after pool fees in cryptocurrency"""
+        return self.amount_mined - self.pool_fee_amount
+    
+    @property
+    def effective_hashrate_percentage(self):
+        """Percentage of contracted hashrate actually used"""
+        if not self.contract or not self.contract.hashrate:
+            return 0
+        return (float(self.hashrate_used) / float(self.contract.hashrate)) * 100
+
+class MiningPoolStats(db.Model, TimestampMixin):
+    """Historical statistics for mining pools"""
+    __tablename__ = 'mining_pool_stats'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    pool_id = db.Column(db.Integer, db.ForeignKey('mining_pools.id'), nullable=False, index=True)
+    date = db.Column(db.Date, nullable=False, index=True)
+    
+    # Daily statistics
+    total_hashrate = db.Column(db.Numeric(20, 8), nullable=False)
+    total_hashrate_unit = db.Column(SQLAlchemyEnum(HashrateUnit), nullable=False)
+    active_miners = db.Column(db.Integer, default=0)
+    blocks_found = db.Column(db.Integer, default=0)
+    average_block_time_minutes = db.Column(db.Numeric(8, 2), nullable=True)
+    pool_luck_percentage = db.Column(db.Numeric(6, 2), nullable=True)  # Mining luck %
+    network_difficulty = db.Column(db.Numeric(30, 8), nullable=True)
+    
+    # Earnings statistics
+    total_rewards_distributed = db.Column(db.Numeric(30, 18), default=0)
+    average_earnings_per_th = db.Column(db.Numeric(20, 8), nullable=True)  # Earnings per TH/s
+    
+    # Relationships
+    pool = db.relationship('MiningPool', backref='historical_stats')
+    
+    __table_args__ = (
+        db.UniqueConstraint('pool_id', 'date', name='uq_pool_stats_date'),
+        CheckConstraint('total_hashrate > 0', name='ck_stats_hashrate_positive'),
+        CheckConstraint('active_miners >= 0', name='ck_stats_miners_non_negative'),
+        CheckConstraint('blocks_found >= 0', name='ck_stats_blocks_non_negative'),
+    )
+    
+    def __repr__(self):
+        return f"<MiningPoolStats {self.pool.asset.symbol} {self.date}: {self.total_hashrate} {self.total_hashrate_unit.value}>"   
+
+
 
 # ----- Event listeners -----
 
