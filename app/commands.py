@@ -4,14 +4,16 @@ from decimal import Decimal
 import json
 import time
 import math
+import random
 import requests
+from faker import Faker
 from sqlalchemy import exc
 from flask.cli import with_appcontext
 from datetime import datetime
 from .extensions import db
-from .models import Asset, User, NetworkType, AssetType, Holding, DepositAddress, Trader
+from app.models import Asset, User, NetworkType, AssetType, Holding, DepositAddress, Trader, AssetType, MiningAlgorithm, HashrateUnit, MiningPool, MiningDifficulty, HashratePackage
 from .dashboard.services import CoinGeckoService
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError, NoResultFound
 from app.utils.network_symbol import get_network_symbol
 
 @click.command('seed-db')
@@ -689,6 +691,95 @@ def seed_traders_command(json_file):
     except Exception as e:
         click.echo(f"Failed to load JSON file: {str(e)}", err=True)
 
+@click.command('seed-mining-pools')
+@click.option('--pools', default=5, help='Number of mining pools to create')
+@click.option('--packages', default=3, help='Number of hashrate packages per pool')
+def load_mining_data(pools, packages):
+    """Load dummy data for mining pools and hashrate packages"""
+    fake = Faker()
+    click.echo(f"Creating {pools} mining pools with {packages} packages each...")
+
+    # Asset symbols we'll use (assuming they exist)
+    asset_symbols = ["btc", "eth", "ltc", "doge"]
+    
+    # Asset-algorithm mapping
+    asset_algorithms = {
+        "btc": MiningAlgorithm.SHA256,
+        "eth": MiningAlgorithm.ETHASH,
+        "ltc": MiningAlgorithm.SCRYPT,
+        "doge": MiningAlgorithm.SCRYPT,
+    }
+
+    # Asset-unit mapping
+    asset_units = {
+        "btc": HashrateUnit.TERAHASH_S,
+        "eth": HashrateUnit.MEGAHASH_S,
+        "ltc": HashrateUnit.GIGAHASH_S,
+        "doge": HashrateUnit.KILOHASH_S,
+    }
+
+    # Create mining pools
+    created_pools = 0
+    created_packages = 0
+    
+    for _ in range(pools):
+        symbol = random.choice(asset_symbols)
+        
+        try:
+            # Fetch existing asset - will fail if not found
+            asset = db.session.query(Asset).filter_by(symbol=symbol).first()
+            
+            pool = MiningPool(
+                asset_id=asset.id,
+                name=f"{asset.name} {fake.color_name()} Pool",
+                algorithm=asset_algorithms[symbol],
+                pool_fee=round(random.uniform(0.005, 0.03), 4),  # 0.5% - 3%
+                difficulty=random.choice(list(MiningDifficulty)),
+                min_hashrate=round(random.uniform(10, 1000), 2),  # 10-1000 units
+                min_hashrate_unit=asset_units[symbol],
+                estimated_daily_earnings_per_unit=round(random.uniform(0.01, 0.5), 4),  # $0.01-$0.5/day
+                description=fake.text(),
+                is_active=random.choices([True, False], weights=[0.8, 0.2])[0],
+                total_hashrate=round(random.uniform(1000, 100000), 2),
+                total_hashrate_unit=asset_units[symbol],
+                active_miners=random.randint(100, 10000),
+                blocks_found_24h=random.randint(1, 100)
+            )
+            db.session.add(pool)
+            db.session.flush()  # Get pool ID for packages
+            
+            # Create packages for this pool
+            for j in range(packages):
+                multiplier = [1, 5, 10, 20, 50][j] if j < 5 else 100
+                package = HashratePackage(
+                    pool_id=pool.id,
+                    name=f"{fake.word().capitalize()} Package",
+                    hashrate=pool.min_hashrate * multiplier,
+                    hashrate_unit=pool.min_hashrate_unit,
+                    monthly_cost_usd=round(30 * pool.estimated_daily_earnings_per_unit * multiplier * random.uniform(0.8, 1.2), 2),
+                    power_consumption_watts=random.randint(100, 5000),
+                    is_active=random.choices([True, False], weights=[0.9, 0.1])[0],
+                    sort_order=j
+                )
+                db.session.add(package)
+                created_packages += 1
+                
+            db.session.commit()
+            created_pools += 1
+            click.echo(f"Created pool: {pool.name} with {packages} packages")
+            
+        except NoResultFound:
+            db.session.rollback()
+            click.echo(f"⚠️ Asset {symbol} not found in database. Skipping pool creation.")
+        except IntegrityError as e:
+            db.session.rollback()
+            click.echo(f"⚠️ Skipped duplicate pool: {e.orig}")
+
+    click.echo(f"✅ Successfully created {created_pools} mining pools")
+    click.echo(f"✅ Successfully created {created_packages} packages")
+    click.echo(f"💡 Note: {pools - created_pools} pools skipped due to errors")
+
+
 def init_app(app):
     app.cli.add_command(seed_db_command)
     app.cli.add_command(seed_holdings_command)
@@ -698,3 +789,4 @@ def init_app(app):
     app.cli.add_command(fetch_crypto_images_command)
     app.cli.add_command(seed_traders_command)
     app.cli.add_command(update_network_structure)
+    app.cli.add_command(load_mining_data)
