@@ -1,0 +1,399 @@
+{% extends "layouts/vertical.html" %}
+{% block extra_css %}
+
+{% endblock %}
+
+
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    {# CARD WITH TABS for Mining pools and Positions #}
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <div class="nav-align-top">
+                        <ul class="nav nav-pills mb-3" role="tablist">
+                            <li class="nav-item">
+                                <button type="button" class="nav-link active" role="tab" data-bs-toggle="tab"
+                                        data-bs-target="#navs-pills-tab-mining-pools"
+                                        aria-controls="navs-pills-tab-mining-pools" aria-selected="true">
+                                    Mining Pools
+                                </button>
+                            </li>
+                            <li class="nav-item">
+                                <button type="button" class="nav-link" role="tab" data-bs-toggle="tab"
+                                        data-bs-target="#navs-pills-tab-my-positions"
+                                        aria-controls="navs-pills-tab-my-positions" aria-selected="false">
+                                    My Staking Positions
+                                </button>
+                            </li>
+                            {# Add other tabs here if needed, e.g., "Earnings History" #}
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="tab-content p-0">
+                        {# ------------- TAB 1: MINING POOLS ------------- #}
+                        <div class="tab-pane fade show active" id="navs-pills-tab-mining-pools" role="tabpanel">
+                            {# SEARCH / FILTER CARD (existing code from your staking_home.html) #}
+                            <div class="row mb-4">
+                                <div class="col-md-10 col-lg-8 mx-auto">
+                                    <div class="card shadow-sm">
+                                        <div class="card-body">
+                                            <form method="GET" action="{{ url_for('staking.mining_home') }}#navs-pills-tab-mining-pools" class="d-flex flex-wrap gap-3 align-items-end">
+                                                {# Ensure form action includes hash to return to the correct tab #}
+                                                <!--Searchbox-->
+                                                <div class="flex-grow-1">
+                                                    <label for="search" class="form-label">Search Pools</label>
+                                                    <input type="text" id="search" name="search" class="form-control" placeholder="Search by symbol or name…" value="{{ search_query }}" autocomplete="off">
+                                                </div>
+
+                                                <!--Algorithm Dropdown-->
+                                                <div>
+                                                    <label for="algorithm" class="form-label">Algorithm</label>
+                                                    <select name="algorithm" id="algorithm" class="form-select">
+                                                        <option value="">All Algorithms</option>
+                                                        {% for algo in algorithms %}
+                                                            <option value="{{ algo.value }}" {% if algorithm_filter == algo.value %}selected{% endif %}>{{ algo.name }}</option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+
+                                                <!--Difficulty Dropdown-->
+                                                <div>
+                                                    <label for="difficulty" class="form-label">Difficulty</label>
+                                                    <select name="difficulty" id="difficulty" class="form-select">
+                                                        <option value="">Any Difficulty</option>
+                                                        {% for diff in difficulties %}
+                                                            <option value="{{ diff.value }}" {% if difficulty_filter == diff.value %}selected{% endif %}>{{ diff.name.title() }}</option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+
+                                                <!--Pagination Selection-->
+                                                <div style="min-width: 80px;">
+                                                    <label for="per_page" class="form-label">Per Page</label>
+                                                    <select name="per_page" id="per_page" class="form-select" style="width: auto;">
+                                                        <option value="5"  {% if current_per_page == 5  %}selected{% endif %}>5</option>
+                                                        <option value="10" {% if current_per_page == 10 %}selected{% endif %}>10</option>
+                                                        <option value="25" {% if current_per_page == 25 %}selected{% endif %}>25</option>
+                                                        <option value="50" {% if current_per_page == 50 %}selected{% endif %}>50</option>
+                                                    </select>
+                                                </div>
+                                                <!--Search Button-->
+                                                <div>
+                                                    <button type="submit" class="btn btn-primary">
+                                                        <i class="icon-base ti tabler-search me-1"></i>Search
+                                                    </button>
+                                                </div>
+                                                {% if search_query %}
+                                                <div>
+                                                    <a href="{{ url_for('staking.mining_home') }}#navs-pills-tab-mining-pools" class="btn btn-outline-secondary">
+                                                        <i class="icon-base ti tabler-x me-1"></i>Clear
+                                                    </a>
+                                                </div>
+                                                {% endif %}
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {% if search_query %}
+                            <div class="row mb-3">
+                                <div class="col-md-10 col-lg-8 mx-auto">
+                                    <div class="alert alert-info">
+                                        <i class="icon-base ti tabler-info-circle me-1"></i>
+                                        Found {{ pagination.total }} result(s) for "{{ search_query }}"
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            {# POOLS/ASSET LIST #}
+                            <div class="row">
+                                <div class="col-md-10 col-lg-8 mx-auto">
+                                    <div class="card shadow-sm">
+                                        <div class="card-datatable table-responsive pt-0">
+                                            <table class="datatables-basic table">
+                                                <thead>
+                                                    <tr>
+                                                        <th></th>
+                                                        <th>Asset</th>
+                                                        <th>Algorithm</th>
+                                                        <th>Pool fee</th>
+                                                        <th>Difficulty</th>
+                                                        <th>APR</th>
+                                                        <th>Action</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for pool in pools %}
+                                                    <tr>
+                                                        <td></td>
+                                                        <td>
+                                                            <div class="d-flex align-items-center">
+                                                                <div class="avatar flex-shrink-0 me-3">
+                                                                    {% if pool.asset.images %}
+                                                                    <img 
+                                                                    src="{{ pool.asset.images.get('small', pool.asset.images.get('thumb', '')) }}" 
+                                                                    alt="{{ pool.asset.name }} logo" 
+                                                                    class="rounded-circle" 
+                                                                    style="width:32px;height:32px;"
+                                                                    >
+                                                                    {% else %}
+                                                                        <div class="avatar-initial rounded-circle bg-label-primary">
+                                                                            {{ pool.asset.symbol[0] if pool.asset.symbol else 'A' }}
+                                                                        </div>
+                                                                    {% endif %}
+                                                                </div>
+                                                                <div>
+                                                                    <h6 class="mb-0">{{ pool.asset.symbol }}</h6>
+                                                                    <small class="text-body">{{ pool.name }}</small>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td><span>{{ pool.algorithm.name }}</span></td>
+                                                        <td>{{ "%.2f"|format(pool.pool_fee * 100) }}%</td>
+                                                        <td>
+                                                            {% if pool.difficulty.value == 'low' %}
+                                                                <span class="badge bg-label-success">Low</span>
+                                                            {% elif pool.difficulty.value == 'medium' %}
+                                                                <span class="badge bg-label-warning">Medium</span>
+                                                            {% elif pool.difficulty.value == 'high' %}
+                                                                <span class="badge bg-label-danger">High</span>
+                                                            {% elif pool.difficulty.value == 'very_high' %}
+                                                                <span class="badge bg-label-danger">Very High</span>
+                                                            {% else %}
+                                                                <span class="badge bg-label-secondary">{{ pool.difficulty.name.title() }}</span>
+                                                            {% endif %}
+                                                        </td>
+                                                        <td>{{ pool.min_hashrate }} {{ pool.min_hashrate_unit.value }}</td>
+                                                        <td>${{ "%.4f"|format(pool.estimated_daily_earnings_per_unit) }} per {{ pool.min_hashrate_unit.value }}</td>
+                                                        <td><span class="badge bg-label-success">4.5%</span></td> {# This APR should be dynamic from asset data if available #}
+                                                        <td>
+                                                            <button class="btn btn-primary btn-sm mining-btn"
+                                                                    data-bs-toggle="modal"
+                                                                    data-bs-target="#miningModal"
+                                                                    data-asset-id="{{ pool.id }}"
+                                                                    data-asset-symbol="{{ pool.asset.symbol }}"
+                                                                    data-asset-name="{{ pool.asset.name }}"
+                                                                    data-asset-image="{{ pool.asset.images.get('small', pool.asset.images.get('thumb', '')) if pool.asset.images else '' }}"
+                                                                    data-algorithm="{{ pool.algorithm.name }}"
+                                                                    data-pool-fee="{{ '%.2f' | format( pool.pool_fee * 100 ) }}"
+                                                                    data-min-hashrate="{{ pool.min_hashrate }}"
+                                                                    data-hashrate-unit="{{ pool.min_hashrate_unit.value }}"
+                                                                    data-earnings-per-unit="{{ pool.estimated_daily_earnings_per_unit }}"
+                                                                    data-difficulty="{{ pool.difficulty.name.title() }}">
+                                                                <i class="icon-base ti tabler-coins me-1"></i>Mine
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                    {% else %}
+                                                    <tr>
+                                                        <td colspan="4" class="text-center py-4">
+                                                            <div class="text-muted">
+                                                                <i class="icon-base ti tabler-search icon-lg d-block mx-auto mb-2"></i>
+                                                                {% if search_query %}
+                                                                    No mining pools found matching "{{ search_query }}"
+                                                                {% else %}
+                                                                    No mining pools available at the moment.
+                                                                {% endif %}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        {# PAGINATION (existing code - ensure links point to the correct tab with hash) #}
+                                        {% if pagination and pagination.pages > 1 %}
+                                        <div class="card-footer d-flex justify-content-center">
+                                            <nav aria-label="Mining pools navigation">
+                                                <ul class="pagination">
+                                                    <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                                                        <a class="page-link" href="{{ url_for('staking.mining_home', page=pagination.prev_num, per_page=current_per_page, search=search_query) if pagination.has_prev else '#'}}#navs-pills-tab-stake-assets"><i class="ti ti-chevron-left"></i></a>
+                                                    </li>
+                                                    {% for p_num in pagination.iter_pages %}
+                                                        {% if p_num %}
+                                                            <li class="page-item {% if p_num == pagination.page %}active{% endif %}">
+                                                                <a class="page-link" href="{{ url_for('staking.mining_home', page=p_num, per_page=current_per_page, search=search_query) }}#navs-pills-tab-stake-assets">{{ p_num }}</a>
+                                                            </li>
+                                                        {% else %}
+                                                            <li class="page-item disabled"><span class="page-link">…</span></li>
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                    <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                                                        <a class="page-link" href="{{ url_for('staking.mining_home', page=pagination.next_num, per_page=current_per_page, search=search_query) if pagination.has_next else '#'}}#navs-pills-tab-stake-assets"><i class="ti ti-chevron-right"></i></a>
+                                                    </li>
+                                                </ul>
+                                            </nav>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>{# /#navs-pills-tab-mining-pools #}
+
+                        {# ------------- TAB 2: MY MINERS ------------- #}
+                        <div class="tab-pane fade" id="navs-pills-tab-my-positions" role="tabpanel">
+                            <h4 class="mb-3 pt-3">Your Active Miners</h4>
+                            <p>Total Positions: <span class="fw-bold">{{ total_positions }}</span> | Currently Active: <span class="fw-bold text-success">{{ active_positions }}</span></p>
+
+                            {% if user_positions %}
+                            <div class="table-responsive text-nowrap">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Asset</th>
+                                            <th>Amount Staked</th>
+                                            <th>Period</th>
+                                            <th>APR</th>
+                                            <th>Est. Rewards</th>
+                                            <th>Start Date</th>
+                                            <th>End Date / Unlock</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="table-border-bottom-0">
+                                        {% for pos in user_positions %}
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    {% if pos.asset_image %}
+                                                        <img src="{{ pos.asset_image }}" alt="{{ pos.asset_symbol }}" class="avatar avatar-xs rounded-circle me-2">
+                                                    {% else %}
+                                                        <div class="avatar avatar-xs avatar-initial rounded-circle bg-label-secondary me-2">{{ pos.asset_symbol[0] if pos.asset_symbol else '?' }}</div>
+                                                    {% endif %}
+                                                    <div>
+                                                        <span class="fw-medium">{{ pos.asset_symbol }}</span><br>
+                                                        <small class="text-muted">{{ pos.asset_name }}</small>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>{{ "%.8f"|format(pos.amount|float) }}</td>
+                                            <td>{{ pos.period_display }}</td> {# Assuming StakingService provides this #}
+                                            <td><span class="badge bg-label-info">{{ pos.apr }}%</span></td> {# Assuming StakingService provides this #}
+                                            <td>{{ pos.estimated_rewards }}</td>
+                                            <td>{{ pos.start_date.strftime('%Y-%m-%d %H:%M') if pos.start_date else 'N/A' }}</td>
+                                            <td>{{ pos.end_date.strftime('%Y-%m-%d %H:%M') if pos.end_date else 'Flexible' }}</td>
+                                            <td>
+                                                <span class="badge rounded-pill
+                                                    {% if pos.status == 'active' %} bg-label-success
+                                                    {% elif pos.status == 'completed' %} bg-label-primary
+                                                    {% elif pos.status == 'unstaked' %} bg-label-warning
+                                                    {% else %} bg-label-secondary {% endif %}">
+                                                    {{ pos.status|capitalize }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                {% if pos.status == 'active' and pos.can_unstake %} {# Assuming StakingService provides can_unstake #}
+                                                <button type="button" class="btn btn-danger btn-sm unstake-pos-btn"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#unstakePositionModal"
+                                                        data-position-id="{{ pos.id }}"
+                                                        data-asset-symbol="{{ pos.asset_symbol }}"
+                                                        data-staked-amount="{{ "%.8f"|format(pos.amount|float) }}">
+                                                    <i class="ti ti-logout me-1 ti-xs"></i>Unstake
+                                                </button>
+                                                {% elif pos.status == 'active' and not pos.can_unstake %}
+                                                    <span class="text-muted small fst-italic">Locked</span>
+                                                {% else %}
+                                                    <span class="text-muted small fst-italic">-</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="text-center py-5">
+                                <i class="ti ti-ghost ti-lg mb-2 d-block mx-auto text-muted"></i>
+                                <p class="text-muted">You have no staking positions yet.</p>
+                                <p><small>Explore assets in the "Stake Assets" tab to get started!</small></p>
+                            </div>
+                            {% endif %}
+                        </div>{# /#navs-pills-tab-my-positions #}
+                    </div>
+                </div>{# /.card-body #}
+            </div>{# /.card #}
+        </div>{# /.col-12 #}
+    </div>{# /.row #}
+
+    {# MODAL 1 – ENTER DETAILS (NO FORM SUBMIT) - (existing code from your staking_home.html) #}
+    <div class="modal fade" id="stakingModal" tabindex="-1" aria-labelledby="stakingModalLabel" aria-hidden="true">
+        {# ... Your existing modal content for staking ... #}
+        {# Ensure IDs like 'modal-asset-image', 'modal-asset-symbol', 'stakeAmount', etc. are correct #}
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="stakingModalLabel"><i class="icon-base ti tabler-coins me-2"></i>Stake Asset</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="d-flex align-items-center mb-4 p-3 bg-light rounded">
+                        <div class="avatar flex-shrink-0 me-3">
+                            <img src="" id="modal-asset-image" class="rounded-circle" style="width:48px;height:48px;" alt="">
+                        </div>
+                        <div>
+                            <h6 class="mb-1" id="modal-asset-symbol">Loading…</h6>
+                            <small class="text-muted" id="modal-asset-name">Loading…</small>
+                        </div>
+                        <div class="ms-auto"><span class="badge bg-label-success fs-6">APR: 4.5%</span></div>
+                    </div>
+
+                    {# Plain inputs – will be copied into WTForms fields in modal 2 #}
+                    <div class="mb-3">
+                        <label for="stakeAmount" class="form-label">Amount to Stake</label>
+                        <div class="input-group">
+                            <input type="number" id="stakeAmount" class="form-control" placeholder="0.00" step="0.00000001" min="0">
+                            <span class="input-group-text" id="stake-currency-symbol">CUR</span>
+                        </div>
+                        <div class="form-text">Available Balance:
+                            <span class="text-primary fw-medium">
+                            <span id="balance-amount">0.00</span>
+                            <span id="balance-currency">CUR</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="stakingPeriod" class="form-label">Staking Period</label>
+                        <select id="stakingPeriod" class="form-select">
+                            <option value="">Select staking period</option>
+                            <option value="flexible">Flexible (No lock period – 4.5% APR)</option>
+                            <option value="30">30 Days (5.0% APR)</option>
+                            <option value="60">60 Days (5.5% APR)</option>
+                            <option value="90">90 Days (6.0% APR)</option>
+                        </select>
+                    </div>
+
+                    <div class="alert alert-info mb-3" id="stakingSummary" style="display:none;">
+                        <h6 class="alert-heading mb-2"><i class="icon-base ti tabler-info-circle me-1"></i>Staking Summary</h6>
+                        <div class="row">
+                            <div class="col-6"><small class="text-muted">Amount:</small><br><span class="fw-medium" id="summary-amount">0.00 CUR</span></div>
+                            <div class="col-6"><small class="text-muted">Est. Annual Rewards:</small><br><span class="fw-medium text-success" id="summary-rewards">0.00 CUR</span></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" id="proceedToConfirm" class="btn btn-primary" data-bs-target="#stakingConfirmModal" data-bs-toggle="modal" data-bs-dismiss="modal" disabled>
+                        <i class="icon-base ti tabler-arrow-right me-1"></i>Review &amp; Confirm
+                    </button>
+                </div>
+            </div> 
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+
+{% block extra_js %}
+
+{% endblock %}

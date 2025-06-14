@@ -1,9 +1,9 @@
 from decimal import Decimal
 from datetime import datetime, timedelta
 from flask import current_app
-from app.models import User, Holding, Asset, AssetType, StakingPosition
+from app.models import User, Holding, Asset, AssetType, StakingPosition, MiningPool, HashratePackage, MiningContract, Transaction, MiningContractStatus, MiningEarnings, MiningEarningsStatus, MiningDifficulty, MiningAlgorithm    
 from app.extensions import db
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 
 
 class AssetService:
@@ -330,3 +330,523 @@ class StakingService:
             'rewards': str(rewards),
             'total_value': str(position.amount + rewards)
         }
+
+
+# Complete the MiningService class in services.py
+
+class MiningService:
+    @staticmethod
+    def get_available_pools_old(page=1, per_page=10, search='', algorithm='', difficulty=''):
+        """Get available mining pools with pagination and filtering"""
+        query = MiningPool.query.filter(MiningPool.is_active == True)
+        
+        # Add search filter
+        if search:
+            search_filter = f"%{search}%"
+            query = query.join(Asset).filter(
+                or_(
+                    Asset.symbol.ilike(search_filter),
+                    Asset.name.ilike(search_filter),
+                    MiningPool.name.ilike(search_filter)
+                )
+            )
+        
+        # Add algorithm filter
+        if algorithm:
+            query = query.filter(MiningPool.algorithm == algorithm)
+        
+        # Add difficulty filter
+        if difficulty:
+            query = query.filter(MiningPool.difficulty == difficulty)
+        
+        # Order by estimated earnings (highest first)
+        query = query.order_by(MiningPool.estimated_daily_earnings_per_unit.desc())
+        
+        # Apply pagination
+        paginated_pools = query.paginate(
+            page=page,
+            per_page=per_page,
+            error_out=False
+        )
+        
+        return paginated_pools
+    
+    @staticmethod
+    def get_available_pools(page=1, per_page=10, search='', algorithm='', difficulty=''):
+        """
+        Get available mining pools with pagination and filtering
+        
+        Args:
+            page (int): Page number
+            per_page (int): Items per page
+            search (str): Search query for name or symbol
+            algorithm (str): Filter by algorithm type
+            difficulty (str): Filter by difficulty level
+        
+        Returns:
+            Pagination object containing filtered mining pools
+        """
+        query = MiningPool.query.filter(MiningPool.is_active == True)
+        
+        # Always join with Asset to ensure we have access to asset data
+        query = query.join(Asset)
+        
+        # Add search filter
+        if search:
+            search_filter = f"%{search}%"
+            query = query.filter(
+                or_(
+                    Asset.symbol.ilike(search_filter),
+                    Asset.name.ilike(search_filter),
+                    MiningPool.name.ilike(search_filter)
+                )
+            )
+        
+        # Add algorithm filter
+        if algorithm:
+            # Handle both string values and enum values
+            if isinstance(algorithm, str) and algorithm in MiningAlgorithm.__members__:
+                algorithm = MiningAlgorithm[algorithm.upper()]
+            query = query.filter(MiningPool.algorithm == algorithm)
+        
+        # Add difficulty filter
+        if difficulty:
+            # Handle both string values and enum values
+            if isinstance(difficulty, str) and difficulty in MiningDifficulty.__members__:
+                difficulty = MiningDifficulty[difficulty.upper()]
+            query = query.filter(MiningPool.difficulty == difficulty)
+        
+        # Order by estimated earnings (highest first)
+        query = query.order_by(MiningPool.estimated_daily_earnings_per_unit.desc())
+        
+        # Apply pagination
+        paginated_pools = query.paginate(
+            page=page,
+            per_page=per_page,
+            error_out=False
+        )
+        
+        return paginated_pools
+
+
+    @staticmethod
+    def get_pool_by_id(pool_id):
+        """
+        Get a specific mining pool by ID with related asset data
+        
+        Args:
+            pool_id (int): The ID of the mining pool
+            
+        Returns:
+            MiningPool: The mining pool or None if not found
+        """
+        return MiningPool.query.join(Asset).filter(MiningPool.id == pool_id).first()
+
+
+
+    @staticmethod
+    def get_pool_packages(pool_id):
+        """Get hashrate packages for a specific pool"""
+        packages = HashratePackage.query.filter_by(
+            pool_id=pool_id,
+            is_active=True
+        ).order_by(HashratePackage.sort_order, HashratePackage.hashrate).all()
+        
+        return packages
+    
+    @staticmethod
+    def get_user_contracts(user_id, include_inactive=False):
+        """Get all mining contracts for a user with formatted data for template"""
+        query = MiningContract.query.filter_by(user_id=user_id)
+        
+        if not include_inactive:
+            query = query.filter(
+                MiningContract.status.in_([
+                    MiningContractStatus.PENDING,
+                    MiningContractStatus.ACTIVE,
+                    MiningContractStatus.PAUSED
+                ])
+            )
+        
+        contracts = query.join(MiningPool).join(Asset).order_by(
+            MiningContract.created_at.desc()
+        ).all()
+        
+        result = []
+        now = datetime.utcnow()
+        
+        for contract in contracts:
+            # Calculate uptime and status
+            if contract.status == MiningContractStatus.ACTIVE:
+                hours_since_start = (now - contract.start_date).total_seconds() / 3600 if contract.start_date else 0
+                uptime_hours = hours_since_start * (contract.uptime_percentage / 100) if contract.uptime_percentage else 0
+                uptime_display = f"{uptime_hours:.1f}h" if uptime_hours < 24 else f"{uptime_hours/24:.1f}d"
+            else:
+                uptime_display = "N/A"
+            
+            # Determine if contract can be controlled
+            can_pause = contract.status == MiningContractStatus.ACTIVE
+            can_resume = contract.status == MiningContractStatus.PAUSED
+            can_unstake = contract.status in [MiningContractStatus.ACTIVE, MiningContractStatus.PAUSED]
+            
+            # Calculate estimated daily earnings
+            daily_earnings = contract.estimated_daily_earnings if hasattr(contract, 'estimated_daily_earnings') else 0
+            
+            result.append({
+                'id': contract.id,
+                'name': contract.name or f"{contract.pool.asset.symbol} Miner #{contract.id}",
+                'asset_symbol': contract.pool.asset.symbol,
+                'asset_name': contract.pool.asset.name,
+                'asset_image': contract.pool.asset.images.get('small', '') if contract.pool.asset.images else None,
+                'hashrate': f"{contract.current_hashrate or contract.hashrate} {contract.hashrate_unit.value}",
+                'power_consumption': contract.power_consumption_watts,
+                'pool_fee': f"{contract.pool.pool_fee * 100:.1f}%",
+                'daily_earnings': f"${daily_earnings:.2f}",
+                'status': contract.status.value,
+                'uptime_percentage': f"{contract.uptime_percentage:.1f}%",
+                'uptime_display': uptime_display,
+                'start_date': contract.start_date,
+                'end_date': contract.end_date,
+                'hardware_type': contract.hardware_type,
+                'can_pause': can_pause,
+                'can_resume': can_resume,
+                'can_unstake': can_unstake,
+                'apr': f"{contract.pool.estimated_daily_earnings_per_unit * 365 / 1000:.1f}%"  # Rough APR calculation
+            })
+        
+        return result
+    
+    @staticmethod
+    def get_user_earnings_summary(user_id):
+        """Get user's mining earnings summary for the earnings tab"""
+        
+        now = datetime.utcnow()
+        today = now.date()
+        week_start = today - timedelta(days=today.weekday())
+        month_start = today.replace(day=1)
+        
+        # Get earnings by time period
+        earnings_query = db.session.query(
+            func.sum(MiningEarnings.amount_usd).label('total_usd')
+        ).join(MiningContract).filter(
+            MiningContract.user_id == user_id,
+            MiningEarnings.status == 'paid'
+        )
+        
+        # Today's earnings
+        today_earnings = earnings_query.filter(
+            MiningEarnings.date == today
+        ).scalar() or 0
+        
+        # This week's earnings
+        week_earnings = earnings_query.filter(
+            MiningEarnings.date >= week_start
+        ).scalar() or 0
+        
+        # This month's earnings
+        month_earnings = earnings_query.filter(
+            MiningEarnings.date >= month_start
+        ).scalar() or 0
+        
+        # Total earnings
+        total_earnings = earnings_query.scalar() or 0
+        
+        # Get earnings by coin
+        earnings_by_coin = db.session.query(
+            Asset.symbol,
+            Asset.name,
+            func.sum(MiningEarnings.amount_mined).label('total_mined'),
+            func.sum(MiningEarnings.amount_usd).label('total_usd')
+        ).join(MiningContract).join(MiningPool).join(Asset).filter(
+            MiningContract.user_id == user_id,
+            MiningEarnings.status == 'paid'
+        ).group_by(Asset.id, Asset.symbol, Asset.name).all()
+        
+        # Calculate percentages for coin distribution
+        coin_distribution = []
+        for coin_data in earnings_by_coin:
+            percentage = (coin_data.total_usd / total_earnings * 100) if total_earnings > 0 else 0
+            coin_distribution.append({
+                'symbol': coin_data.symbol,
+                'name': coin_data.name,
+                'amount_mined': float(coin_data.total_mined),
+                'usd_value': float(coin_data.total_usd),
+                'percentage': percentage
+            })
+        
+        # Get recent payouts
+        recent_payouts = db.session.query(MiningEarnings).join(
+            MiningContract
+        ).join(MiningPool).join(Asset).filter(
+            MiningContract.user_id == user_id
+        ).order_by(MiningEarnings.date.desc()).limit(10).all()
+        
+        payout_history = []
+        for payout in recent_payouts:
+            payout_history.append({
+                'date': payout.date,
+                'asset_symbol': payout.contract.pool.asset.symbol,
+                'asset_name': payout.contract.pool.asset.name,
+                'amount_mined': float(payout.amount_mined),
+                'usd_value': float(payout.amount_usd),
+                'status': payout.status.value
+            })
+        
+        return {
+            'today_earnings': float(today_earnings),
+            'week_earnings': float(week_earnings),
+            'month_earnings': float(month_earnings),
+            'total_earnings': float(total_earnings),
+            'coin_distribution': coin_distribution,
+            'recent_payouts': payout_history
+        }
+    
+    @staticmethod
+    def can_user_start_contract(user_id, pool_id):
+        """Check if user can start a mining contract for this pool"""
+        pool = MiningPool.query.get(pool_id)
+        if not pool or not pool.is_active:
+            return False
+        
+        # Check if user has any payment method or sufficient balance
+        # This would integrate with your payment/balance system
+        return True
+    
+    @staticmethod
+    def validate_user_can_pay(user_id, amount):
+        """Validate user has sufficient balance to pay for contract"""
+        # This should check user's USD balance or payment methods
+        # For now, assuming they can pay (implement based on your payment system)
+        
+        # Example implementation:
+        usd_asset_id = 1  # Assuming USD asset ID is 1
+        user_balance = AssetService.get_user_balance(user_id, usd_asset_id)
+        return user_balance >= Decimal(str(amount))
+    
+    @staticmethod
+    def control_mining_contract(user_id, contract_id, action):
+        """Control mining contract (pause, resume, cancel)"""
+        try:
+            contract = MiningContract.query.filter_by(
+                id=contract_id,
+                user_id=user_id
+            ).first()
+            
+            if not contract:
+                return False
+            
+            if action == 'pause' and contract.can_pause:
+                contract.status = MiningContractStatus.PAUSED
+                contract.last_active_at = datetime.utcnow()
+                
+            elif action == 'resume' and contract.can_resume:
+                contract.status = MiningContractStatus.ACTIVE
+                
+            elif action == 'cancel' and contract.can_cancel:
+                contract.status = MiningContractStatus.CANCELLED
+                # Optionally process refund logic here
+                
+            else:
+                return False
+            
+            db.session.commit()
+            return True
+            
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error controlling mining contract: {str(e)}")
+            return False
+    
+    @staticmethod
+    def get_withdrawable_assets(user_id):
+        """Get assets that user can withdraw mining earnings as"""
+        # Get assets where user has mining earnings
+        assets_with_earnings = db.session.query(Asset).join(
+            MiningPool
+        ).join(MiningContract).filter(
+            MiningContract.user_id == user_id,
+            MiningContract.status == MiningContractStatus.ACTIVE
+        ).distinct().all()
+        
+        return assets_with_earnings
+    
+    @staticmethod
+    def get_available_earnings_balance(user_id, asset_id):
+        """Get available earnings balance for withdrawal"""
+        
+        # Sum up all paid earnings for this user and asset
+        total_earnings = db.session.query(
+            func.sum(MiningEarnings.amount_mined)
+        ).join(MiningContract).join(MiningPool).filter(
+            MiningContract.user_id == user_id,
+            MiningPool.asset_id == asset_id,
+            MiningEarnings.status == 'paid'
+        ).scalar() or Decimal('0')
+        
+        # Subtract any previous withdrawals (would need withdrawal tracking)
+        # For now, return total earnings
+        return total_earnings
+    
+    @staticmethod
+    def get_total_positions(user_id):
+        """Get total number of mining positions for user"""
+        return MiningContract.query.filter_by(user_id=user_id).count()
+    
+    @staticmethod
+    def get_active_positions(user_id):
+        """Get number of active mining positions for user"""
+        return MiningContract.query.filter_by(
+            user_id=user_id,
+            status=MiningContractStatus.ACTIVE
+        ).count()
+    
+    @staticmethod
+    def update_contract_performance(contract_id, hashrate, uptime_percentage):
+        """Update mining contract performance metrics"""
+        try:
+            contract = MiningContract.query.get(contract_id)
+            if contract:
+                contract.current_hashrate = hashrate
+                contract.uptime_percentage = uptime_percentage
+                contract.last_active_at = datetime.utcnow()
+                db.session.commit()
+                return True
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error updating contract performance: {str(e)}")
+        return False
+    
+    @staticmethod
+    def create_daily_earnings(contract_id, date, amount_mined, amount_usd, hashrate_used, uptime_hours=24):
+        """Create daily earnings record for a mining contract"""
+
+        try:
+            # Check if earnings already exist for this date
+            existing = MiningEarnings.query.filter_by(
+                contract_id=contract_id,
+                date=date
+            ).first()
+            
+            if existing:
+                return existing
+            
+            contract = MiningContract.query.get(contract_id)
+            if not contract:
+                return None
+            
+            # Calculate pool fee
+            pool_fee_amount = Decimal(str(amount_mined)) * contract.pool.pool_fee
+            
+            earnings = MiningEarnings(
+                contract_id=contract_id,
+                date=date,
+                amount_mined=amount_mined,
+                amount_usd=amount_usd,
+                hashrate_used=hashrate_used,
+                uptime_hours=uptime_hours,
+                pool_fee_amount=pool_fee_amount,
+                status=MiningEarningsStatus.PENDING
+            )
+            
+            db.session.add(earnings)
+            db.session.commit()
+            
+            return earnings
+            
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error creating daily earnings: {str(e)}")
+            return None
+
+
+    #-------------- New functions --------------------------
+    @staticmethod
+    def get_hashrate_packages(pool_id=None):
+        """
+        Get available hashrate packages
+        
+        Args:
+            pool_id (int, optional): Filter by pool ID
+            
+        Returns:
+            list: List of HashratePackage objects
+        """
+        query = HashratePackage.query.filter(HashratePackage.is_active == True)
+        
+        if pool_id:
+            query = query.filter(HashratePackage.pool_id == pool_id)
+            
+        return query.order_by(HashratePackage.sort_order).all()
+    
+    @staticmethod
+    def create_mining_contract(user_id, pool_id, hashrate, duration, package_id=None):
+        """
+        Create a new mining contract
+        
+        Args:
+            user_id (int): User ID
+            pool_id (int): Mining pool ID
+            hashrate (float): Purchased hashrate
+            duration (int): Contract duration in days
+            package_id (int, optional): Hashrate package ID
+            
+        Returns:
+            MiningContract: The newly created mining contract
+        """
+        # Get the pool
+        pool = MiningService.get_pool_by_id(pool_id)
+        if not pool or not pool.is_active:
+            raise ValueError("Mining pool not available")
+        
+        # Get package if provided
+        package = None
+        if package_id:
+            package = HashratePackage.query.get(package_id)
+            if not package or not package.is_active or package.pool_id != pool.id:
+                raise ValueError("Invalid hashrate package")
+            
+            # Use package hashrate if provided
+            hashrate = package.hashrate
+        
+        # Validate hashrate
+        if hashrate < float(pool.min_hashrate):
+            raise ValueError(f"Minimum hashrate is {pool.min_hashrate} {pool.min_hashrate_unit.value}")
+        
+        # Calculate costs and duration
+        duration_months = duration / 30  # Convert days to months
+        
+        # Use package cost if available, otherwise calculate
+        if package:
+            monthly_cost = package.monthly_cost_usd
+            total_cost = monthly_cost * duration_months
+            power_consumption = package.power_consumption_watts
+            hardware_type = package.name
+        else:
+            # Calculate cost based on hashrate (simplified - replace with your pricing logic)
+            cost_per_hashrate = 5.0  # $5 per unit per month
+            monthly_cost = float(hashrate) * cost_per_hashrate
+            total_cost = monthly_cost * duration_months
+            power_consumption = None
+            hardware_type = None
+        
+        # Create the contract
+        contract = MiningContract(
+            user_id=user_id,
+            pool_id=pool_id,
+            package_id=package_id,
+            name=f"{pool.asset.symbol} Mining - {hashrate} {pool.min_hashrate_unit.value}",
+            hashrate=hashrate,
+            hashrate_unit=pool.min_hashrate_unit,
+            duration_months=int(duration_months),
+            monthly_cost_usd=monthly_cost,
+            total_cost_usd=total_cost,
+            status=MiningContractStatus.PENDING,
+            power_consumption_watts=power_consumption,
+            hardware_type=hardware_type
+        )
+        
+        # Add to database
+        db.session.add(contract)
+        db.session.commit()
+        
+        return contract

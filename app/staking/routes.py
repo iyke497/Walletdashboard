@@ -2,12 +2,13 @@
 from decimal import Decimal
 from flask import render_template, request, url_for, jsonify, current_app, flash, redirect
 from flask_login import login_required, current_user
+from app.extensions import db
 from app.staking import staking_bp
-from app.staking.services import AssetService, StakingService
-from app.staking.forms import StakingForm, QuickStakeForm, UnstakeForm
-from app.models import Asset
+from app.staking.services import AssetService, StakingService, MiningService
+from app.staking.forms import StakingForm, QuickStakeForm, UnstakeForm, MiningPoolSearchForm, MiningContractConfirmForm, MiningContractForm, MinerControlForm
+from app.models import Asset, MiningAlgorithm,  MiningDifficulty, HashratePackage
 
-# <-----------------------Start------------------------->
+# <-----------------------Staking------------------------->
 @staking_bp.route('/')
 @login_required # Good practice if viewing positions requires login
 def staking_home():
@@ -80,7 +81,7 @@ def staking_home():
         unstake_form=unstake_form_for_positions_tab # Pass the specific unstake_form instance
     )
 
-# <-----------------------End------------------------->
+
 @staking_bp.route('/stake', methods=['POST'])
 @login_required
 def stake_asset():
@@ -310,3 +311,226 @@ def unstake_position_api(position_id):
             'success': False,
             'error': 'Failed to unstake position'
         }), 500
+
+# <-----------------------/Staking------------------------->
+
+# <-----------------------Mining------------------------->
+#@staking_bp.route('/mining')
+@login_required
+def mining_home_old():
+    # Get pagination and search parameters from request
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+    search = request.args.get('search', '', type=str).strip()
+    algorithm = request.args.get('algorithm', '', type=str)
+    difficulty = request.args.get('difficulty', '', type=str)
+    
+    # Get filtered pools based on parameters
+    paginated_pools = MiningService.get_available_pools(
+        page=page,
+        per_page=per_page,
+        search=search,
+        algorithm=algorithm,
+        difficulty=difficulty
+    )
+    
+    # Format assets for the template
+    serialized_assets = []
+    for pool in paginated_pools.items:
+        serialized_assets.append({
+            'id': pool.id,
+            'name': pool.name,
+            'algorithm': pool.algorithm,
+            'pool_fee': pool.pool_fee,
+            'difficulty': pool.difficulty,
+            'apr': 4.5
+        })
+    
+    # Set up pagination info
+    pagination_info = {
+        'page': paginated_pools.page,
+        'pages': paginated_pools.pages,
+        'per_page': paginated_pools.per_page,
+        'total': paginated_pools.total,
+        'has_prev': paginated_pools.has_prev,
+        'prev_num': paginated_pools.prev_num,
+        'has_next': paginated_pools.has_next,
+        'next_num': paginated_pools.next_num,
+        'iter_pages': list(paginated_pools.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2))
+    }
+    
+    # Forms for modals
+    contract_form = MiningContractForm()
+    confirm_form = MiningContractConfirmForm()
+    
+    return render_template(
+        'staking/mining_home.html',
+        assets=serialized_assets,
+        pagination=pagination_info,
+        search_query=search,
+        current_per_page=per_page,
+        contract_form=contract_form,
+        confirm_form=confirm_form,
+        algorithm_filter=algorithm,
+        difficulty_filter=difficulty
+    )
+
+@staking_bp.route('/mining')
+@login_required
+def mining_home():
+    # Get pagination and search parameters from request
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+    search = request.args.get('search', '', type=str).strip()
+    algorithm = request.args.get('algorithm', '', type=str)
+    difficulty = request.args.get('difficulty', '', type=str)
+    
+    # Get filtered pools based on parameters
+    paginated_pools = MiningService.get_available_pools(
+        page=page,
+        per_page=per_page,
+        search=search,
+        algorithm=algorithm,
+        difficulty=difficulty
+    )
+    
+    # Get enum options for dropdown filters
+    algorithms = MiningAlgorithm.__members__.values()
+    difficulties = MiningDifficulty.__members__.values()
+    
+
+    
+    # Forms for modals
+    contract_form = MiningContractForm()
+    confirm_form = MiningContractConfirmForm()
+    
+    # Get hashrate packages for active pools
+    pool_ids = [pool.id for pool in paginated_pools.items]
+    hashrate_packages = []
+    if pool_ids:
+        hashrate_packages = HashratePackage.query.filter(
+            HashratePackage.pool_id.in_(pool_ids),
+            HashratePackage.is_active == True
+        ).order_by(HashratePackage.sort_order).all()
+    
+    # Set up pagination info
+    pagination_info = {
+        'page': paginated_pools.page,
+        'pages': paginated_pools.pages,
+        'per_page': paginated_pools.per_page,
+        'total': paginated_pools.total,
+        'has_prev': paginated_pools.has_prev,
+        'prev_num': paginated_pools.prev_num,
+        'has_next': paginated_pools.has_next,
+        'next_num': paginated_pools.next_num,
+        'iter_pages': list(paginated_pools.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2))
+    }
+    
+    return render_template(
+        'staking/mining_home.html',
+        pools=paginated_pools.items,  # Pass the entire pool objects instead of serialized data
+        pagination=pagination_info,
+        search_query=search,
+        current_per_page=per_page,
+        contract_form=contract_form,
+        confirm_form=confirm_form,
+        algorithm_filter=algorithm,
+        difficulty_filter=difficulty,
+        algorithms=algorithms,  # Pass enum values for dropdowns
+        difficulties=difficulties,
+        packages=hashrate_packages  # Pass packages for the modals
+    )
+
+@staking_bp.route('/start-contract', methods=['POST'])
+@login_required
+def start_mining_contract():
+    form = MiningContractForm()
+    
+    if form.validate_on_submit():
+        # Create confirmation form with validated data
+        confirm_form = MiningContractConfirmForm()
+        
+        # Calculate costs server-side
+        cost_data = MiningService.calculate_contract_cost(
+            package_id=form.package_id.data,
+            custom_hashrate=form.custom_hashrate.data,
+            duration=int(form.duration.data)
+        )
+        
+        # Pre-populate confirmation form
+        confirm_form.pool_id.data = form.pool_id.data
+        confirm_form.package_id.data = form.package_id.data
+        confirm_form.total_cost.data = str(cost_data['total_cost'])
+        # ... populate other fields
+        
+        # Return JSON for modal transition
+        return jsonify({
+            'success': True,
+            'confirmation_data': {
+                'pool_name': pool.name,
+                'hashrate': cost_data['hashrate'],
+                'total_cost': cost_data['total_cost'],
+                'daily_earnings': cost_data['estimated_daily_earnings']
+            }
+        })
+    
+    # Return validation errors
+    return jsonify({
+        'success': False,
+        'errors': form.errors
+    })
+
+@staking_bp.route('/confirm-contract', methods=['POST'])
+@login_required
+def confirm_mining_contract():
+    form = MiningContractConfirmForm()
+    
+    if form.validate_on_submit():
+        try:
+            # Create the mining contract
+            contract = MiningService.create_mining_contract(
+                user_id=current_user.id,
+                form_data=form.data
+            )
+            
+            # Process payment
+            MiningService.process_contract_payment(
+                user_id=current_user.id,
+                contract=contract
+            )
+            
+            flash(f'Mining contract #{contract.id} started successfully!', 'success')
+            return redirect(url_for('mining.mining_home') + '#my-miners-tab')
+            
+        except Exception as e:
+            db.session.rollback()
+            flash('Failed to create mining contract. Please try again.', 'error')
+    
+    # Show validation errors
+    for field, errors in form.errors.items():
+        for error in errors:
+            flash(f'{field}: {error}', 'error')
+    
+    return redirect(url_for('mining.mining_home'))
+
+@staking_bp.route('/control-miner', methods=['POST'])
+@login_required
+def control_miner():
+    form = MinerControlForm()
+    
+    if form.validate_on_submit():
+        contract_id = form.contract_id.data
+        action = form.action.data
+        
+        success = MiningService.control_mining_contract(
+            user_id=current_user.id,
+            contract_id=contract_id,
+            action=action
+        )
+        
+        if success:
+            flash(f'Mining contract {action}d successfully!', 'success')
+        else:
+            flash(f'Failed to {action} mining contract.', 'error')
+    
+    return redirect(url_for('mining.mining_home') + '#my-miners-tab')
