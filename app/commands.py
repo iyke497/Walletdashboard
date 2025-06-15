@@ -779,6 +779,116 @@ def load_mining_data(pools, packages):
     click.echo(f"✅ Successfully created {created_packages} packages")
     click.echo(f"💡 Note: {pools - created_pools} pools skipped due to errors")
 
+@click.command('standardize-packages')
+@with_appcontext
+def standardize_packages_command():
+    """Standardize hashrate packages to use Basic, Pro, Enterprise naming."""
+    click.echo("Standardizing hashrate packages...")
+    
+    # Get all mining pools
+    pools = MiningPool.query.all()
+    
+    if not pools:
+        click.echo("No mining pools found. Nothing to standardize.")
+        return
+    
+    click.echo(f"Found {len(pools)} mining pools")
+    updated_count = 0
+    created_count = 0
+    
+    for pool in pools:
+        click.echo(f"\nProcessing pool {pool.id} ({pool.asset.symbol if pool.asset else 'Unknown'})")
+        
+        # Get existing packages for this pool
+        existing_packages = HashratePackage.query.filter_by(pool_id=pool.id).order_by(HashratePackage.hashrate).all()
+        
+        # Get or create base hashrate and unit from pool
+        base_hashrate = (pool.min_hashrate if hasattr(pool, 'min_hashrate') and pool.min_hashrate is not None else Decimal('0.1'))
+        hashrate_unit = pool.min_hashrate_unit if hasattr(pool, 'min_hashrate_unit') and pool.min_hashrate_unit else HashrateUnit.TERAHASH_S
+        
+        # Define standard package configurations
+        standard_packages = [
+            {
+                'name': 'Basic',
+                'hashrate_multiplier': 1,
+                'cost_multiplier': 1.0,
+                'power_efficiency': 1.0,
+                'sort_order': 1
+            },
+            {
+                'name': 'Pro',
+                'hashrate_multiplier': 5,
+                'cost_multiplier': 0.9,  # 10% discount per unit
+                'power_efficiency': 0.9,  # 10% more efficient
+                'sort_order': 2
+            },
+            {
+                'name': 'Enterprise',
+                'hashrate_multiplier': 20,
+                'cost_multiplier': 0.8,  # 20% discount per unit
+                'power_efficiency': 0.8,  # 20% more efficient
+                'sort_order': 3
+            }
+        ]
+        
+        # Calculate base cost per unit based on pool's daily earnings
+        #base_cost_per_unit = 30 * pool.estimated_daily_earnings_per_unit * 1.2 if hasattr(pool, 'estimated_daily_earnings_per_unit') and pool.estimated_daily_earnings_per_unit else 10.0
+        if hasattr(pool, 'estimated_daily_earnings_per_unit') and pool.estimated_daily_earnings_per_unit:
+            # Convert multipliers to Decimal before arithmetic operations
+            base_cost_per_unit = Decimal(30) * pool.estimated_daily_earnings_per_unit * Decimal('1.2')
+        else:
+            base_cost_per_unit = Decimal('10.0')
+        
+        # Calculate base power consumption
+        base_power = Decimal(100)
+        
+        # Create or update packages
+        for pkg_config in standard_packages:
+            # Check if we already have a package with this name
+            existing_pkg = next((p for p in existing_packages if p.name == pkg_config['name']), None)
+            
+            if existing_pkg:
+                # Update existing package
+                existing_pkg.hashrate = base_hashrate * pkg_config['hashrate_multiplier']
+                existing_pkg.hashrate_unit = hashrate_unit
+                existing_pkg.monthly_cost_usd = base_cost_per_unit * pkg_config['hashrate_multiplier'] * pkg_config['cost_multiplier']
+                existing_pkg.power_consumption_watts = int(base_power * pkg_config['hashrate_multiplier'] * pkg_config['power_efficiency'])
+                existing_pkg.is_active = True
+                existing_pkg.sort_order = pkg_config['sort_order']
+                
+                click.echo(f"  ✅ Updated {pkg_config['name']} package: {existing_pkg.hashrate} {existing_pkg.hashrate_unit.value}, ${existing_pkg.monthly_cost_usd:.2f}/month")
+                updated_count += 1
+            else:
+                # Create new package
+                new_pkg = HashratePackage(
+                    pool_id=pool.id,
+                    name=pkg_config['name'],
+                    hashrate=base_hashrate * pkg_config['hashrate_multiplier'],
+                    hashrate_unit=hashrate_unit,
+                    monthly_cost_usd=(base_cost_per_unit * Decimal(pkg_config['hashrate_multiplier']) * Decimal(str(pkg_config['cost_multiplier']))).quantize(Decimal('0.01')),
+                    power_consumption_watts=int( base_power * Decimal(pkg_config['hashrate_multiplier']) * Decimal(str(pkg_config['power_efficiency'])) ),
+                    is_active=True,
+                    sort_order=pkg_config['sort_order']
+                )
+                db.session.add(new_pkg)
+                
+                click.echo(f"  ✅ Created {pkg_config['name']} package: {new_pkg.hashrate} {new_pkg.hashrate_unit.value}, ${new_pkg.monthly_cost_usd:.2f}/month")
+                created_count += 1
+        
+        # Deactivate other packages that don't match standard names
+        for pkg in existing_packages:
+            if pkg.name not in ['Basic', 'Pro', 'Enterprise']:
+                pkg.is_active = False
+                click.echo(f"  ❌ Deactivated non-standard package: {pkg.name}")
+                updated_count += 1
+    
+    # Commit changes
+    try:
+        db.session.commit()
+        click.echo(f"\n✅ Successfully standardized packages: updated {updated_count}, created {created_count}")
+    except Exception as e:
+        db.session.rollback()
+        click.echo(f"\n❌ Error committing changes: {str(e)}")
 
 def init_app(app):
     app.cli.add_command(seed_db_command)
@@ -790,3 +900,4 @@ def init_app(app):
     app.cli.add_command(seed_traders_command)
     app.cli.add_command(update_network_structure)
     app.cli.add_command(load_mining_data)
+    app.cli.add_command(standardize_packages_command)
