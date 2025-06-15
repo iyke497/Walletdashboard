@@ -1,6 +1,6 @@
 {% extends "layouts/vertical.html" %}
 {% block extra_css %}
-
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/css/pages/cards-advance.css')}}">
 {% endblock %}
 
 
@@ -324,76 +324,798 @@
         </div>{# /.col-12 #}
     </div>{# /.row #}
 
-    {# MODAL 1 – ENTER DETAILS (NO FORM SUBMIT) - (existing code from your staking_home.html) #}
-    <div class="modal fade" id="stakingModal" tabindex="-1" aria-labelledby="stakingModalLabel" aria-hidden="true">
-        {# ... Your existing modal content for staking ... #}
-        {# Ensure IDs like 'modal-asset-image', 'modal-asset-symbol', 'stakeAmount', etc. are correct #}
-        <div class="modal-dialog modal-dialog-centered">
+    {# MODAL 1 – ENTER DETAILS (NO FORM SUBMIT) #}
+    <div class="modal fade" id="miningModal" tabindex="-1" aria-labelledby="miningModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-md" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="stakingModalLabel"><i class="icon-base ti tabler-coins me-2"></i>Stake Asset</h5>
+                    <h5 class="modal-title" id="miningModalLabel"><i class="icon-base ti tabler-pickaxe me-2"></i>Create Mining Contract</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <div class="d-flex align-items-center mb-4 p-3 bg-light rounded">
-                        <div class="avatar flex-shrink-0 me-3">
-                            <img src="" id="modal-asset-image" class="rounded-circle" style="width:48px;height:48px;" alt="">
+                        <div class="asset-image mb-3">
+                            <div class="avatar avatar-lg">
+                                <img src="" alt="Asset logo" id="modalAssetImage" class="rounded-circle" style="width:64px;height:64px;object-fit:cover;display:none;">
+                                <div class="avatar-initial rounded-circle bg-label-primary" id="modalAssetInitial">
+                                    A
+                                </div>
+                            </div>
                         </div>
-                        <div>
-                            <h6 class="mb-1" id="modal-asset-symbol">Loading…</h6>
-                            <small class="text-muted" id="modal-asset-name">Loading…</small>
-                        </div>
-                        <div class="ms-auto"><span class="badge bg-label-success fs-6">APR: 4.5%</span></div>
-                    </div>
 
-                    {# Plain inputs – will be copied into WTForms fields in modal 2 #}
-                    <div class="mb-3">
-                        <label for="stakeAmount" class="form-label">Amount to Stake</label>
-                        <div class="input-group">
-                            <input type="number" id="stakeAmount" class="form-control" placeholder="0.00" step="0.00000001" min="0">
-                            <span class="input-group-text" id="stake-currency-symbol">CUR</span>
-                        </div>
-                        <div class="form-text">Available Balance:
-                            <span class="text-primary fw-medium">
-                            <span id="balance-amount">0.00</span>
-                            <span id="balance-currency">CUR</span>
+                        <div class="mb-3">
+                            <h4 id="modalAssetName">Bitcoin</h4>
+                            <span>
+                                <span id="modalAssetSymbol" class="badge bg-label-primary">BTC</span>
+                                <span id="modalAlgorithm" class="badge bg-label-info ms-1">SHA-256</span>
+                                <span id="modalPoolFee" class="badge bg-label-warning ms-1">1% Pool Fee</span>
+                                <span id="modalDifficulty" class="badge bg-label-danger ms-1">Medium</span>
                             </span>
                         </div>
+
                     </div>
 
-                    <div class="mb-3">
-                        <label for="stakingPeriod" class="form-label">Staking Period</label>
-                        <select id="stakingPeriod" class="form-select">
-                            <option value="">Select staking period</option>
-                            <option value="flexible">Flexible (No lock period – 4.5% APR)</option>
-                            <option value="30">30 Days (5.0% APR)</option>
-                            <option value="60">60 Days (5.5% APR)</option>
-                            <option value="90">90 Days (6.0% APR)</option>
-                        </select>
+                    <div class="text-center mb-4">
+                        <div class="alert alert-info">
+                            <div class="d-flex align-items-center">
+                                <i class="icon-base ti tabler-info-circle me-2"></i>
+                                <div>
+                                    <div>Min. Hashrate: <span id="modalMinHashrate" class="fw-bold">0.1 TH/s</span></div>
+                                    <div>Est. Daily Earnings: <span id="modalEarningsPerUnit" class="fw-bold">$0.05 per TH/s</span></div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-
-                    <div class="alert alert-info mb-3" id="stakingSummary" style="display:none;">
-                        <h6 class="alert-heading mb-2"><i class="icon-base ti tabler-info-circle me-1"></i>Staking Summary</h6>
-                        <div class="row">
-                            <div class="col-6"><small class="text-muted">Amount:</small><br><span class="fw-medium" id="summary-amount">0.00 CUR</span></div>
-                            <div class="col-6"><small class="text-muted">Est. Annual Rewards:</small><br><span class="fw-medium text-success" id="summary-rewards">0.00 CUR</span></div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <label class="form-label">Hashrate Package</label>
+                            <div class="package-selection-container">
+                                <div class="form-check custom-option custom-option-basic mb-2">
+                                    <label class="form-check-label custom-option-content p-2" for="package_selection_basic">
+                                        <input name="package_selection" class="form-check-input" type="radio" value="basic" id="package_selection_basic">
+                                        <span class="d-flex justify-content-between">
+                                            <span>
+                                                <span class="custom-option-header">
+                                                    <span class="fw-semibold">Basic Package</span>
+                                                </span>
+                                                <span class="custom-option-body package-description" id="package_desc_basic">
+                                                    <small>Loading...</small>
+                                                </span>
+                                            </span>
+                                            <span class="text-end">
+                                                <span class="custom-option-header">
+                                                    <span class="fw-semibold package-price" id="package_price_basic">
+                                                        $0.00/mo
+                                                    </span>
+                                                </span>
+                                                <span class="custom-option-body">
+                                                    <small class="package-power" id="package_power_basic">
+                                                        0W
+                                                    </small>
+                                                </span>
+                                            </span>
+                                        </span>
+                                    </label>
+                                </div>
+                                <div class="form-check custom-option custom-option-basic mb-2">
+                                    <label class="form-check-label custom-option-content p-2" for="package_selection_pro">
+                                        <input name="package_selection" class="form-check-input" type="radio" value="pro" id="package_selection_pro" checked>
+                                        <span class="d-flex justify-content-between">
+                                            <span>
+                                                <span class="custom-option-header">
+                                                    <span class="fw-semibold">Pro Package</span>
+                                                </span>
+                                                <span class="custom-option-body package-description" id="package_desc_pro">
+                                                    <small>Loading...</small>
+                                                </span>
+                                            </span>
+                                            <span class="text-end">
+                                                <span class="custom-option-header">
+                                                    <span class="fw-semibold package-price" id="package_price_pro">
+                                                        $0.00/mo
+                                                    </span>
+                                                </span>
+                                                <span class="custom-option-body">
+                                                    <small class="package-power" id="package_power_pro">
+                                                        0W
+                                                    </small>
+                                                </span>
+                                            </span>
+                                        </span>
+                                    </label>
+                                </div>
+                                <div class="form-check custom-option custom-option-basic mb-2">
+                                    <label class="form-check-label custom-option-content p-2" for="package_selection_enterprise">
+                                        <input name="package_selection" class="form-check-input" type="radio" value="enterprise" id="package_selection_enterprise">
+                                        <span class="d-flex justify-content-between">
+                                            <span>
+                                                <span class="custom-option-header">
+                                                    <span class="fw-semibold">Enterprise Package</span>
+                                                </span>
+                                                <span class="custom-option-body package-description" id="package_desc_enterprise">
+                                                    <small>Loading...</small>
+                                                </span>
+                                            </span>
+                                            <span class="text-end">
+                                                <span class="custom-option-header">
+                                                    <span class="fw-semibold package-price" id="package_price_enterprise">
+                                                        $0.00/mo
+                                                    </span>
+                                                </span>
+                                                <span class="custom-option-body">
+                                                    <small class="package-power" id="package_power_enterprise">
+                                                        0W
+                                                    </small>
+                                                </span>
+                                            </span>
+                                        </span>
+                                    </label>
+                                </div>
+                                <div class="form-check custom-option custom-option-basic mb-2">
+                                    <label class="form-check-label custom-option-content p-2" for="package_selection_custom">
+                                        <input name="package_selection" class="form-check-input" type="radio" value="custom" id="package_selection_custom">
+                                        <span class="d-flex justify-content-between">
+                                            <span>
+                                                <span class="custom-option-header">
+                                                    <span class="fw-semibold">Custom Package</span>
+                                                </span>
+                                                <span class="custom-option-body package-description" id="package_desc_custom">
+                                                    <small>Specify your own hashrate</small>
+                                                </span>
+                                            </span>
+                                            <span class="text-end">
+                                                <span class="custom-option-header">
+                                                    <span class="fw-semibold package-price" id="package_price_custom">
+                                                        <i class="ti ti-settings"></i>
+                                                    </span>
+                                                </span>
+                                            </span>
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {# Custom Hashrate Fields - shown only when custom package is selected #}
+                    <div id="customHashrateFields" class="row g-3 mb-3" style="display:none;">
+                        <div class="col-md-8">
+                            <label for="custom_hashrate" class="form-label">Custom Hashrate</label>
+                            <div class="input-group">
+                                <input type="number" id="custom_hashrate" class="form-control" placeholder="Enter hashrate" step="0.1" min="0.1">
+                                <select id="custom_hashrate_unit" class="form-select input-group-text custom-select-sm" style="max-width: 120px;">
+                                    <option value="TH/s">TH/s</option>
+                                    <option value="GH/s">GH/s</option>
+                                    <option value="MH/s">MH/s</option>
+                                </select>
+                            </div>
+                            <div class="form-text">Minimum hashrate: <span id="minHashrateText">0.1 TH/s</span></div>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="duration" class="form-label">Contract Duration</label>
+                            <select id="duration" class="form-select">
+                                <option value="1">1 Month</option>
+                                <option value="3">3 Months (5% discount)</option>
+                                <option value="6">6 Months (10% discount)</option>
+                                <option value="12">12 Months (15% discount)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="contract_name" class="form-label">Contract Name (Optional)</label>
+                            <input type="text" id="contract_name" class="form-control" placeholder="e.g., My BTC Miner #1">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="alert alert-primary">
+                                <div class="d-flex align-items-center">
+                                    <i class="icon-base ti tabler-calculator me-2"></i>
+                                    <div>
+                                        <div>Monthly cost: <span id="monthlyCost" class="fw-bold">$0.00</span></div>
+                                        <div>Est. monthly earnings: <span id="monthlyEarnings" class="fw-bold">$0.00</span></div>
+                                        <div>Total contract cost: <span id="totalCost" class="fw-bold">$0.00</span></div>
+                                        <div class="mt-1 text-success">Potential profit: <span id="potentialProfit" class="fw-bold">$0.00</span></div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" id="proceedToConfirm" class="btn btn-primary" data-bs-target="#stakingConfirmModal" data-bs-toggle="modal" data-bs-dismiss="modal" disabled>
+                    <button type="button" id="proceedToConfirm" class="btn btn-primary" data-bs-target="#miningConfirmModal" data-bs-toggle="modal" data-bs-dismiss="modal">
                         <i class="icon-base ti tabler-arrow-right me-1"></i>Review &amp; Confirm
                     </button>
                 </div>
-            </div> 
+            </div>
         </div>
     </div>
 
+    {# MODAL 2 – CONFIRM + WTForms SUBMIT #}
+    <div class="modal fade" id="miningConfirmModal" tabindex="-1" aria-labelledby="miningConfirmModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <form id="confirmMiningForm" method="POST" action="{{ url_for('staking.create_mining_contract') }}">
+                    {{ contract_form.csrf_token }}
+                    {{ contract_form.pool_id(id='form-pool-id', type='hidden') }}
+                    {{ contract_form.package_id(id='form-package-id', type='hidden') }}
+                    <input type="hidden" id="form-package-selection" name="{{ contract_form.package_selection.name }}" value="pro">
+                    <input type="hidden" id="form-custom-hashrate" name="{{ contract_form.custom_hashrate.name }}" value="">
+                    <input type="hidden" id="form-custom-hashrate-unit" name="{{ contract_form.custom_hashrate_unit.name }}" value="TH/s">
+                    <input type="hidden" id="form-duration" name="{{ contract_form.duration.name }}" value="1">
+                    <input type="hidden" id="form-contract-name" name="{{ contract_form.contract_name.name }}" value="">
+                    
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="miningConfirmModalLabel"><i class="icon-base ti tabler-shield-check me-2"></i>Confirm Mining Contract</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="text-center mb-4">
+                            <div class="avatar avatar-lg mb-3">
+                                <img src="" alt="Asset logo" id="confirmAssetImage" class="rounded-circle" style="width:64px;height:64px;object-fit:cover;display:none;">
+                                <div class="avatar-initial rounded-circle bg-label-primary" id="confirmAssetInitial">
+                                    A
+                                </div>
+                            </div>
+                            <h6 class="mb-1">Confirm Mining Contract Details</h6>
+                            <small class="text-muted">Please review your mining contract information before confirming</small>
+                        </div>
+
+                        <div class="card border mb-3">
+                            <div class="card-body">
+                                <div class="row mb-3">
+                                    <div class="col-5"><small class="text-muted">Asset:</small></div>
+                                    <div class="col-7"><span class="fw-medium" id="confirm-asset">BTC</span></div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-5"><small class="text-muted">Algorithm:</small></div>
+                                    <div class="col-7"><span class="fw-medium" id="confirm-algorithm">SHA-256</span></div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-5"><small class="text-muted">Package:</small></div>
+                                    <div class="col-7"><span class="fw-medium" id="confirm-package">Pro Package</span></div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-5"><small class="text-muted">Hashrate:</small></div>
+                                    <div class="col-7"><span class="fw-medium" id="confirm-hashrate">1.0 TH/s</span></div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-5"><small class="text-muted">Duration:</small></div>
+                                    <div class="col-7"><span class="fw-medium" id="confirm-duration">1 Month</span></div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-5"><small class="text-muted">Pool Fee:</small></div>
+                                    <div class="col-7"><span class="fw-medium" id="confirm-fee">1.0%</span></div>
+                                </div>
+                                <hr>
+                                <div class="row mb-3">
+                                    <div class="col-5"><small class="text-muted">Monthly Cost:</small></div>
+                                    <div class="col-7"><span class="fw-medium" id="confirm-monthly-cost">$50.00</span></div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-5"><small class="text-muted">Est. Monthly Earnings:</small></div>
+                                    <div class="col-7"><span class="fw-medium text-success" id="confirm-monthly-earnings">$60.00</span></div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-5"><small class="text-muted">Total Contract Cost:</small></div>
+                                    <div class="col-7"><span class="fw-medium" id="confirm-total-cost">$50.00</span></div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-5"><small class="text-muted">Potential Profit:</small></div>
+                                    <div class="col-7"><span class="fw-medium text-success" id="confirm-profit">$10.00</span></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="agreeTerms" required>
+                            <label class="form-check-label" for="agreeTerms">
+                                I understand the mining contract terms and conditions
+                            </label>
+                            <div class="invalid-feedback">
+                                You must agree to the terms before proceeding
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-target="#miningModal" data-bs-toggle="modal" data-bs-dismiss="modal">
+                            <i class="icon-base ti tabler-arrow-left me-1"></i>Back
+                        </button>
+                        <button type="submit" id="confirmMining" class="btn btn-success" disabled>
+                            <i class="icon-base ti tabler-check me-1"></i>Confirm Contract
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
 
 {% block extra_js %}
+<script src="{{ url_for('static', filename='js/ui-modals.js') }}"></script>
+<script src="{{ url_for('static', filename='js/cards-advance.js') }}"></script>
+<script>
+// Mining contract modal functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // Get references to mining modal elements
+    const miningModal = document.getElementById('miningModal');
+    const confirmModal = document.getElementById('miningConfirmModal');
+    const confirmForm = document.getElementById('confirmMiningForm');
+    const proceedButton = document.getElementById('proceedToConfirm');
+    const confirmButton = document.getElementById('confirmMining');
+    const agreeTerms = document.getElementById('agreeTerms');
+    
+    // Store mining pool data
+    let currentPool = {
+        id: null,
+        assetSymbol: '',
+        assetName: '',
+        assetImage: '',
+        algorithm: '',
+        poolFee: 0,
+        minHashrate: 0,
+        hashrateUnit: '',
+        earningsPerUnit: 0,
+        difficulty: ''
+    };
+    
+    // Store hashrate packages data
+    let hashratePackages = [];
+    
+    // Form elements in first modal
+    const packageSelectionInputs = document.querySelectorAll('input[name="package_selection"]');
+    const customHashrateInput = document.getElementById('custom_hashrate');
+    const customHashrateUnitSelect = document.getElementById('custom_hashrate_unit');
+    const durationSelect = document.getElementById('duration');
+    const contractNameInput = document.getElementById('contract_name');
+    const customHashrateFields = document.getElementById('customHashrateFields');
+    
+    // First modal elements
+    const modalAssetImage = document.getElementById('modalAssetImage');
+    const modalAssetInitial = document.getElementById('modalAssetInitial');
+    const modalAssetName = document.getElementById('modalAssetName');
+    const modalAssetSymbol = document.getElementById('modalAssetSymbol');
+    const modalAlgorithm = document.getElementById('modalAlgorithm');
+    const modalPoolFee = document.getElementById('modalPoolFee');
+    const modalDifficulty = document.getElementById('modalDifficulty');
+    const modalMinHashrate = document.getElementById('modalMinHashrate');
+    const modalEarningsPerUnit = document.getElementById('modalEarningsPerUnit');
+    const minHashrateText = document.getElementById('minHashrateText');
+    
+    // Cost and earnings elements
+    const monthlyCost = document.getElementById('monthlyCost');
+    const monthlyEarnings = document.getElementById('monthlyEarnings');
+    const totalCost = document.getElementById('totalCost');
+    const potentialProfit = document.getElementById('potentialProfit');
+    
+    // Form elements in second modal (hidden inputs)
+    const formPoolId = document.getElementById('form-pool-id');
+    const formPackageId = document.getElementById('form-package-id');
+    const formPackageSelection = document.getElementById('form-package-selection');
+    const formCustomHashrate = document.getElementById('form-custom-hashrate');
+    const formCustomHashrateUnit = document.getElementById('form-custom-hashrate-unit');
+    const formDuration = document.getElementById('form-duration');
+    const formContractName = document.getElementById('form-contract-name');
+    
+    // Confirmation modal elements
+    const confirmAssetImage = document.getElementById('confirmAssetImage');
+    const confirmAssetInitial = document.getElementById('confirmAssetInitial');
+    const confirmAsset = document.getElementById('confirm-asset');
+    const confirmAlgorithm = document.getElementById('confirm-algorithm');
+    const confirmPackage = document.getElementById('confirm-package');
+    const confirmHashrate = document.getElementById('confirm-hashrate');
+    const confirmDuration = document.getElementById('confirm-duration');
+    const confirmFee = document.getElementById('confirm-fee');
+    const confirmMonthlyCost = document.getElementById('confirm-monthly-cost');
+    const confirmMonthlyEarnings = document.getElementById('confirm-monthly-earnings');
+    const confirmTotalCost = document.getElementById('confirm-total-cost');
+    const confirmProfit = document.getElementById('confirm-profit');
+    
+    // Fetch hashrate packages for a pool
+    async function fetchHashratePackages(poolId) {
+        try {
+            const response = await fetch(`/api/mining/packages/${poolId}`);
+            if (!response.ok) {
+                throw new Error('Failed to fetch packages');
+            }
+            const data = await response.json();
+            hashratePackages = data.packages || [];
+            updatePackageOptions();
+        } catch (error) {
+            console.error('Error fetching packages:', error);
+            hashratePackages = [];
+            // Create default packages if API fails
+            hashratePackages = [
+                {
+                    id: 'basic',
+                    name: 'Basic Package',
+                    hashrate: currentPool.minHashrate,
+                    hashrateUnit: currentPool.hashrateUnit,
+                    monthlyCost: currentPool.minHashrate * 5,
+                    powerConsumption: currentPool.minHashrate * 10
+                },
+                {
+                    id: 'pro',
+                    name: 'Pro Package',
+                    hashrate: currentPool.minHashrate * 5,
+                    hashrateUnit: currentPool.hashrateUnit,
+                    monthlyCost: currentPool.minHashrate * 5 * 4.5, // Slight discount
+                    powerConsumption: currentPool.minHashrate * 5 * 9.5
+                },
+                {
+                    id: 'enterprise',
+                    name: 'Enterprise Package',
+                    hashrate: currentPool.minHashrate * 20,
+                    hashrateUnit: currentPool.hashrateUnit,
+                    monthlyCost: currentPool.minHashrate * 20 * 4, // Better discount
+                    powerConsumption: currentPool.minHashrate * 20 * 9
+                }
+            ];
+            updatePackageOptions();
+        }
+    }
+    
+    // Update package option displays
+    function updatePackageOptions() {
+        // Only process the real packages (not the custom option)
+        const packageTypes = ['basic', 'pro', 'enterprise'];
+        
+        packageTypes.forEach((type, index) => {
+            const package = hashratePackages[index] || {
+                hashrate: currentPool.minHashrate * Math.pow(5, index),
+                hashrateUnit: currentPool.hashrateUnit,
+                monthlyCost: currentPool.minHashrate * Math.pow(5, index) * (5 - index * 0.5),
+                powerConsumption: currentPool.minHashrate * Math.pow(5, index) * (10 - index * 0.5)
+            };
+            
+            // Update display elements
+            const descEl = document.getElementById(`package_desc_${type}`);
+            const priceEl = document.getElementById(`package_price_${type}`);
+            const powerEl = document.getElementById(`package_power_${type}`);
+            
+            if (descEl) {
+                descEl.innerHTML = `<small>${package.hashrate} ${package.hashrateUnit}</small>`;
+            }
+            
+            if (priceEl) {
+                priceEl.textContent = `$${package.monthlyCost.toFixed(2)}/mo`;
+            }
+            
+            if (powerEl) {
+                powerEl.textContent = package.powerConsumption ? `${package.powerConsumption}W` : '';
+            }
+        });
+    }
+    
+    // Handle mining button click
+    const miningButtons = document.querySelectorAll('.mining-btn');
+    miningButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            // Get pool data from button attributes
+            const poolId = this.getAttribute('data-pool-id');
+            const assetSymbol = this.getAttribute('data-asset-symbol');
+            const assetName = this.getAttribute('data-asset-name');
+            const assetImage = this.getAttribute('data-asset-image');
+            const algorithm = this.getAttribute('data-algorithm');
+            const poolFee = parseFloat(this.getAttribute('data-pool-fee'));
+            const minHashrate = parseFloat(this.getAttribute('data-min-hashrate'));
+            const hashrateUnit = this.getAttribute('data-hashrate-unit');
+            const earningsPerUnit = parseFloat(this.getAttribute('data-earnings-per-unit'));
+            const difficulty = this.getAttribute('data-difficulty');
+            
+            // Store pool data
+            currentPool = {
+                id: poolId,
+                assetSymbol,
+                assetName,
+                assetImage,
+                algorithm,
+                poolFee,
+                minHashrate,
+                hashrateUnit,
+                earningsPerUnit,
+                difficulty
+            };
+            
+            // Update hidden input
+            formPoolId.value = poolId;
+            
+            // Set default values
+            customHashrateInput.value = minHashrate;
+            customHashrateInput.min = minHashrate;
+            
+            // Set suggested contract name
+            if (!contractNameInput.value) {
+                contractNameInput.value = `${assetSymbol} Miner #1`;
+            }
+            
+            // Match hashrate unit in dropdown to pool's unit
+            for (let i = 0; i < customHashrateUnitSelect.options.length; i++) {
+                if (customHashrateUnitSelect.options[i].value === hashrateUnit) {
+                    customHashrateUnitSelect.selectedIndex = i;
+                    break;
+                }
+            }
+            
+            // Fetch hashrate packages for this pool
+            fetchHashratePackages(poolId);
+            
+            // Update modal content
+            updateModalContent();
+            
+            // Select default package option
+            if (packageSelectionInputs.length > 0) {
+                packageSelectionInputs[1].checked = true; // Select Pro package by default
+                toggleCustomHashrateFields();
+            }
+            
+            // Update calculations
+            updateCalculations();
+        });
+    });
+    
+    // Update modal content with current pool data
+    function updateModalContent() {
+        // Update asset info
+        modalAssetName.textContent = currentPool.assetName;
+        modalAssetSymbol.textContent = currentPool.assetSymbol;
+        modalAlgorithm.textContent = currentPool.algorithm;
+        modalPoolFee.textContent = `${currentPool.poolFee}% Pool Fee`;
+        modalDifficulty.textContent = currentPool.difficulty;
+        
+        // Update hashrate info
+        modalMinHashrate.textContent = `${currentPool.minHashrate} ${currentPool.hashrateUnit}`;
+        modalEarningsPerUnit.textContent = `$${currentPool.earningsPerUnit.toFixed(4)} per ${currentPool.hashrateUnit}`;
+        minHashrateText.textContent = `${currentPool.minHashrate} ${currentPool.hashrateUnit}`;
+        
+        // Update asset image
+        if (currentPool.assetImage) {
+            modalAssetImage.src = currentPool.assetImage;
+            modalAssetImage.style.display = 'block';
+            modalAssetInitial.style.display = 'none';
+        } else {
+            modalAssetImage.style.display = 'none';
+            modalAssetInitial.style.display = 'flex';
+            modalAssetInitial.textContent = currentPool.assetSymbol.charAt(0);
+        }
+    }
+    
+    // Toggle custom hashrate fields based on selection
+    function toggleCustomHashrateFields() {
+        const customSelected = Array.from(packageSelectionInputs).find(radio => radio.checked && radio.value === 'custom');
+        
+        if (customSelected) {
+            customHashrateFields.style.display = 'flex';
+        } else {
+            customHashrateFields.style.display = 'none';
+        }
+        
+        updateCalculations();
+    }
+    
+    // Calculate costs and earnings
+    function updateCalculations() {
+        // Get selected package or custom hashrate
+        let hashrate = currentPool.minHashrate;
+        let monthlyCostValue = 0;
+        let powerConsumption = 0;
+        let packageLabel = '';
+        
+        const selectedPackage = Array.from(packageSelectionInputs).find(radio => radio.checked);
+        
+        if (selectedPackage) {
+            if (selectedPackage.value === 'custom') {
+                // Custom hashrate
+                hashrate = parseFloat(customHashrateInput.value) || currentPool.minHashrate;
+                monthlyCostValue = hashrate * 5; // $5 per unit per month - simplified pricing
+                powerConsumption = hashrate * 10; // 10W per unit - simplified
+                packageLabel = 'Custom';
+                formPackageId.value = '';
+            } else {
+                // Predefined package
+                const packageIndex = ['basic', 'pro', 'enterprise'].indexOf(selectedPackage.value);
+                if (packageIndex >= 0 && hashratePackages[packageIndex]) {
+                    const package = hashratePackages[packageIndex];
+                    hashrate = package.hashrate;
+                    monthlyCostValue = package.monthlyCost;
+                    powerConsumption = package.powerConsumption;
+                    packageLabel = `${selectedPackage.value.charAt(0).toUpperCase() + selectedPackage.value.slice(1)} Package`;
+                    
+                    // Set package ID if available
+                    if (package.id && !isNaN(package.id)) {
+                        formPackageId.value = package.id;
+                    } else {
+                        formPackageId.value = '';
+                    }
+                }
+            }
+        }
+        
+        // Get duration and apply discounts
+        const durationValue = parseInt(durationSelect.value) || 1;
+        let discount = 0;
+        
+        switch (durationValue) {
+            case 3: discount = 0.05; break; // 5% discount for 3 months
+            case 6: discount = 0.10; break; // 10% discount for 6 months
+            case 12: discount = 0.15; break; // 15% discount for 12 months
+        }
+        
+        const discountedMonthlyCost = monthlyCostValue * (1 - discount);
+        const totalContractCost = discountedMonthlyCost * durationValue;
+        
+        // Calculate earnings
+        const dailyEarnings = hashrate * currentPool.earningsPerUnit;
+        const monthlyEarningsValue = dailyEarnings * 30;
+        const totalEarnings = monthlyEarningsValue * durationValue;
+        const profitValue = totalEarnings - totalContractCost;
+        
+        // Update UI
+        monthlyCost.textContent = `$${discountedMonthlyCost.toFixed(2)}`;
+        monthlyEarnings.textContent = `$${monthlyEarningsValue.toFixed(2)}`;
+        totalCost.textContent = `$${totalContractCost.toFixed(2)}`;
+        
+        if (profitValue > 0) {
+            potentialProfit.textContent = `$${profitValue.toFixed(2)}`;
+            potentialProfit.parentElement.classList.add('text-success');
+            potentialProfit.parentElement.classList.remove('text-danger');
+        } else {
+            potentialProfit.textContent = `-$${Math.abs(profitValue).toFixed(2)}`;
+            potentialProfit.parentElement.classList.remove('text-success');
+            potentialProfit.parentElement.classList.add('text-danger');
+        }
+    }
+    
+    // Listen for package selection changes
+    packageSelectionInputs.forEach(input => {
+        input.addEventListener('change', function() {
+            toggleCustomHashrateFields();
+        });
+    });
+    
+    // Listen for custom hashrate changes
+    customHashrateInput.addEventListener('input', updateCalculations);
+    customHashrateUnitSelect.addEventListener('change', updateCalculations);
+    
+    // Listen for duration changes
+    durationSelect.addEventListener('change', updateCalculations);
+    
+    // Enable/disable confirm button based on terms checkbox
+    agreeTerms.addEventListener('change', function() {
+        confirmButton.disabled = !this.checked;
+    });
+    
+    // Handle proceeding to confirmation modal
+    proceedButton.addEventListener('click', function() {
+        // Basic validation before proceeding
+        const selectedPackage = Array.from(packageSelectionInputs).find(radio => radio.checked);
+        if (!selectedPackage) {
+            alert('Please select a package');
+            return;
+        }
+        
+        if (selectedPackage.value === 'custom') {
+            const hashrate = parseFloat(customHashrateInput.value);
+            if (!hashrate || hashrate < currentPool.minHashrate) {
+                alert(`Minimum hashrate is ${currentPool.minHashrate} ${currentPool.hashrateUnit}`);
+                return;
+            }
+        }
+        
+        // Transfer data to confirmation modal
+        transferDataToConfirmation();
+    });
+    
+    // Transfer data from first modal to confirmation modal
+    function transferDataToConfirmation() {
+        // Get current values
+        const selectedPackage = Array.from(packageSelectionInputs).find(radio => radio.checked);
+        let hashrate = currentPool.minHashrate;
+        let hashrateUnit = currentPool.hashrateUnit;
+        let packageLabel = '';
+        
+        if (selectedPackage) {
+            // Set package selection in form
+            formPackageSelection.value = selectedPackage.value;
+            
+            if (selectedPackage.value === 'custom') {
+                // Custom hashrate
+                hashrate = parseFloat(customHashrateInput.value) || currentPool.minHashrate;
+                hashrateUnit = customHashrateUnitSelect.value;
+                packageLabel = 'Custom';
+                
+                // Set custom hashrate values in form
+                formCustomHashrate.value = hashrate;
+                formCustomHashrateUnit.value = hashrateUnit;
+            } else {
+                // Predefined package
+                const packageIndex = ['basic', 'pro', 'enterprise'].indexOf(selectedPackage.value);
+                if (packageIndex >= 0 && hashratePackages[packageIndex]) {
+                    const package = hashratePackages[packageIndex];
+                    hashrate = package.hashrate;
+                    hashrateUnit = package.hashrateUnit || currentPool.hashrateUnit;
+                    packageLabel = `${selectedPackage.value.charAt(0).toUpperCase() + selectedPackage.value.slice(1)} Package`;
+                    
+                    // Clear custom hashrate values in form
+                    formCustomHashrate.value = '';
+                    formCustomHashrateUnit.value = hashrateUnit;
+                }
+            }
+        }
+        
+        // Set duration and contract name in form
+        const durationValue = parseInt(durationSelect.value) || 1;
+        const durationText = durationSelect.options[durationSelect.selectedIndex].text;
+        formDuration.value = durationValue;
+        
+        const contractName = contractNameInput.value || `${currentPool.assetSymbol} Miner #1`;
+        formContractName.value = contractName;
+        
+        // Calculate costs and earnings for confirmation
+        let monthlyCostValue = parseFloat(monthlyCost.textContent.replace('$', ''));
+        let monthlyEarningsValue = parseFloat(monthlyEarnings.textContent.replace('$', ''));
+        let totalCostValue = parseFloat(totalCost.textContent.replace('$', ''));
+        let profitValue = parseFloat(potentialProfit.textContent.replace('$', '').replace('-$', '-'));
+        
+        // Update confirmation modal elements
+        confirmAsset.textContent = currentPool.assetSymbol;
+        confirmAlgorithm.textContent = currentPool.algorithm;
+        confirmPackage.textContent = packageLabel;
+        confirmHashrate.textContent = `${hashrate} ${hashrateUnit}`;
+        confirmDuration.textContent = durationText;
+        confirmFee.textContent = `${currentPool.poolFee}%`;
+        confirmMonthlyCost.textContent = `$${monthlyCostValue.toFixed(2)}`;
+        confirmMonthlyEarnings.textContent = `$${monthlyEarningsValue.toFixed(2)}`;
+        confirmTotalCost.textContent = `$${totalCostValue.toFixed(2)}`;
+        
+        if (profitValue > 0) {
+            confirmProfit.textContent = `$${profitValue.toFixed(2)}`;
+            confirmProfit.classList.add('text-success');
+            confirmProfit.classList.remove('text-danger');
+        } else {
+            confirmProfit.textContent = `-$${Math.abs(profitValue).toFixed(2)}`;
+            confirmProfit.classList.remove('text-success');
+            confirmProfit.classList.add('text-danger');
+        }
+        
+        // Update asset image in confirmation modal
+        if (currentPool.assetImage) {
+            confirmAssetImage.src = currentPool.assetImage;
+            confirmAssetImage.style.display = 'block';
+            confirmAssetInitial.style.display = 'none';
+        } else {
+            confirmAssetImage.style.display = 'none';
+            confirmAssetInitial.style.display = 'flex';
+            confirmAssetInitial.textContent = currentPool.assetSymbol.charAt(0);
+        }
+        
+        // Reset terms checkbox
+        agreeTerms.checked = false;
+        confirmButton.disabled = true;
+    }
+    
+    // Form submission
+    confirmForm.addEventListener('submit', function(e) {
+        // Additional validation if needed
+        if (!agreeTerms.checked) {
+            e.preventDefault();
+            alert('You must agree to the terms before proceeding');
+            return;
+        }
+        
+        // Form will be submitted normally to the server
+    });
+    
+    // Initialize package selection display
+    toggleCustomHashrateFields();
+});
+</script>
 
 {% endblock %}

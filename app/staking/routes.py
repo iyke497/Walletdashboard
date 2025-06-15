@@ -6,7 +6,7 @@ from app.extensions import db
 from app.staking import staking_bp
 from app.staking.services import AssetService, StakingService, MiningService
 from app.staking.forms import StakingForm, QuickStakeForm, UnstakeForm, MiningPoolSearchForm, MiningContractConfirmForm, MiningContractForm, MinerControlForm
-from app.models import Asset, MiningAlgorithm,  MiningDifficulty, HashratePackage
+from app.models import Asset, MiningAlgorithm,  MiningDifficulty, HashratePackage, MiningPool, MiningContract
 
 # <-----------------------Staking------------------------->
 @staking_bp.route('/')
@@ -315,65 +315,6 @@ def unstake_position_api(position_id):
 # <-----------------------/Staking------------------------->
 
 # <-----------------------Mining------------------------->
-#@staking_bp.route('/mining')
-@login_required
-def mining_home_old():
-    # Get pagination and search parameters from request
-    page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 10, type=int)
-    search = request.args.get('search', '', type=str).strip()
-    algorithm = request.args.get('algorithm', '', type=str)
-    difficulty = request.args.get('difficulty', '', type=str)
-    
-    # Get filtered pools based on parameters
-    paginated_pools = MiningService.get_available_pools(
-        page=page,
-        per_page=per_page,
-        search=search,
-        algorithm=algorithm,
-        difficulty=difficulty
-    )
-    
-    # Format assets for the template
-    serialized_assets = []
-    for pool in paginated_pools.items:
-        serialized_assets.append({
-            'id': pool.id,
-            'name': pool.name,
-            'algorithm': pool.algorithm,
-            'pool_fee': pool.pool_fee,
-            'difficulty': pool.difficulty,
-            'apr': 4.5
-        })
-    
-    # Set up pagination info
-    pagination_info = {
-        'page': paginated_pools.page,
-        'pages': paginated_pools.pages,
-        'per_page': paginated_pools.per_page,
-        'total': paginated_pools.total,
-        'has_prev': paginated_pools.has_prev,
-        'prev_num': paginated_pools.prev_num,
-        'has_next': paginated_pools.has_next,
-        'next_num': paginated_pools.next_num,
-        'iter_pages': list(paginated_pools.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2))
-    }
-    
-    # Forms for modals
-    contract_form = MiningContractForm()
-    confirm_form = MiningContractConfirmForm()
-    
-    return render_template(
-        'staking/mining_home.html',
-        assets=serialized_assets,
-        pagination=pagination_info,
-        search_query=search,
-        current_per_page=per_page,
-        contract_form=contract_form,
-        confirm_form=confirm_form,
-        algorithm_filter=algorithm,
-        difficulty_filter=difficulty
-    )
 
 @staking_bp.route('/mining')
 @login_required
@@ -398,20 +339,8 @@ def mining_home():
     algorithms = MiningAlgorithm.__members__.values()
     difficulties = MiningDifficulty.__members__.values()
     
-
-    
     # Forms for modals
     contract_form = MiningContractForm()
-    confirm_form = MiningContractConfirmForm()
-    
-    # Get hashrate packages for active pools
-    pool_ids = [pool.id for pool in paginated_pools.items]
-    hashrate_packages = []
-    if pool_ids:
-        hashrate_packages = HashratePackage.query.filter(
-            HashratePackage.pool_id.in_(pool_ids),
-            HashratePackage.is_active == True
-        ).order_by(HashratePackage.sort_order).all()
     
     # Set up pagination info
     pagination_info = {
@@ -428,109 +357,125 @@ def mining_home():
     
     return render_template(
         'staking/mining_home.html',
-        pools=paginated_pools.items,  # Pass the entire pool objects instead of serialized data
+        pools=paginated_pools.items,
         pagination=pagination_info,
         search_query=search,
         current_per_page=per_page,
         contract_form=contract_form,
-        confirm_form=confirm_form,
         algorithm_filter=algorithm,
         difficulty_filter=difficulty,
-        algorithms=algorithms,  # Pass enum values for dropdowns
-        difficulties=difficulties,
-        packages=hashrate_packages  # Pass packages for the modals
+        algorithms=algorithms,
+        difficulties=difficulties
     )
 
-@staking_bp.route('/start-contract', methods=['POST'])
+@staking_bp.route('/api/mining/packages/<int:pool_id>')
 @login_required
-def start_mining_contract():
+def get_mining_packages(pool_id):
+    """API endpoint to get hashrate packages for a specific mining pool"""
+    packages = MiningService.get_hashrate_packages(pool_id)
+    
+    # Serialize the packages for JSON response
+    serialized_packages = []
+    for package in packages:
+        serialized_packages.append({
+            'id': package.id,
+            'name': package.name,
+            'hashrate': float(package.hashrate),
+            'hashrateUnit': package.hashrate_unit.value,
+            'monthlyCost': float(package.monthly_cost_usd),
+            'powerConsumption': package.power_consumption_watts
+        })
+    
+    return jsonify({
+        'success': True,
+        'packages': serialized_packages
+    })
+
+@staking_bp.route('/mining/create-contract', methods=['POST'])
+@login_required
+def create_mining_contract():
+    """Create a new mining contract after confirmation"""
     form = MiningContractForm()
     
     if form.validate_on_submit():
-        # Create confirmation form with validated data
-        confirm_form = MiningContractConfirmForm()
-        
-        # Calculate costs server-side
-        cost_data = MiningService.calculate_contract_cost(
-            package_id=form.package_id.data,
-            custom_hashrate=form.custom_hashrate.data,
-            duration=int(form.duration.data)
-        )
-        
-        # Pre-populate confirmation form
-        confirm_form.pool_id.data = form.pool_id.data
-        confirm_form.package_id.data = form.package_id.data
-        confirm_form.total_cost.data = str(cost_data['total_cost'])
-        # ... populate other fields
-        
-        # Return JSON for modal transition
-        return jsonify({
-            'success': True,
-            'confirmation_data': {
-                'pool_name': pool.name,
-                'hashrate': cost_data['hashrate'],
-                'total_cost': cost_data['total_cost'],
-                'daily_earnings': cost_data['estimated_daily_earnings']
-            }
-        })
-    
-    # Return validation errors
-    return jsonify({
-        'success': False,
-        'errors': form.errors
-    })
-
-@staking_bp.route('/confirm-contract', methods=['POST'])
-@login_required
-def confirm_mining_contract():
-    form = MiningContractConfirmForm()
-    
-    if form.validate_on_submit():
         try:
-            # Create the mining contract
+            # Get form data
+            pool_id = form.pool_id.data
+            package_id = form.package_id.data if form.package_selection.data != 'custom' else None
+            
+            # Determine hashrate and unit
+            hashrate = None
+            hashrate_unit = None
+            
+            if form.package_selection.data == 'custom':
+                hashrate = form.custom_hashrate.data
+                hashrate_unit = form.custom_hashrate_unit.data
+            else:
+                # Get hashrate from package
+                if package_id:
+                    package = HashratePackage.query.get(package_id)
+                    if package:
+                        hashrate = float(package.hashrate)
+                        hashrate_unit = package.hashrate_unit.value
+                else:
+                    # Use default package values based on selection
+                    pool = MiningPool.query.get(pool_id)
+                    if not pool:
+                        raise ValueError("Mining pool not found")
+                    
+                    # Simple logic for package selection
+                    if form.package_selection.data == 'basic':
+                        hashrate = float(pool.min_hashrate)
+                        hashrate_unit = pool.min_hashrate_unit.value
+                    elif form.package_selection.data == 'pro':
+                        hashrate = float(pool.min_hashrate) * 5
+                        hashrate_unit = pool.min_hashrate_unit.value
+                    elif form.package_selection.data == 'enterprise':
+                        hashrate = float(pool.min_hashrate) * 20
+                        hashrate_unit = pool.min_hashrate_unit.value
+            
+            if not hashrate:
+                flash('Invalid hashrate specified', 'danger')
+                return redirect(url_for('staking.mining_home'))
+            
+            # Get duration in months
+            duration_months = int(form.duration.data)
+            
+            # Create the contract
             contract = MiningService.create_mining_contract(
                 user_id=current_user.id,
-                form_data=form.data
+                pool_id=pool_id,
+                package_id=package_id,
+                hashrate=hashrate,
+                hashrate_unit=hashrate_unit,
+                duration_months=duration_months,
+                name=form.contract_name.data
             )
             
-            # Process payment
-            MiningService.process_contract_payment(
-                user_id=current_user.id,
-                contract=contract
-            )
-            
-            flash(f'Mining contract #{contract.id} started successfully!', 'success')
-            return redirect(url_for('mining.mining_home') + '#my-miners-tab')
+            flash(f'Mining contract created successfully! Your {contract.hashrate} {contract.hashrate_unit.value} miner will start working soon.', 'success')
+            return redirect(url_for('staking.mining_contracts'))
             
         except Exception as e:
-            db.session.rollback()
-            flash('Failed to create mining contract. Please try again.', 'error')
+            current_app.logger.error(f"Error creating mining contract: {str(e)}")
+            flash(f'Error creating mining contract: {str(e)}', 'danger')
+            return redirect(url_for('staking.mining_home'))
     
-    # Show validation errors
+    # If form validation failed
     for field, errors in form.errors.items():
         for error in errors:
-            flash(f'{field}: {error}', 'error')
+            flash(f"{getattr(form, field).label.text}: {error}", 'danger')
     
-    return redirect(url_for('mining.mining_home'))
+    return redirect(url_for('staking.mining_home'))
 
-@staking_bp.route('/control-miner', methods=['POST'])
+@staking_bp.route('/mining/contracts')
 @login_required
-def control_miner():
-    form = MinerControlForm()
+def mining_contracts():
+    """View user's mining contracts"""
+    contracts = MiningContract.query.filter_by(
+        user_id=current_user.id
+    ).order_by(MiningContract.created_at.desc()).all()
     
-    if form.validate_on_submit():
-        contract_id = form.contract_id.data
-        action = form.action.data
-        
-        success = MiningService.control_mining_contract(
-            user_id=current_user.id,
-            contract_id=contract_id,
-            action=action
-        )
-        
-        if success:
-            flash(f'Mining contract {action}d successfully!', 'success')
-        else:
-            flash(f'Failed to {action} mining contract.', 'error')
-    
-    return redirect(url_for('mining.mining_home') + '#my-miners-tab')
+    return render_template(
+        'staking/mining_contracts.html',
+        contracts=contracts
+    )
