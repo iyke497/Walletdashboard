@@ -125,6 +125,13 @@ class MiningEarningsStatus(Enum):
     PAID = "paid"                 # Paid to user's wallet
     CANCELLED = "cancelled"       # Earnings cancelled (e.g., contract issues)
 
+class PackageType(Enum):
+    """Standard hashrate package types"""
+    BASIC = "Basic"
+    PRO = "Pro"
+    ENTERPRISE = "Enterprise"
+    CUSTOM = "Custom"
+
 class HashrateUnit(Enum):
     HASH_S = "H/s"               # Hash per second
     KILOHASH_S = "KH/s"          # Kilohash per second  
@@ -570,6 +577,7 @@ class HashratePackage(db.Model, TimestampMixin, SoftDeleteMixin):
     
     id = db.Column(db.Integer, primary_key=True)
     pool_id = db.Column(db.Integer, db.ForeignKey('mining_pools.id'), nullable=False, index=True)
+    package_type = db.Column(SQLAlchemyEnum(PackageType), nullable=False, default=PackageType.BASIC)
     name = db.Column(db.String(50), nullable=False)  # "Basic", "Pro", "Enterprise"
     hashrate = db.Column(db.Numeric(20, 8), nullable=False)
     hashrate_unit = db.Column(SQLAlchemyEnum(HashrateUnit), nullable=False)
