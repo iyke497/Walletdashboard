@@ -4,7 +4,7 @@ from flask_wtf import FlaskForm
 from wtforms import DecimalField, SelectField, HiddenField, BooleanField, TextAreaField, StringField, RadioField, IntegerField
 from wtforms.validators import DataRequired, NumberRange, ValidationError,Optional, Length
 from wtforms.widgets import NumberInput
-from app.models import Asset, HashratePackage, MiningContract
+from app.models import Asset, HashratePackage, MiningContract, MiningPool
 from app.staking.services import AssetService
 from flask_login import current_user
 

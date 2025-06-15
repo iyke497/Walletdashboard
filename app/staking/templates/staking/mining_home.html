@@ -176,16 +176,18 @@
                                                             <button class="btn btn-primary btn-sm mining-btn"
                                                                     data-bs-toggle="modal"
                                                                     data-bs-target="#miningModal"
-                                                                    data-asset-id="{{ pool.id }}"
+                                                                    data-pool-id="{{ pool.id }}"
                                                                     data-asset-symbol="{{ pool.asset.symbol }}"
                                                                     data-asset-name="{{ pool.asset.name }}"
                                                                     data-asset-image="{{ pool.asset.images.get('small', pool.asset.images.get('thumb', '')) if pool.asset.images else '' }}"
                                                                     data-algorithm="{{ pool.algorithm.name }}"
-                                                                    data-pool-fee="{{ '%.2f' | format( pool.pool_fee * 100 ) }}"
+                                                                    data-pool-fee="{{ '%.2f'|format(pool.pool_fee * 100) }}"
                                                                     data-min-hashrate="{{ pool.min_hashrate }}"
                                                                     data-hashrate-unit="{{ pool.min_hashrate_unit.value }}"
                                                                     data-earnings-per-unit="{{ pool.estimated_daily_earnings_per_unit }}"
                                                                     data-difficulty="{{ pool.difficulty.name.title() }}">
+                                                                <i class="icon-base ti tabler-pickaxe me-1"></i>Mine
+                                                            </button>
                                                                 <i class="icon-base ti tabler-coins me-1"></i>Mine
                                                             </button>
                                                         </td>
@@ -333,7 +335,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="d-flex align-items-center mb-4 p-3 bg-light rounded">
+                    <div class="text-center mb-4">
                         <div class="asset-image mb-3">
                             <div class="avatar avatar-lg">
                                 <img src="" alt="Asset logo" id="modalAssetImage" class="rounded-circle" style="width:64px;height:64px;object-fit:cover;display:none;">
@@ -342,20 +344,13 @@
                                 </div>
                             </div>
                         </div>
-
                         <div class="mb-3">
                             <h4 id="modalAssetName">Bitcoin</h4>
-                            <span>
-                                <span id="modalAssetSymbol" class="badge bg-label-primary">BTC</span>
-                                <span id="modalAlgorithm" class="badge bg-label-info ms-1">SHA-256</span>
-                                <span id="modalPoolFee" class="badge bg-label-warning ms-1">1% Pool Fee</span>
-                                <span id="modalDifficulty" class="badge bg-label-danger ms-1">Medium</span>
-                            </span>
+                            <span id="modalAssetSymbol" class="badge bg-label-primary">BTC</span>
+                            <span id="modalAlgorithm" class="badge bg-label-info ms-1">SHA-256</span>
+                            <span id="modalPoolFee" class="badge bg-label-warning ms-1">1% Pool Fee</span>
+                            <span id="modalDifficulty" class="badge bg-label-danger ms-1">Medium</span>
                         </div>
-
-                    </div>
-
-                    <div class="text-center mb-4">
                         <div class="alert alert-info">
                             <div class="d-flex align-items-center">
                                 <i class="icon-base ti tabler-info-circle me-2"></i>
@@ -718,20 +713,44 @@ document.addEventListener('DOMContentLoaded', function() {
     const confirmTotalCost = document.getElementById('confirm-total-cost');
     const confirmProfit = document.getElementById('confirm-profit');
     
+    // Debug logger function
+    function debugLog(message) {
+        console.log(`[Mining Debug] ${message}`);
+    }
+    
     // Fetch hashrate packages for a pool
     async function fetchHashratePackages(poolId) {
         try {
-            const response = await fetch(`/api/mining/packages/${poolId}`);
-            if (!response.ok) {
-                throw new Error('Failed to fetch packages');
+            // Only proceed if we have a valid pool ID
+            if (!poolId || poolId === 'null' || poolId === 'undefined' || isNaN(parseInt(poolId))) {
+                debugLog(`Invalid pool ID for API call: ${poolId}`);
+                throw new Error('Invalid pool ID');
             }
+            
+            // Log the API call we're about to make
+            debugLog(`Fetching packages for pool ID: ${poolId}`);
+            
+            const response = await fetch(`api/mining/packages/${poolId}`);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch packages: ${response.status} ${response.statusText}`);
+            }
+            
             const data = await response.json();
-            hashratePackages = data.packages || [];
+            debugLog(`API response received: ${JSON.stringify(data)}`);
+            
+            if (data.success && data.packages && data.packages.length > 0) {
+                hashratePackages = data.packages;
+                debugLog(`${hashratePackages.length} packages loaded successfully`);
+            } else {
+                debugLog('No packages in response or success=false, using defaults');
+                throw new Error('No packages available');
+            }
+            
             updatePackageOptions();
         } catch (error) {
-            console.error('Error fetching packages:', error);
-            hashratePackages = [];
+            debugLog(`Error in fetchHashratePackages: ${error.message}`);
             // Create default packages if API fails
+            debugLog('Creating default packages based on pool data');
             hashratePackages = [
                 {
                     id: 'basic',
@@ -763,41 +782,58 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Update package option displays
+    // Update the updatePackageOptions function to better match package types
     function updatePackageOptions() {
-        // Only process the real packages (not the custom option)
+        debugLog('Updating package display options');
+        
+        // Define our standard package types
         const packageTypes = ['basic', 'pro', 'enterprise'];
         
-        packageTypes.forEach((type, index) => {
-            const package = hashratePackages[index] || {
-                hashrate: currentPool.minHashrate * Math.pow(5, index),
-                hashrateUnit: currentPool.hashrateUnit,
-                monthlyCost: currentPool.minHashrate * Math.pow(5, index) * (5 - index * 0.5),
-                powerConsumption: currentPool.minHashrate * Math.pow(5, index) * (10 - index * 0.5)
-            };
-            
-            // Update display elements
-            const descEl = document.getElementById(`package_desc_${type}`);
-            const priceEl = document.getElementById(`package_price_${type}`);
-            const powerEl = document.getElementById(`package_power_${type}`);
-            
-            if (descEl) {
-                descEl.innerHTML = `<small>${package.hashrate} ${package.hashrateUnit}</small>`;
-            }
-            
-            if (priceEl) {
-                priceEl.textContent = `$${package.monthlyCost.toFixed(2)}/mo`;
-            }
-            
-            if (powerEl) {
-                powerEl.textContent = package.powerConsumption ? `${package.powerConsumption}W` : '';
-            }
-        });
+        // Get packages for each type
+        const basicPackage = hashratePackages.find(p => p.name === 'Basic');
+        const proPackage = hashratePackages.find(p => p.name === 'Pro');
+        const enterprisePackage = hashratePackages.find(p => p.name === 'Enterprise');
+        
+        // Map packages to their respective UI elements
+        updatePackageDisplay('basic', basicPackage);
+        updatePackageDisplay('pro', proPackage);
+        updatePackageDisplay('enterprise', enterprisePackage);
+    }
+
+    // Helper function to update a package display
+    function updatePackageDisplay(type, package) {
+        const descEl = document.getElementById(`package_desc_${type}`);
+        const priceEl = document.getElementById(`package_price_${type}`);
+        const powerEl = document.getElementById(`package_power_${type}`);
+        
+        if (!package) {
+            // No package found for this type
+            if (descEl) descEl.innerHTML = `<small>Not available</small>`;
+            if (priceEl) priceEl.textContent = `N/A`;
+            if (powerEl) powerEl.textContent = ``;
+            return;
+        }
+        
+        // Update elements with package data
+        if (descEl) {
+            descEl.innerHTML = `<small>${package.hashrate} ${package.hashrateUnit}</small>`;
+        }
+        
+        if (priceEl) {
+            priceEl.textContent = `$${package.monthlyCost.toFixed(2)}/mo`;
+        }
+        
+        if (powerEl) {
+            powerEl.textContent = package.powerConsumption ? `${package.powerConsumption}W` : '';
+        }
     }
     
     // Handle mining button click
     const miningButtons = document.querySelectorAll('.mining-btn');
     miningButtons.forEach(button => {
         button.addEventListener('click', function() {
+            debugLog('Mining button clicked');
+            
             // Get pool data from button attributes
             const poolId = this.getAttribute('data-pool-id');
             const assetSymbol = this.getAttribute('data-asset-symbol');
@@ -809,6 +845,15 @@ document.addEventListener('DOMContentLoaded', function() {
             const hashrateUnit = this.getAttribute('data-hashrate-unit');
             const earningsPerUnit = parseFloat(this.getAttribute('data-earnings-per-unit'));
             const difficulty = this.getAttribute('data-difficulty');
+            
+            debugLog(`Button data: poolId=${poolId}, assetSymbol=${assetSymbol}, algorithm=${algorithm}`);
+            
+            // Validate pool ID
+            if (!poolId || poolId === 'null' || poolId === 'undefined' || isNaN(parseInt(poolId))) {
+                debugLog(`Invalid pool ID detected: ${poolId}`);
+                alert('Invalid pool data. Please try again or contact support.');
+                return; // Don't proceed with invalid pool ID
+            }
             
             // Store pool data
             currentPool = {
@@ -824,17 +869,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 difficulty
             };
             
-            // Update hidden input
+            // Update hidden input - make sure it's a valid value
             formPoolId.value = poolId;
+            debugLog(`Set form pool ID to: ${formPoolId.value}`);
             
             // Set default values
             customHashrateInput.value = minHashrate;
             customHashrateInput.min = minHashrate;
             
             // Set suggested contract name
-            if (!contractNameInput.value) {
-                contractNameInput.value = `${assetSymbol} Miner #1`;
-            }
+            contractNameInput.value = `${assetSymbol} Miner #1`;
             
             // Match hashrate unit in dropdown to pool's unit
             for (let i = 0; i < customHashrateUnitSelect.options.length; i++) {
@@ -863,6 +907,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Update modal content with current pool data
     function updateModalContent() {
+        debugLog('Updating modal content with pool data');
+        
         // Update asset info
         modalAssetName.textContent = currentPool.assetName;
         modalAssetSymbol.textContent = currentPool.assetSymbol;
@@ -993,20 +1039,31 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Handle proceeding to confirmation modal
-    proceedButton.addEventListener('click', function() {
+    proceedButton.addEventListener('click', function(e) {
+        debugLog('Proceed to confirm button clicked');
+        
         // Basic validation before proceeding
         const selectedPackage = Array.from(packageSelectionInputs).find(radio => radio.checked);
         if (!selectedPackage) {
             alert('Please select a package');
-            return;
+            e.preventDefault();
+            return false;
         }
         
         if (selectedPackage.value === 'custom') {
             const hashrate = parseFloat(customHashrateInput.value);
             if (!hashrate || hashrate < currentPool.minHashrate) {
                 alert(`Minimum hashrate is ${currentPool.minHashrate} ${currentPool.hashrateUnit}`);
-                return;
+                e.preventDefault();
+                return false;
             }
+        }
+        
+        // Check if pool ID is valid
+        if (!formPoolId.value || formPoolId.value === 'null' || formPoolId.value === 'undefined' || isNaN(parseInt(formPoolId.value))) {
+            alert('Invalid pool selection. Please try again or contact support.');
+            e.preventDefault();
+            return false;
         }
         
         // Transfer data to confirmation modal
@@ -1015,6 +1072,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Transfer data from first modal to confirmation modal
     function transferDataToConfirmation() {
+        debugLog('Transferring data to confirmation modal');
+        
         // Get current values
         const selectedPackage = Array.from(packageSelectionInputs).find(radio => radio.checked);
         let hashrate = currentPool.minHashrate;
@@ -1099,22 +1158,44 @@ document.addEventListener('DOMContentLoaded', function() {
         // Reset terms checkbox
         agreeTerms.checked = false;
         confirmButton.disabled = true;
+        
+        debugLog('Data transfer to confirmation modal complete');
     }
     
     // Form submission
     confirmForm.addEventListener('submit', function(e) {
+        debugLog('Confirm form submission attempted');
+        
         // Additional validation if needed
         if (!agreeTerms.checked) {
             e.preventDefault();
             alert('You must agree to the terms before proceeding');
-            return;
+            return false;
         }
         
+        // Make sure pool ID is valid
+        if (!formPoolId.value || formPoolId.value === 'null' || formPoolId.value === 'undefined' || isNaN(parseInt(formPoolId.value))) {
+            e.preventDefault();
+            alert('Invalid pool selection. Please try again.');
+            return false;
+        }
+        
+        // Make sure hashrate unit is valid
+        if (formPackageSelection.value === 'custom' && (!formCustomHashrateUnit.value || formCustomHashrateUnit.value === '')) {
+            e.preventDefault();
+            alert('Please select a valid hashrate unit.');
+            return false;
+        }
+        
+        debugLog('Form submission validation passed, submitting form');
         // Form will be submitted normally to the server
+        return true;
     });
     
     // Initialize package selection display
     toggleCustomHashrateFields();
+    
+    debugLog('Mining modal JavaScript initialized');
 });
 </script>
 
