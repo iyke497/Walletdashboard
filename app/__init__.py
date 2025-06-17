@@ -1,7 +1,7 @@
 import os
 from flask import Flask
 from .config import config_by_name
-from .extensions import db, migrate, login_manager, cache, assets, css_bundle, js_bundle, mail
+from .extensions import db, migrate, login_manager, cache, assets, css_bundle, js_bundle, mail, csrf
 from .commands import init_app as init_commands
 from .filters import init_app as init_filters
 from app.auth.services import EmailService
@@ -23,6 +23,7 @@ def create_app(config_name=None):
     cache.init_app(app)
     assets.init_app(app)
     mail.init_app(app)
+    csrf.init_app(app)
 
     # Register template filters
     register_template_filters(app)
