@@ -128,64 +128,24 @@
 
     <!-- FAQ + Side widgets unchanged -->
     <div class="col-md-4">
-      <div class="card mb-4">
-        <div class="card-header">
-          <h5 class="m-0">FAQ</h5>
-        </div>
-        <div class="card-body">
-          <ul class="list-unstyled mb-0">
-            <li class="mb-3">
-              <a href="#" class="d-flex align-items-center">
-                <i class="ti tabler-chevron-right me-2 text-primary"></i>
-                <span>How to Make a Deposit</span>
-              </a>
-            </li>
-            <li class="mb-3">
-              <a href="#" class="d-flex align-items-center">
-                <i class="ti tabler-chevron-right me-2 text-primary"></i>
-                <span>Unsupported Deposit Recovery Procedure</span>
-              </a>
-            </li>
-            <li class="mb-3">
-              <a href="#" class="d-flex align-items-center">
-                <i class="ti tabler-chevron-right me-2 text-primary"></i>
-                <span>FAQ — Crypto Deposit</span>
-              </a>
-            </li>
-            <li class="mb-3">
-              <a href="#" class="d-flex align-items-center">
-                <i class="ti tabler-chevron-right me-2 text-primary"></i>
-                <span>How to Recover a Deposit with Wrong or Missing Tag/Memo</span>
-              </a>
-            </li>
-            <li class="mb-3">
-              <a href="#" class="d-flex align-items-center">
-                <i class="ti tabler-chevron-right me-2 text-primary"></i>
-                <span>Deposits yet to be credited?</span>
-                <i class="ti tabler-arrow-right ms-auto text-muted"></i>
-              </a>
-            </li>
-            <li>
-              <a href="#" class="d-flex align-items-center">
-                <i class="ti tabler-chevron-right me-2 text-primary"></i>
-                <span>Deposit/Withdrawal Status of All Coins</span>
-                <i class="ti tabler-arrow-right ms-auto text-muted"></i>
-              </a>
-            </li>
-          </ul>
-        </div>
-      </div>
-      
       <!-- Option for Fiat Deposit -->
-      <div class="card mb-0">
+      <div class="card mb-0 border-warning">
         <div class="card-body">
-          <div class="d-flex align-items-center">
-            <i class="ti tabler-currency-dollar fs-3 me-2"></i>
-            <div>
-              <h5 class="mb-0">Fiat Deposit</h5>
-              <small>Deposit using bank transfer or cards</small>
-            </div>
-            <a href="#" class="btn btn-primary btn-sm ms-auto">Deposit</a>
+          <div class="d-flex flex-column">
+            <h5 class="text-warning mb-3">Warning:</h5>
+            <p class="small text-muted mb-2">
+              Please ensure that the **deposit address** is correct. 
+              Deposits to incorrect addresses cannot be recovered.
+            </p>
+            <p class="small text-muted mb-2">
+              Make sure you have selected the correct network that matches 
+              your **source wallet**. Sending to the wrong network may 
+              result in **permanent loss of funds**.
+            </p>
+            <p class="small text-muted">
+              Minimum deposit amounts may apply. Please check the deposit limits 
+              before confirming your transfer.
+            </p>
           </div>
         </div>
       </div>
