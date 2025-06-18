@@ -6,7 +6,7 @@ from app.extensions import db
 from .services import WalletService
 from .forms import WithdrawForm, DepositForm
 from app.models import Asset, AssetType, Holding
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 import logging
 
 logger = logging.getLogger(__name__)
@@ -166,7 +166,6 @@ def deposit_fiat():
         return jsonify({'error': 'An unexpected error occurred'}), 500
 
 # ********** Withdraw **********
-
 @wallet_bp.route('/withdraw/crypto', methods=['GET'])
 @login_required
 def withdraw_crypto_form():
@@ -197,67 +196,42 @@ def withdraw_crypto_form():
     # Get recent withdrawals
     recent_withdrawals = WalletService.get_recent_crypto_withdrawals(current_user.id, limit=5)
     
-    return render_template('wallet/withdraw_crypto.html',
+    return render_template('wallet/withdraw_crypto_fixed.html',  # Updated template name
                          form=form,
                          crypto_assets=serialized_assets,
                          recent_withdrawals=recent_withdrawals)
 
 @wallet_bp.route('/withdraw/crypto', methods=['POST'])
 @login_required
-def withdraw_crypto_old():
-    """Handle crypto withdrawal form submission"""
-    try:
-        asset_symbol = request.form.get('asset')
-        amount = Decimal(request.form.get('amount'))
-        address = request.form.get('address')
-
-        # Basic validation
-        if not all([asset_symbol, amount, address]):
-            flash('All fields are required', 'danger')
-            return redirect(url_for('wallet.withdraw_crypto_form'))
-
-        # Process withdrawal
-        transaction = WalletService.withdraw_crypto(
-            user_id=current_user.id,
-            asset_symbol=asset_symbol,
-            amount=amount,
-            destination_address=address
-        )
-
-        flash(f'Withdrawal of {amount} {asset_symbol} initiated!', 'success')
-        return redirect(url_for('wallet.withdraw_crypto_form'))
-
-    except ValueError as e:
-        flash(str(e), 'danger')
-        return redirect(url_for('wallet.withdraw_crypto_form'))
-    except Exception as e:
-        logger.error(f"Withdrawal error: {str(e)}")
-        flash('Failed to process withdrawal', 'danger')
-        return redirect(url_for('wallet.withdraw_crypto_form'))
-
-@wallet_bp.route('/withdraw/crypto', methods=['POST'])
-@login_required
 def withdraw_crypto():
-    """Handle crypto withdrawal form submission"""
+    """Handle crypto withdrawal form submission - supports both form data and JSON"""
     try:
-        # Get JSON data with proper error handling
-        data = request.get_json()
-        if not data:
-            return jsonify({'error': 'Missing request body'}), 400
-
-        asset_symbol = data.get('asset')
-        amount_str = data.get('amount')  # Get as string first
-        address = data.get('address')
+        # Handle both form data (with CSRF) and JSON data
+        if request.is_json:
+            data = request.get_json()
+            if not data:
+                return jsonify({'error': 'Missing request body'}), 400
+            
+            asset_symbol = data.get('asset')
+            amount_str = data.get('amount')
+            address = data.get('address')
+            network_id = data.get('network')
+        else:
+            # Form data (with CSRF protection)
+            asset_symbol = request.form.get('asset')
+            amount_str = request.form.get('amount')
+            address = request.form.get('address')
+            network_id = request.form.get('network')
 
         # Validate presence of all fields
         if not all([asset_symbol, amount_str, address]):
-            return jsonify({'error': 'All fields are required'}), 400
+            return jsonify({'error': 'Asset, amount, and address are required'}), 400
 
         # Convert amount to Decimal safely
         try:
             amount = Decimal(amount_str)
             if amount <= Decimal('0'):
-                raise ValueError()
+                raise ValueError("Amount must be positive")
         except (ValueError, TypeError, InvalidOperation):
             return jsonify({'error': 'Invalid amount format'}), 400
 
@@ -284,24 +258,38 @@ def withdraw_crypto():
 @wallet_bp.route('/verify-withdrawal', methods=['POST'])
 @login_required
 def verify_withdrawal():
+    """Verify withdrawal details before processing"""
     try:
-        data = request.get_json()
-        asset_symbol = data.get('asset')
-        amount_str = data.get('amount')
-        address = data.get('address')
+        # Handle both form data and JSON
+        if request.is_json:
+            data = request.get_json()
+            asset_symbol = data.get('asset')
+            amount_str = data.get('amount')
+            address = data.get('address')
+        else:
+            # Form data (with CSRF protection)
+            asset_symbol = request.form.get('asset')
+            amount_str = request.form.get('amount')
+            address = request.form.get('address')
 
         # Basic validation
-        if not all([asset_symbol, amount, address]):
+        if not all([asset_symbol, amount_str, address]):
             return jsonify({'error': 'All fields are required'}), 400
         
         # Convert amount to Decimal safely
         try:
             amount = Decimal(amount_str)
-        except (ValueError, TypeError):
+            if amount <= Decimal('0'):
+                raise ValueError("Amount must be positive")
+        except (ValueError, TypeError, InvalidOperation):
             return jsonify({'error': 'Invalid amount format'}), 400
 
-        # Check balance
+        # Check if asset exists
         asset = Asset.query.filter_by(symbol=asset_symbol).first()
+        if not asset:
+            return jsonify({'error': f'Asset {asset_symbol} not found'}), 400
+
+        # Check balance
         holding = Holding.query.filter_by(
             user_id=current_user.id,
             asset_id=asset.id
@@ -310,55 +298,19 @@ def verify_withdrawal():
         if not holding or holding.balance < amount:
             return jsonify({'error': 'Insufficient balance'}), 400
 
-        # Add any additional verification logic here
+        # Additional validation can be added here
+        # - Address format validation
+        # - Minimum withdrawal amounts
+        # - Daily withdrawal limits
+        # - etc.
+
         return jsonify({
             'valid': True,
-            'message': 'Withdrawal verification successful'
+            'message': 'Withdrawal verification successful',
+            'available_balance': float(holding.balance),
+            'withdrawal_amount': float(amount)
         })
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-@wallet_bp.route('/transfer', methods=['POST'])
-@login_required
-def transfer():
-    data = request.get_json()
-    
-    try:
-        from_asset = data.get('from_asset')
-        to_asset = data.get('to_asset')
-        amount = float(data.get('amount'))
-        
-        if not all([from_asset, to_asset, amount]):
-            return jsonify({'error': 'From asset, to asset, and amount are required'}), 400
-            
-        withdraw_tx, deposit_tx = WalletService.transfer(
-            current_user.id,
-            from_asset,
-            to_asset,
-            amount
-        )
-        
-        return jsonify({
-            'message': 'Transfer successful',
-            'transactions': {
-                'withdraw': {
-                    'id': withdraw_tx.id,
-                    'asset': from_asset,
-                    'amount': amount,
-                    'timestamp': withdraw_tx.timestamp.isoformat()
-                },
-                'deposit': {
-                    'id': deposit_tx.id,
-                    'asset': to_asset,
-                    'amount': deposit_tx.amount,
-                    'timestamp': deposit_tx.timestamp.isoformat()
-                }
-            }
-        }), 201
-        
-    except ValueError as e:
-        return jsonify({'error': str(e)}), 400
-    except Exception as e:
-        return jsonify({'error': 'An unexpected error occurred'}), 500
+        logger.error(f"Withdrawal verification error: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Verification failed'}), 500

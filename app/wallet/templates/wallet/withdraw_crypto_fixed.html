@@ -1,0 +1,541 @@
+{% extends "layouts/vertical.html" %}
+{% block title %} Withdraw Crypto {% endblock %}
+
+
+{% block extra_css %}
+<!-- Only animate.css is required; Notyf was removed -->
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/libs/animate-css/animate.css') }}" />
+{% endblock %}
+
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <h4 class="fw-bold py-3 mb-4">Withdraw Crypto</h4>
+
+    <!-- Toast container - Added missing container -->
+    <div id="toastContainer" class="toast-container position-fixed top-0 end-0 p-3"></div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <!-- Step 1: Choose Coin -->
+                    <h6>1. Select Coin</h6>
+                    <form method="POST" action="">
+                        {{ form.hidden_tag() }}
+                        <div class="row mb-4">
+                          <div class="col-12">
+                            <div class="form-group">
+                              <label class="form-label d-block" for="coin">Select cryptocurrency</label>
+                              <div class="dropdown w-100">
+                                <button class="form-select d-flex align-items-center" type="button" id="coinDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                  <span id="selectedCoin">Select crypto</span>
+                                </button>
+            
+                                <!-- Coin Dropdown -->
+                                <ul class="dropdown-menu w-100" aria-labelledby="coinDropdown" style="max-height: 300px; overflow-y: auto;">
+                                  <!-- Search Input -->
+                                  <li class="px-3 pb-2">
+                                    <input type="text" class="form-control form-control-sm" placeholder="Search crypto..." id="coinSearch">
+                                  </li>
+                                  <!-- Limited Initial Display -->
+                                  {% for asset in crypto_assets[:50] %}
+                                  <li class="asset-item">
+                                    <a class="dropdown-item d-flex align-items-center coin-option" href="#" data-value="{{ asset.symbol }}">
+                                      <div class="avatar avatar-xs me-2">
+                                        <img src="{{ asset.images }}" alt="{{ asset.name }} logo" class="rounded-circle" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjEwIi8+PHBhdGggZD0iTTkuMDkgOWEzIDMgMCAwIDEgNS44MyAxYzAgMi0zIDMtMy4zIDMiLz48bGluZSB4MT0iMTIiIHkxPSIxNyIgeDI9IjEyLjAxIiB5Mj0iMTciLz48L3N2Zz4='">
+                                      </div>
+                                      <span>{{ asset.name }} ({{ asset.symbol }})</span>
+                                    </a>
+                                  </li>
+                                  {% endfor %}
+                                </ul>
+                              </div>
+                              <input type="hidden" name="asset" id="assetInput" required>
+                            </div>
+                          </div>
+                        </div>
+                    </form>
+
+                    <hr class="my-6 mx-n6" />
+                    <!-- Step 2: Choose a network -->
+                    <h6>2. Choose Chain</h6>
+                    <form method="POST" action="">
+                        {{ form.hidden_tag() }}
+                        <input type="hidden" name="asset" value="{{ selected_asset }}">
+                        <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="form-group">
+                            <label class="form-label d-block" for="network">Select network</label>
+                            <div class="dropdown w-100">
+                                <button class="form-select d-flex align-items-center" type="button" id="networkDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                <span id="selectedNetwork">Select network</span>
+                                </button>
+                                <ul class="dropdown-menu w-100" aria-labelledby="networkDropdown" id="networkOptions">
+                                <!-- populated dynamically -->
+                                </ul>
+                            </div>
+                            <input type="hidden" name="network" id="networkInput" required>
+                            </div>
+                        </div>
+                        </div>
+                    </form>
+
+                    <hr class="my-6 mx-n6" />
+                    <!-- Step 3: Enter a wallet address -->
+                    <h6>3. Wallet Address</h6>
+                    <div class="form-group">
+                        <label class="form-label">Withdrawal Address</label>
+                        <div class="input-group">
+                          <input 
+                            type="text" 
+                            class="form-control" 
+                            name="address" 
+                            id="addressInput"
+                            placeholder="Enter destination wallet address" 
+                            aria-label="Wallet address"
+                            aria-describedby="paste-button" 
+                            required
+                          >
+                          <button 
+                            class="btn btn-outline-primary" 
+                            type="button" 
+                            id="paste-button"
+                            onclick="handlePaste()"
+                          >
+                            <i class="icon-base ti tabler-clipboard"></i>
+                          </button>
+                        </div>
+                    </div>
+
+                    <hr class="my-6 mx-n6" />
+                    <!-- Step 4: Enter withdrawal amount -->
+                    <h6>4. Amount</h6>
+                    <div class="row mb-4">
+                        <div class="col-12">
+                        <label class="form-label" for="amountInput">Withdrawal Amount</label>
+                        <input type="number" step="0.00000001" min="0" class="form-control" id="amountInput" name="amount" placeholder="0.00" required>
+                        </div>
+                    </div>
+
+                    <hr class="my-6 mx-n6" />
+                    <!-- Step 5: Process withdrawal -->
+                    <h6>5. Process withdrawal</h6>
+                    <!-- Launch Modal -->
+                    <div class="col-12 col-sm-6 col-md-8">
+                        <button type="button" id="launchModalBtn" class="btn btn-primary" disabled data-bs-toggle="modal" data-bs-target="#animationModal">
+                            Withdraw
+                        </button>
+                    </div>
+
+                    <!-- Modal -->
+                    <div class="modal fade animate__animated slideInUp" id="animationModal" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="exampleModalLabel5">Withdraw Crypto</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body text-center">
+                                    <img id="depositQr" class="img-fluid mb-3" style="max-width:200px" />
+                                    <small id="depositMeta" class="text-muted d-block mt-2"></small>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="button" class="btn btn-danger" id="confirmWithdrawBtn">Confirm Withdrawal</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                            
+                </div>
+            </div>
+        </div>
+
+        <!-- FAQ + Side widgets -->
+        <div class="col-md-4">
+          <!-- Option for Fiat Deposit -->
+          <div class="card mb-0 border-warning">
+            <div class="card-body">
+              <div class="d-flex flex-column">
+                <h5 class="text-warning mb-3">Warning:</h5>
+                <p class="small text-muted mb-2">
+                  Please ensure that the withdrawal address is correct. 
+                  Withdrawals to incorrect addresses cannot be reversed.
+                </p>
+                <p class="small text-muted mb-2">
+                  Make sure you have selected the correct network that matches 
+                  your destination wallet. Sending to the wrong network may 
+                  result in permanent loss of funds.
+                </p>
+                <p class="small text-muted">
+                  Withdrawal fees will be deducted from the amount you specify. 
+                  Please check the fee structure before confirming your withdrawal.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+          <!-- Show recent withdrawals -->
+        <h3 class="mt-4">Recent Withdrawals</h3>
+        <table class="table">
+            {% for tx in recent_withdrawals %}
+            <tr>
+                <td>{{ tx.asset.symbol }}</td>
+                <td>{{ tx.amount|round(4) }}</td>
+                <td>{{ tx.timestamp|datetime }}</td>
+                <td>{{ tx.external_tx_id|truncate(10) }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/ui-modals.js') }}"></script>
+<script>
+// Replace the entire JavaScript section in your withdraw_crypto_fixed.html with this:
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Toast notification system
+    function showToast(message, variant = 'primary') {
+        const el = document.createElement('div');
+        el.className = `toast align-items-center text-bg-${variant} border-0`;
+        el.setAttribute('role', 'alert');
+        el.setAttribute('aria-live', 'assertive');
+        el.setAttribute('aria-atomic', 'true');
+        el.innerHTML = `<div class="d-flex"><div class="toast-body">${message}</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button></div>`;
+        const container = document.getElementById('toastContainer');
+        container.appendChild(el);
+        const bsToast = bootstrap.Toast.getOrCreateInstance(el, {
+            delay: 3000
+        });
+        bsToast.show();
+        el.addEventListener('hidden.bs.toast', () => el.remove());
+    }
+
+    // State management
+    let selectedCoin = null;
+    let selectedNet = null;
+    let addressValid = false;
+    let amountValid = false;
+    let searchTimeout = null;
+    const withdrawBtn = document.getElementById('launchModalBtn');
+
+    // Elements
+    const coinMenu = document.querySelector('.dropdown-menu[aria-labelledby="coinDropdown"]');
+    const netMenu = document.getElementById('networkOptions');
+    const amountInput = document.getElementById('amountInput');
+    const addressInput = document.getElementById('addressInput');
+    const coinSearch = document.getElementById('coinSearch');
+
+    // Initial popular assets
+    let initialAssets = {{ crypto_assets|tojson|safe }};
+
+    // ---------- Search functionality ----------
+    async function searchAssets(searchTerm) {
+        if (!searchTerm.trim()) {
+            displayAssets(initialAssets);
+            return;
+        }
+
+        clearAssetItems();
+        const li = document.createElement('li');
+        li.className = 'asset-item';
+        li.innerHTML = '<div class="px-3 py-2 text-muted"><i class="ti ti-loader ti-spin me-2"></i>Searching...</div>';
+        coinMenu.appendChild(li);
+
+        try {
+            const response = await fetch(`/wallet/search-assets/${encodeURIComponent(searchTerm)}`);
+            if (!response.ok) throw new Error('Search failed');
+
+            const searchResults = await response.json();
+            displayAssets(searchResults);
+        } catch (error) {
+            console.error('Search error:', error);
+            clearAssetItems();
+            const li = document.createElement('li');
+            li.className = 'asset-item';
+            li.innerHTML = '<div class="px-3 py-2 text-danger"><i class="ti ti-alert-circle me-2"></i>Search failed. Please try again.</div>';
+            coinMenu.appendChild(li);
+        }
+    }
+
+    function clearAssetItems() {
+        const assetItems = coinMenu.querySelectorAll('.asset-item');
+        assetItems.forEach(item => item.remove());
+    }
+
+    function displayAssets(assets) {
+        clearAssetItems();
+
+        if (assets.length === 0) {
+            const li = document.createElement('li');
+            li.className = 'asset-item';
+            li.innerHTML = '<div class="px-3 py-2 text-muted"><i class="ti ti-search-off me-2"></i>No cryptocurrencies found</div>';
+            coinMenu.appendChild(li);
+            return;
+        }
+
+        assets.forEach(asset => {
+            const li = document.createElement('li');
+            li.className = 'asset-item';
+            li.innerHTML = `
+                <a class="dropdown-item d-flex align-items-center coin-option" href="#" data-value="${asset.symbol}">
+                    <div class="avatar avatar-xs me-2">
+                        <img src="${asset.images || asset.image || ''}" alt="${asset.name} logo" class="rounded-circle" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjEwIi8+PHBhdGggZD0iTTkuMDkgOWEzIDMgMCAwIDEgNS44MyAxYzAgMi0zIDMtMy4zIDMiLz48bGluZSB4MT0iMTIiIHkxPSIxNyIgeDI9IjEyLjAxIiB5Mj0iMTciLz48L3N2Zz4='">
+                    </div>
+                    <span>${asset.name} (${asset.symbol}) ${asset.balance ? '- Balance: ' + asset.balance : ''}</span>
+                </a>
+            `;
+            coinMenu.appendChild(li);
+        });
+    }
+
+    function debouncedSearch(searchTerm) {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            searchAssets(searchTerm);
+        }, 300);
+    }
+
+    coinSearch.addEventListener('input', (e) => {
+        debouncedSearch(e.target.value);
+    });
+
+    coinSearch.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+    });
+
+    document.addEventListener('hide.bs.dropdown', (e) => {
+        if (e.target.id === 'coinDropdown') {
+            coinSearch.value = '';
+            displayAssets(initialAssets);
+        }
+    });
+
+    displayAssets(initialAssets);
+
+    // Enable/disable withdraw button
+    function checkFormValidity() {
+        const isValid = selectedCoin && selectedNet && addressValid && amountValid;
+        withdrawBtn.disabled = !isValid;
+        return isValid;
+    }
+
+    // Coin selection handler
+    coinMenu.addEventListener('click', async (e) => {
+        const opt = e.target.closest('.coin-option');
+        if (!opt) return;
+        e.preventDefault();
+
+        selectedCoin = opt.dataset.value;
+        document.getElementById('selectedCoin').textContent = opt.textContent.trim();
+        document.getElementById('assetInput').value = selectedCoin;
+
+        // Reset network selection
+        selectedNet = null;
+        document.getElementById('selectedNetwork').textContent = 'Select network';
+        document.getElementById('networkInput').value = '';
+        netMenu.innerHTML = '<li class="text-muted px-3">Loading networks...</li>';
+
+        try {
+            const response = await fetch(`/wallet/get-networks/${selectedCoin}`);
+            const networks = await response.json();
+
+            netMenu.innerHTML = networks.length ?
+                networks.map(n => `
+                    <li>
+                        <a class="dropdown-item network-option" href="#" 
+                           data-value="${n.id}" 
+                           data-display="${n.symbol}">
+                            ${n.symbol.toUpperCase()}
+                        </a>
+                    </li>
+                `).join('') :
+                '<li class="text-muted px-3">No networks available</li>';
+
+        } catch (error) {
+            netMenu.innerHTML = '<li class="text-danger px-3">Network error</li>';
+            console.error('Failed to load networks:', error);
+        }
+
+        checkFormValidity();
+    });
+
+    // Network selection handler
+    netMenu.addEventListener('click', (e) => {
+        const opt = e.target.closest('.network-option');
+        if (!opt) return;
+        e.preventDefault();
+
+        selectedNet = opt.dataset.value;
+        document.getElementById('selectedNetwork').textContent = opt.dataset.display;
+        document.getElementById('networkInput').value = selectedNet;
+        checkFormValidity();
+    });
+
+    // Amount validation
+    amountInput.addEventListener('input', () => {
+        const value = parseFloat(amountInput.value);
+        amountValid = !isNaN(value) && value > 0;
+        checkFormValidity();
+    });
+
+    // Address validation
+    addressInput.addEventListener('input', () => {
+        addressValid = addressInput.value.trim().length > 0;
+        checkFormValidity();
+    });
+
+    // Withdrawal modal handler - CSRF PROTECTED
+    withdrawBtn.addEventListener('click', async () => {
+        if (!checkFormValidity()) {
+            console.log('Form validation failed');
+            return;
+        }
+
+        console.log('Form is valid, starting verification...');
+
+        try {
+            // Get CSRF token from the form
+            const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+
+            // Create form data with CSRF token
+            const formData = new URLSearchParams();
+            formData.append('csrf_token', csrfToken);  // Add CSRF token
+            formData.append('asset', selectedCoin);
+            formData.append('network', selectedNet);
+            formData.append('amount', amountInput.value);
+            formData.append('address', addressInput.value);
+
+            console.log('Form data to be sent:', formData.toString());
+
+            // Verify withdrawal details with CSRF protection
+            const verification = await fetch('/wallet/verify-withdrawal', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: formData
+            });
+
+            console.log('Verification response status:', verification.status);
+
+            const responseText = await verification.text();
+            console.log('Raw verification response:', responseText);
+
+            let verificationResult;
+            try {
+                verificationResult = JSON.parse(responseText);
+            } catch (parseError) {
+                console.error('Failed to parse verification response as JSON:', parseError);
+                throw new Error(`Server returned non-JSON response: ${responseText}`);
+            }
+
+            if (!verification.ok) {
+                console.error('Verification failed:', verificationResult);
+                throw new Error(verificationResult.error || 'Withdrawal verification failed');
+            }
+
+            console.log('Verification successful:', verificationResult);
+
+            // Update modal with withdrawal details
+            const metaElement = document.getElementById('depositMeta');
+            if (metaElement) {
+                metaElement.textContent = `Withdrawing ${amountInput.value} ${selectedCoin} to ${addressInput.value.substring(0, 20)}...`;
+            }
+
+            // Show confirmation modal
+            const modal = document.getElementById('animationModal');
+            const modalInstance = bootstrap.Modal.getOrCreateInstance(modal);
+            modalInstance.show();
+
+        } catch (error) {
+            console.error('Verification error:', error);
+            showToast(error.message, 'danger');
+        }
+    });
+
+    // Actual withdrawal confirmation handler - CSRF PROTECTED
+    document.getElementById('confirmWithdrawBtn').addEventListener('click', async () => {
+        try {
+            // Get CSRF token
+            const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+
+            // Create form data for actual withdrawal with CSRF token
+            const formData = new URLSearchParams();
+            formData.append('csrf_token', csrfToken);  // Add CSRF token
+            formData.append('asset', selectedCoin);
+            formData.append('network', selectedNet);
+            formData.append('amount', amountInput.value);
+            formData.append('address', addressInput.value);
+
+            const response = await fetch('/wallet/withdraw/crypto', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: formData
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || 'Withdrawal failed');
+            }
+
+            // Hide modal and show success
+            bootstrap.Modal.getInstance(document.getElementById('animationModal')).hide();
+            showToast('Withdrawal initiated successfully!', 'success');
+
+            // Reset form
+            selectedCoin = null;
+            selectedNet = null;
+            addressValid = false;
+            amountValid = false;
+            
+            document.getElementById('selectedCoin').textContent = 'Select crypto';
+            document.getElementById('selectedNetwork').textContent = 'Select network';
+            document.getElementById('assetInput').value = '';
+            document.getElementById('networkInput').value = '';
+            amountInput.value = '';
+            addressInput.value = '';
+            
+            checkFormValidity();
+
+        } catch (error) {
+            console.error('Withdrawal error:', error);
+            showToast(error.message, 'danger');
+        }
+    });
+
+    // Paste handler
+    async function handlePaste() {
+        try {
+            const text = await navigator.clipboard.readText();
+            document.getElementById('addressInput').value = text;
+            addressValid = true;
+            checkFormValidity();
+
+            const btn = document.getElementById('paste-button');
+            btn.innerHTML = '<i class="icon-base ti tabler-check"></i>';
+            setTimeout(() => {
+                btn.innerHTML = '<i class="icon-base ti tabler-clipboard"></i>';
+            }, 2000);
+        } catch (err) {
+            showToast('Clipboard access denied', 'warning');
+        }
+    }
+
+    // Expose to global scope
+    window.handlePaste = handlePaste;
+});
+</script>
+{% endblock %}
