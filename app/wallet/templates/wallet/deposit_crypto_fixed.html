@@ -218,7 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedCoin = null;
     let selectedNet  = null;
     let amountOk     = false;
-    let searchTimeout = null; // For debouncing search requests
+    let searchTimeout = null;
   
     const btnLaunch  = document.getElementById('launchModalBtn');
     const coinMenu   = document.querySelector('.dropdown-menu[aria-labelledby="coinDropdown"]');
@@ -226,18 +226,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const amountInput = document.getElementById('amountInput');
     const coinSearch = document.getElementById('coinSearch');
   
-    // Initial popular assets (first 20)
+    // Initial popular assets
     let initialAssets = {{ crypto_assets|tojson|safe }};
   
     // ---------- Search functionality ----------
     async function searchAssets(searchTerm) {
       if (!searchTerm.trim()) {
-        // Show initial popular assets when search is empty
         displayAssets(initialAssets);
         return;
       }
   
-      // Show loading state
       clearAssetItems();
       const li = document.createElement('li');
       li.className = 'asset-item';
@@ -291,20 +289,17 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
   
-    // Debounced search to avoid too many API calls
     function debouncedSearch(searchTerm) {
       clearTimeout(searchTimeout);
       searchTimeout = setTimeout(() => {
         searchAssets(searchTerm);
-      }, 300); // Wait 300ms after user stops typing
+      }, 300);
     }
   
-    // Search input event listeners
     coinSearch.addEventListener('input', (e) => {
       debouncedSearch(e.target.value);
     });
   
-    // Prevent form submission when pressing Enter in search
     coinSearch.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
@@ -312,15 +307,13 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   
-    // Reset search when dropdown closes
     document.addEventListener('hide.bs.dropdown', (e) => {
       if (e.target.id === 'coinDropdown') {
         coinSearch.value = '';
-        displayAssets(initialAssets); // Reset to show initial popular assets
+        displayAssets(initialAssets);
       }
     });
   
-    // Initialize with popular assets on page load
     displayAssets(initialAssets);
   
     // ---------- fetch QR + address --------
@@ -403,28 +396,59 @@ document.addEventListener('DOMContentLoaded', () => {
       maybeEnable();
     });
   
-    // --------------- deposit submit --------------
+    // --------------- deposit submit (CSRF PROTECTED) --------------
     document.getElementById('makeDepositBtn').addEventListener('click', async () => {
       const amt = parseFloat(amountInput.value);
       if (isNaN(amt) || amt <= 0) {
         showToast('Enter a valid amount', 'warning');
         return;
       }
-  
+
+      if (!selectedCoin || !selectedNet) {
+        showToast('Please select both coin and network', 'warning');
+        return;
+      }
+
+      // Get CSRF token from the form
+      const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+
       const data = new URLSearchParams();
+      data.append('csrf_token', csrfToken);  // Include CSRF token
       data.append('asset', selectedCoin);
       data.append('network', selectedNet);
       data.append('amount', amt);
-  
+
       try {
-        const r = await fetch('/wallet/deposit/crypto', { method: 'POST', body: data });
+        const r = await fetch('/wallet/deposit/crypto', { 
+          method: 'POST', 
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: data 
+        });
+        
         const res = await r.json();
-        if (!r.ok) throw new Error(res.error || 'Deposit failed');
-        showToast('Deposit recorded', 'success');
+        if (!r.ok) {
+          throw new Error(res.error || 'Deposit failed');
+        }
+        
+        showToast('Deposit recorded successfully!', 'success');
         bootstrap.Modal.getInstance(document.getElementById('animationModal')).hide();
+        
+        // Reset form after successful deposit
+        selectedCoin = null;
+        selectedNet = null;
+        amountOk = false;
+        document.getElementById('selectedCoin').textContent = 'Select crypto';
+        document.getElementById('selectedNetwork').textContent = 'Select network';
+        document.getElementById('assetInput').value = '';
+        document.getElementById('networkInput').value = '';
+        amountInput.value = '';
+        btnLaunch.disabled = true;
+        
       } catch (err) {
-        console.error(err);
-        showToast(err.message, 'danger');
+        console.error('Deposit error:', err);
+        showToast(err.message || 'Deposit failed', 'danger');
       }
     });
 });
