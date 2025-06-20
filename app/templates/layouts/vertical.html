@@ -213,56 +213,6 @@
             </div>
 
             <div class="navbar-nav-right d-flex align-items-center justify-content-end" id="navbar-collapse">
-              <div class="navbar-nav align-items-center">
-                <!-- Toggle Light/Dark Theme -->
-                <div class="nav-item dropdown me-2 me-xl-0">
-                  <a
-                    class="nav-link dropdown-toggle hide-arrow"
-                    id="nav-theme"
-                    href="javascript:void(0);"
-                    data-bs-toggle="dropdown">
-                    <i class="icon-base ti tabler-sun icon-md theme-icon-active"></i>
-                    <span class="d-none ms-2" id="nav-theme-text">Toggle theme</span>
-                  </a>
-                  <ul class="dropdown-menu dropdown-menu-start" aria-labelledby="nav-theme-text">
-                    <li>
-                      <button
-                        type="button"
-                        class="dropdown-item align-items-center active"
-                        data-bs-theme-value="light"
-                        aria-pressed="false">
-                        <span><i class="icon-base ti tabler-sun icon-md me-3" data-icon="sun"></i>Light</span>
-                      </button>
-                    </li>
-                    <li>
-                      <button
-                        type="button"
-                        class="dropdown-item align-items-center"
-                        data-bs-theme-value="dark"
-                        aria-pressed="true">
-                        <span
-                          ><i class="icon-base ti tabler-moon-stars icon-md me-3" data-icon="moon-stars"></i>Dark</span
-                        >
-                      </button>
-                    </li>
-                    <li>
-                      <button
-                        type="button"
-                        class="dropdown-item align-items-center"
-                        data-bs-theme-value="system"
-                        aria-pressed="false">
-                        <span
-                          ><i
-                            class="icon-base ti tabler-device-desktop-analytics icon-md me-3"
-                            data-icon="device-desktop-analytics"></i
-                          >System</span
-                        >
-                      </button>
-                    </li>
-                  </ul>
-                </div>
-                <!-- / Toggle Light/Dark Theme -->
-              </div>
 
               <ul class="navbar-nav flex-row align-items-center ms-md-auto">
                 {% if current_user.is_authenticated %}
@@ -356,14 +306,16 @@
                         </a>
                       </h4>
                       <span>Join our community</span>
-                      <div class="social-icon my-4">
-                        <a href="https://www.instagram.com/bloxhain" class="btn btn-icon btn-sm btn-facebook me-2"
-                          ><i class="icon-base ti tabler-brand-instagram icon-20px"></i
-                        ></a>
-                        <a href="https://x.com/bloxxxchain?s=21" class="btn btn-icon btn-sm btn-twitter me-2"
-                          ><i class="icon-base ti tabler-brand-twitter icon-20px"></i
-                        ></a>
-                        <a href="https://wa.me/17203353834" class="btn btn-icon btn-sm ntn-whatsapp me-2"><i class="icon-base ti tabler-brand-whatsapp icon-20px"></i></a>
+                      <div class="social-icon rounded-circle my-4">
+                        <a href="https://www.instagram.com/bloxhain" class="btn btn-icon btn-sm btn-facebook me-2">
+                          <img src="{{ url_for('static', filename='img/logos/ig-logo.jpg') }}" alt="" class="icon" style="width: 32px; height: 32px; object-fit: cover; border-radius: 50%;">
+                        </a>
+                        <a href="https://x.com/bloxxxchain?s=21" class="btn btn-icon btn-sm btn-twitter me-2">
+                          <img src="{{ url_for('static', filename='img/logos/x-logo.jpg') }}" alt="" class="icon rounded-circle" style="width: 32px; height: 32px;">
+                        </a>
+                        <a href="https://wa.me/17203353834" class="btn btn-icon btn-sm ntn-whatsapp me-2">
+                          <img src="{{ url_for('static', filename='img/logos/wa-logo.jpg') }}" alt="" class="icon" style="width: 32px; height: 32px; object-fit: cover; border-radius: 50%;">
+                        </a>
                       </div>
                       <p class="pt-6">
                         <script>

@@ -1,0 +1,105 @@
+<!-- templates/admin/dashboard.html -->
+{% extends "admin/base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Dashboard</h1>
+</div>
+
+<!-- Quick Stats -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-people fs-1 me-3"></i>
+                    <div>
+                        <h4 class="mb-0">{{ total_users }}</h4>
+                        <small>Total Users</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-clock fs-1 me-3"></i>
+                    <div>
+                        <h4 class="mb-0">{{ pending_deposits }}</h4>
+                        <small>Pending Deposits</small>
+                    </div>
+                </div>
+            </div>
+            {% if pending_deposits > 0 %}
+            <div class="card-footer">
+                <a href="{{ url_for('admin.pending_deposits') }}" class="text-white">
+                    View All <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Recent Transactions -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Recent Transactions</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_transactions %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>User</th>
+                                <th>Type</th>
+                                <th>Asset</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for tx in recent_transactions %}
+                            <tr>
+                                <td>#{{ tx.id }}</td>
+                                <td>{{ tx.user.username }}</td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if tx.tx_type.value == 'deposit' else 'info' }}">
+                                        {{ tx.tx_type.value.title() }}
+                                    </span>
+                                </td>
+                                <td>{{ tx.asset.symbol }}</td>
+                                <td>{{ tx.amount }}</td>
+                                <td>
+                                    <span class="badge bg-{{ 'warning' if tx.status.value == 'pending' else 'success' if tx.status.value == 'success' else 'danger' }}">
+                                        {% if tx.status %}
+                                            {{ tx.status.value.title() }}
+                                        {% else %}
+                                            Unknown
+                                        {% endif %}    
+                                    </span>
+                                </td>
+                                <td>{{ tx.timestamp.strftime('%m/%d %H:%M') }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">No recent transactions</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
