@@ -1,7 +1,7 @@
 from datetime import datetime
 from sqlalchemy import desc
 from sqlalchemy.exc import IntegrityError
-from app.models import Transaction, Asset, Holding, TransactionType, AssetType, ExchangeRate
+from app.models import Transaction, Asset, Holding, TransactionType, AssetType, ExchangeRate, TransactionStatus
 from app.extensions import db
 import qrcode
 from io import BytesIO
@@ -84,7 +84,7 @@ class WalletService:
         return record   # whole dict
 
     @staticmethod
-    def deposit_crypto(user_id, asset_symbol, amount, tx_hash=None):
+    def deposit_crypto_old(user_id, asset_symbol, amount, tx_hash=None):
         """Record a cryptocurrency deposit transaction and update holdings"""
         try:
             logger.info(f"Processing crypto deposit: user_id={user_id}, asset={asset_symbol}, amount={amount}, tx_hash={tx_hash}")
@@ -142,6 +142,47 @@ class WalletService:
         except Exception as e:
             logger.error(f"Unexpected error in deposit_crypto: {str(e)}", exc_info=True)
             raise ValueError("An unexpected error occurred while processing the deposit")
+
+    @staticmethod
+    def deposit_crypto(user_id, asset_symbol, amount, tx_hash=None):
+        """Record a cryptocurrency deposit - ALWAYS PENDING"""
+        try:
+            amount = Decimal(str(amount))
+            if amount <= Decimal('0'):
+                raise ValueError("Deposit amount must be positive")
+
+            asset = Asset.query.filter_by(
+                symbol=asset_symbol,
+                asset_type=AssetType.CRYPTO,
+                deleted_at=None
+            ).first()
+            
+            if not asset:
+                raise ValueError(f"Crypto asset {asset_symbol} not found")
+
+            # Create transaction as PENDING - DON'T update holdings yet
+            transaction = Transaction(
+                user_id=user_id,
+                asset_id=asset.id,
+                tx_type=TransactionType.DEPOSIT,
+                amount=amount,
+                status=TransactionStatus.PENDING,  # Always pending
+                timestamp=datetime.utcnow(),
+                external_tx_id=tx_hash,
+                notes="Cryptocurrency deposit"
+            )
+
+            # DON'T update holdings - that happens when admin confirms
+            
+            db.session.add(transaction)
+            db.session.commit()
+            logger.info(f"Deposit created as PENDING: transaction_id={transaction.id}")
+            return transaction
+            
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error creating deposit: {str(e)}")
+            raise ValueError(f"Failed to process deposit: {str(e)}")
 
     @staticmethod
     def get_recent_crypto_deposits(user_id, limit=5):
@@ -325,3 +366,32 @@ class WalletService:
         except IntegrityError:
             db.session.rollback()
             raise ValueError("Failed to process transfer")
+
+    @staticmethod
+    def confirm_deposit(transaction_id):
+        """Confirm pending deposit and update holdings"""
+        try:
+            transaction = Transaction.query.filter_by(
+                id=transaction_id,
+                tx_type=TransactionType.DEPOSIT,
+                status=TransactionStatus.PENDING
+            ).first()
+            
+            if not transaction:
+                raise ValueError("Pending deposit not found")
+            
+            # Update status
+            transaction.status = TransactionStatus.SUCCESS
+            
+            # NOW update holdings
+            holding = WalletService._get_or_create_holding(transaction.user_id, transaction.asset_id)
+            holding.balance += transaction.amount
+            
+            db.session.commit()
+            logger.info(f"Deposit confirmed: transaction_id={transaction_id}, amount={transaction.amount}")
+            return transaction
+            
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error confirming deposit: {str(e)}")
+            raise ValueError(f"Failed to confirm deposit: {str(e)}")

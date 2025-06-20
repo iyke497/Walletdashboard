@@ -80,7 +80,8 @@ def search_assets(search_term):
 #     #return jsonify(asset.networks if asset else [])  # Directly return the JSON array
 #     return jsonify(nets)
 
-#--- NEW NETWORKS FETCH ---#
+# --- NEW NETWORKS FETCH ---
+
 @wallet_bp.route('/get-networks/<asset_symbol>')
 def get_networks(asset_symbol):
     asset = Asset.query.filter_by(symbol=asset_symbol).first()
@@ -140,24 +141,48 @@ def deposit_crypto():
         
         logger.info(f"Successfully processed deposit: transaction_id={transaction.id}")
         
-        # Redirect to success page or show success message
-        return jsonify({
-            'message': 'Crypto deposit successful',
-            'transaction': {
-                'id': transaction.id,
-                'asset': asset_symbol,
-                'amount': amount,
-                'tx_hash': tx_hash,
-                'timestamp': transaction.timestamp.isoformat()
-            }
-        }), 201
+        # Better UX - Different message for pending vs confirmed
+        if transaction.status.value == 'pending':
+            return jsonify({
+                'success': True,
+                'status': 'pending',
+                'message': '⏳ Deposit Submitted!',
+                'details': 'Your deposit is being processed and will appear in your balance once confirmed by our team.',
+                'transaction': {
+                    'id': transaction.id,
+                    'asset': asset_symbol,
+                    'amount': amount,
+                    'status': 'pending',
+                    'timestamp': transaction.timestamp.isoformat()
+                }
+            }), 201
+        else:
+            return jsonify({
+                'success': True,
+                'status': 'confirmed',
+                'message': '✅ Deposit Confirmed!',
+                'details': 'Your deposit has been added to your balance.',
+                'transaction': {
+                    'id': transaction.id,
+                    'asset': asset_symbol,
+                    'amount': amount,
+                    'status': 'confirmed',
+                    'timestamp': transaction.timestamp.isoformat()
+                }
+            }), 201
         
     except ValueError as e:
         logger.error(f"Value error in deposit: {str(e)}")
-        return jsonify({'error': str(e)}), 400
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 400
     except Exception as e:
         logger.error(f"Unexpected error in deposit: {str(e)}", exc_info=True)
-        return jsonify({'error': 'An unexpected error occurred'}), 500
+        return jsonify({
+            'success': False,
+            'error': 'An unexpected error occurred'
+        }), 500
 
 @wallet_bp.route('/deposit/fiat', methods=['POST'])
 @login_required

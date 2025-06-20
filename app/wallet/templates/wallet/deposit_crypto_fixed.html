@@ -150,7 +150,106 @@
         </div>
       </div>
     </div>
+
+
   </div>
+    
+    <!-- Add this modal to your deposit template -->
+    <!-- Pending Success Modal -->
+    <div class="modal fade" id="pendingSuccessModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+              <div class="modal-header bg-warning text-white">
+                  <h5 class="modal-title">
+                      <i class="ti tabler-clock me-2"></i>Deposit Submitted
+                  </h5>
+                  <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body text-center py-4">
+                  <div class="mb-3">
+                      <div class="spinner-border text-warning" role="status" style="width: 3rem; height: 3rem;">
+                          <span class="visually-hidden">Processing...</span>
+                      </div>
+                  </div>
+                  
+                  <h4 class="text-warning mb-3">Processing Your Deposit</h4>
+                  
+                  <div class="alert alert-warning" role="alert">
+                      <strong>⏳ Your deposit is being reviewed</strong><br>
+                      It will appear in your balance once our team confirms the transaction.
+                  </div>
+                  
+                  <div class="row text-start">
+                      <div class="col-6">
+                          <small class="text-muted">Transaction ID:</small><br>
+                          <code id="pendingTxId">#12345</code>
+                      </div>
+                      <div class="col-6">
+                          <small class="text-muted">Amount:</small><br>
+                          <strong id="pendingAmount">0.001 BTC</strong>
+                      </div>
+                  </div>
+                  
+                  <hr>
+                  
+                  <div class="text-start">
+                      <h6>What happens next?</h6>
+                      <ol class="small text-muted">
+                          <li>Our team reviews your transaction</li>
+                          <li>We verify the blockchain confirmation</li>
+                          <li>Your balance is updated (usually within 15-30 minutes)</li>
+                          <li>You'll receive an email notification</li>
+                      </ol>
+                  </div>
+              </div>
+              <div class="modal-footer">
+                  <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                  <button type="button" class="btn btn-warning" onclick="checkDepositStatus()">
+                      <i class="ti ti-refresh me-1"></i>Check Status
+                  </button>
+              </div>
+          </div>
+      </div>
+    </div>
+
+    <!-- Confirmed Success Modal -->
+    <div class="modal fade" id="confirmedSuccessModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+              <div class="modal-header bg-success text-white">
+                  <h5 class="modal-title">
+                      <i class="ti ti-check me-2"></i>Deposit Confirmed
+                  </h5>
+                  <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body text-center py-4">
+                  <div class="text-success mb-3" style="font-size: 4rem;">✅</div>
+                  
+                  <h4 class="text-success mb-3">Deposit Successful!</h4>
+                  
+                  <div class="alert alert-success" role="alert">
+                      <strong>Your balance has been updated</strong><br>
+                      The funds are now available in your wallet.
+                  </div>
+                  
+                  <div class="row text-start">
+                      <div class="col-6">
+                          <small class="text-muted">Transaction ID:</small><br>
+                          <code id="confirmedTxId">#12345</code>
+                      </div>
+                      <div class="col-6">
+                          <small class="text-muted">Amount:</small><br>
+                          <strong id="confirmedAmount">0.001 BTC</strong>
+                      </div>
+                  </div>
+              </div>
+              <div class="modal-footer">
+                  <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                  <a href="/wallet" class="btn btn-success">View Wallet</a>
+              </div>
+          </div>
+      </div>
+    </div>
 </div>
 
 {% endblock %}
@@ -373,10 +472,15 @@ document.addEventListener('DOMContentLoaded', () => {
       const csrfToken = document.querySelector('input[name="csrf_token"]').value;
 
       const data = new URLSearchParams();
-      data.append('csrf_token', csrfToken);  // Include CSRF token
+      data.append('csrf_token', csrfToken);
       data.append('asset', selectedCoin);
       data.append('network', selectedNet);
       data.append('amount', amt);
+
+      // Show loading state
+      const originalText = document.getElementById('makeDepositBtn').textContent;
+      document.getElementById('makeDepositBtn').innerHTML = '<i class="ti ti-loader ti-spin me-1"></i>Processing...';
+      document.getElementById('makeDepositBtn').disabled = true;
 
       try {
         const r = await fetch('/wallet/deposit/crypto', { 
@@ -392,8 +496,11 @@ document.addEventListener('DOMContentLoaded', () => {
           throw new Error(res.error || 'Deposit failed');
         }
         
-        showToast('Deposit recorded successfully!', 'success');
+        // Close the deposit modal first
         bootstrap.Modal.getInstance(document.getElementById('animationModal')).hide();
+        
+        // Show pending success modal
+        showPendingSuccessModal(res.transaction);
         
         // Reset form after successful deposit
         selectedCoin = null;
@@ -409,8 +516,92 @@ document.addEventListener('DOMContentLoaded', () => {
       } catch (err) {
         console.error('Deposit error:', err);
         showToast(err.message || 'Deposit failed', 'danger');
+      } finally {
+        // Restore button
+        document.getElementById('makeDepositBtn').textContent = originalText;
+        document.getElementById('makeDepositBtn').disabled = false;
       }
     });
+
+    // ADD THIS NEW FUNCTION at the end, just before the closing });
+
+    // Simple success modal function
+    function showPendingSuccessModal(transaction) {
+      // Create a simple modal HTML
+      const modalHtml = `
+      <div class="modal fade" id="depositSuccessModal" tabindex="-1" aria-hidden="true">
+          <div class="modal-dialog modal-dialog-centered">
+              <div class="modal-content">
+                  <div class="modal-header bg-warning text-white">
+                      <h5 class="modal-title">
+                          <i class="ti tabler-clock me-2"></i>Deposit Submitted
+                      </h5>
+                      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                  </div>
+                  <div class="modal-body text-center py-4">
+                      <div class="text-warning mb-3" style="font-size: 3rem;">⏳</div>
+                      
+                      <h4 class="text-warning mb-3">Processing Your Deposit</h4>
+                      
+                      <div class="alert alert-warning" role="alert">
+                          <strong>Your deposit is being reviewed</strong><br>
+                          It will appear in your balance once confirmed by our team.
+                      </div>
+                      
+                      <div class="row text-start">
+                          <div class="col-6">
+                              <small class="text-muted">Transaction ID:</small><br>
+                              <code>#${transaction.id}</code>
+                          </div>
+                          <div class="col-6">
+                              <small class="text-muted">Amount:</small><br>
+                              <strong>${transaction.amount} ${transaction.asset}</strong>
+                          </div>
+                      </div>
+                      
+                      <hr>
+                      
+                      <div class="text-start">
+                          <h6>What happens next?</h6>
+                          <ol class="small text-muted">
+                              <li>Our team reviews your transaction</li>
+                              <li>We verify the blockchain confirmation</li>
+                              <li>Your balance is updated (usually within 15-30 minutes)</li>
+                              <li>The page will refresh to show your updated balance</li>
+                          </ol>
+                      </div>
+                  </div>
+                  <div class="modal-footer">
+                      <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                      <button type="button" class="btn btn-warning" onclick="window.location.reload()">
+                          <i class="ti tabler-refresh me-1"></i>Refresh Page
+                      </button>
+                  </div>
+              </div>
+          </div>
+      </div>
+      `;
+      
+      // Remove existing modal if any
+      const existingModal = document.getElementById('depositSuccessModal');
+      if (existingModal) {
+          existingModal.remove();
+      }
+      
+      // Add new modal to page
+      document.body.insertAdjacentHTML('beforeend', modalHtml);
+      
+      // Show the modal
+      const modal = new bootstrap.Modal(document.getElementById('depositSuccessModal'));
+      modal.show();
+      
+      // Auto-refresh page after 2 minutes to show any updates
+      setTimeout(() => {
+          if (document.getElementById('depositSuccessModal').classList.contains('show')) {
+              window.location.reload();
+          }
+      }, 120000); // 2 minutes
+    }
 });
 </script>
 {% endblock %}
