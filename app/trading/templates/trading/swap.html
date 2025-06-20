@@ -1,0 +1,424 @@
+{% extends "layouts/vertical.html" %}
+{% block title %} Crypto Swap {% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/libs/animate-css/animate.css') }}" />
+<style>
+.swap-container {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.swap-arrow {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    margin: 15px auto;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+}
+
+.swap-arrow:hover {
+    transform: rotate(180deg);
+}
+
+.balance-info {
+    font-size: 0.875rem;
+    color: #6c757d;
+    margin-top: 5px;
+}
+
+.preview-card {
+    background: linear-gradient(135deg, #f8f9ff 0%, #e8f4f8 100%);
+    border-radius: 10px;
+    padding: 20px;
+    margin-top: 20px;
+    border: 1px solid #e3e6f0;
+}
+
+.holdings-card {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.holding-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.holding-item:hover {
+    background-color: #f8f9fa;
+}
+
+.holding-item:last-child {
+    border-bottom: none;
+}
+
+.asset-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    margin-right: 10px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <h4 class="fw-bold py-3 mb-4">Crypto Swap</h4>
+
+    <div class="swap-container">
+        <div class="row">
+            <!-- Main Swap Interface -->
+            <div class="col-lg-8 col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Swap Cryptocurrencies</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST">
+                            {{ form.hidden_tag() }}
+                            
+                            <!-- From Asset Section -->
+                            <div class="mb-4">
+                                <h6>1. From Asset</h6>
+                                <div class="row">
+                                    <div class="col-6">
+                                        {{ form.from_asset_id(class="form-select") }}
+                                        {% if form.from_asset_id.errors %}
+                                            <div class="text-danger small mt-1">
+                                                {{ form.from_asset_id.errors[0] }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-6">
+                                        {{ form.from_amount(class="form-control", placeholder="0.00000000") }}
+                                        {% if form.from_amount.errors %}
+                                            <div class="text-danger small mt-1">
+                                                {{ form.from_amount.errors[0] }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="balance-info" id="fromBalance">
+                                    Select an asset to see your balance
+                                </div>
+                            </div>
+
+                            <!-- Swap Arrow -->
+                            <div class="text-center">
+                                <div class="swap-arrow" onclick="swapAssets()">
+                                    <i class="ti tabler-arrow-down"></i>
+                                </div>
+                            </div>
+
+                            <!-- To Asset Section -->
+                            <div class="mb-4">
+                                <h6>2. To Asset</h6>
+                                <div class="row">
+                                    <div class="col-6">
+                                        {{ form.to_asset_id(class="form-select") }}
+                                        {% if form.to_asset_id.errors %}
+                                            <div class="text-danger small mt-1">
+                                                {{ form.to_asset_id.errors[0] }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-6">
+                                        <input type="text" class="form-control" id="estimatedAmount" 
+                                               placeholder="0.00000000" readonly>
+                                    </div>
+                                </div>
+                                <div class="balance-info" id="toEstimate">
+                                    Estimated amount you'll receive
+                                </div>
+                            </div>
+
+                            <!-- Preview Section -->
+                            {% if show_preview and swap_preview %}
+                            <div class="preview-card">
+                                <h6 class="mb-3">Swap Preview</h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span>Exchange Rate:</span>
+                                            <span class="fw-bold text-success">
+                                                1 {{ swap_preview.from_asset.symbol }} = 
+                                                {{ "%.4f"|format(swap_preview.rate|float) }} {{ swap_preview.to_asset.symbol }}
+                                            </span>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span>Trading Fee:</span>
+                                            <span class="text-danger">
+                                                {{ "%.4f"|format(swap_preview.fee_amount|float) }} {{ swap_preview.from_asset.symbol }}
+                                                ({{ "%.2f"|format(swap_preview.fee_percentage|float) }}%)
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span>You Send:</span>
+                                            <span class="fw-bold">
+                                                {{ "%.8f"|format(swap_preview.from_amount|float) }} {{ swap_preview.from_asset.symbol }}
+                                            </span>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span>You Receive:</span>
+                                            <span class="fw-bold text-primary">
+                                                {{ "%.8f"|format(swap_preview.net_to_amount|float) }} {{ swap_preview.to_asset.symbol }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Action Buttons -->
+                            <div class="mt-4 text-center">
+                                {{ form.preview_swap() }}
+                                {% if show_preview %}
+                                    {{ form.execute_swap() }}
+                                {% endif %}
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="col-lg-4 col-12">
+                <!-- Your Holdings -->
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">Your Holdings</h6>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="holdings-card">
+                            {% if user_holdings %}
+                                {% for holding, asset in user_holdings %}
+                                <div class="holding-item" onclick="selectFromAsset('{{ asset.id }}')">
+                                    <div class="d-flex align-items-center">
+                                        {% if asset.images and asset.images.thumb %}
+                                            <img src="{{ asset.images.thumb }}" alt="{{ asset.symbol }}" class="asset-icon">
+                                        {% else %}
+                                            <div class="asset-icon bg-primary text-white d-flex align-items-center justify-content-center">
+                                                {{ asset.symbol[:2] }}
+                                            </div>
+                                        {% endif %}
+                                        <div>
+                                            <div class="fw-bold">{{ asset.symbol }}</div>
+                                            <div class="text-muted small">{{ asset.name }}</div>
+                                        </div>
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="fw-bold">{{ "%.3f"|format(holding.balance|float) }}</div>
+                                        <div class="text-muted small">{{ asset.symbol }}</div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-center p-4">
+                                    <p class="text-muted mb-0">No crypto holdings available</p>
+                                    <small class="text-muted">Deposit crypto to start swapping</small>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Swaps -->
+                <div class="card mt-3">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h6 class="card-title mb-0">Recent Swaps</h6>
+                        <a href="{{ url_for('trading.swap_history') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                    </div>
+                    <div class="card-body p-0">
+                        <div style="max-height: 300px; overflow-y: auto;">
+                            {% set recent_swaps = current_user.transactions[-5:] %}
+                            {% if recent_swaps %}
+                                {% for transaction in recent_swaps %}
+                                    {% if transaction.tx_type.value in ['trade_buy', 'trade_sell'] %}
+                                    <div class="d-flex align-items-center p-3 border-bottom">
+                                        <div class="me-3">
+                                            <span class="badge bg-{{ 'success' if transaction.tx_type.value == 'trade_buy' else 'danger' }} rounded-pill">
+                                                {{ transaction.tx_type.value.replace('_', ' ').title() }}
+                                            </span>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <div class="fw-bold">{{ transaction.asset.symbol }}</div>
+                                            <div class="text-muted small">{{ transaction.timestamp.strftime('%m/%d %H:%M') }}</div>
+                                        </div>
+                                        <div class="text-end">
+                                            <div class="fw-bold">{{ "%.3f"|format(transaction.amount|float) }}</div>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-center p-4">
+                                    <p class="text-muted mb-0">No recent swaps</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">Quick Actions</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <a href="{{ url_for('wallet.deposit_crypto') }}" class="btn btn-outline-success btn-sm">
+                                <i class="ti tabler-plus me-1"></i>Deposit Crypto
+                            </a>
+                            <a href="{{ url_for('wallet.withdraw_crypto') }}" class="btn btn-outline-warning btn-sm">
+                                <i class="ti tabler-minus me-1"></i>Withdraw Crypto
+                            </a>
+                            <a href="{{ url_for('trading.swap_history') }}" class="btn btn-outline-info btn-sm">
+                                <i class="ti tabler-history me-1"></i>Swap History
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Simple JavaScript for basic functionality (no complex AJAX)
+document.addEventListener('DOMContentLoaded', function() {
+    const fromAssetSelect = document.getElementById('from_asset_id');
+    const toAssetSelect = document.getElementById('to_asset_id');
+    const fromAmountInput = document.getElementById('from_amount');
+    const fromBalanceDiv = document.getElementById('fromBalance');
+    const estimatedAmountInput = document.getElementById('estimatedAmount');
+    const toEstimateDiv = document.getElementById('toEstimate');
+
+    // Update balance display when from asset changes
+    fromAssetSelect.addEventListener('change', function() {
+        const assetId = this.value;
+        if (assetId) {
+            // Get selected option text to show asset symbol
+            const selectedOption = this.options[this.selectedIndex];
+            const assetText = selectedOption.text;
+            const symbol = assetText.split(' - ')[0];
+            
+            fromBalanceDiv.innerHTML = `<small class="text-muted">Loading ${symbol} balance...</small>`;
+            
+            // Make AJAX call to get balance
+            fetch(`/trading/api/user-balance/${assetId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.balance !== undefined) {
+                        fromBalanceDiv.innerHTML = `<small class="text-success">Available: ${parseFloat(data.balance).toFixed(8)} ${data.symbol}</small>`;
+                    } else {
+                        fromBalanceDiv.innerHTML = `<small class="text-danger">Error loading balance</small>`;
+                    }
+                })
+                .catch(error => {
+                    fromBalanceDiv.innerHTML = `<small class="text-danger">Error loading balance</small>`;
+                });
+        } else {
+            fromBalanceDiv.innerHTML = 'Select an asset to see your balance';
+        }
+        
+        // Clear estimate when assets change
+        clearEstimate();
+    });
+
+    // Clear estimate when to asset changes
+    toAssetSelect.addEventListener('change', function() {
+        clearEstimate();
+    });
+
+    // Update estimate when amount changes (with debounce)
+    let estimateTimeout;
+    fromAmountInput.addEventListener('input', function() {
+        clearTimeout(estimateTimeout);
+        estimateTimeout = setTimeout(updateEstimate, 500);
+    });
+
+    function clearEstimate() {
+        estimatedAmountInput.value = '';
+        toEstimateDiv.innerHTML = 'Estimated amount you\'ll receive';
+    }
+
+    function updateEstimate() {
+        const fromAssetId = fromAssetSelect.value;
+        const toAssetId = toAssetSelect.value;
+        const amount = fromAmountInput.value;
+
+        if (fromAssetId && toAssetId && amount && parseFloat(amount) > 0) {
+            toEstimateDiv.innerHTML = '<small class="text-muted">Calculating estimate...</small>';
+            
+            fetch('/trading/api/swap-preview', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    from_asset_id: parseInt(fromAssetId),
+                    to_asset_id: parseInt(toAssetId),
+                    from_amount: parseFloat(amount)
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    estimatedAmountInput.value = parseFloat(data.to_amount).toFixed(8);
+                    toEstimateDiv.innerHTML = `<small class="text-success">≈ ${parseFloat(data.to_amount).toFixed(8)} ${data.to_asset_symbol} (Rate: ${parseFloat(data.rate).toFixed(8)})</small>`;
+                } else {
+                    estimatedAmountInput.value = '';
+                    toEstimateDiv.innerHTML = `<small class="text-danger">${data.error}</small>`;
+                }
+            })
+            .catch(error => {
+                estimatedAmountInput.value = '';
+                toEstimateDiv.innerHTML = '<small class="text-danger">Error calculating estimate</small>';
+            });
+        }
+    }
+});
+
+// Function to swap assets
+function swapAssets() {
+    const fromSelect = document.getElementById('from_asset_id');
+    const toSelect = document.getElementById('to_asset_id');
+    
+    const fromValue = fromSelect.value;
+    const toValue = toSelect.value;
+    
+    fromSelect.value = toValue;
+    toSelect.value = fromValue;
+    
+    // Trigger change events
+    fromSelect.dispatchEvent(new Event('change'));
+    toSelect.dispatchEvent(new Event('change'));
+    
+    // Clear amount
+    document.getElementById('from_amount').value = '';
+}
+
+// Function to select from asset (called from holdings)
+function selectFromAsset(assetId) {
+    const fromSelect = document.getElementById('from_asset_id');
+    fromSelect.value = assetId;
+    fromSelect.dispatchEvent(new Event('change'));
+}
+</script>
+{% endblock %}
