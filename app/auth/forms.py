@@ -9,7 +9,7 @@ class RegistrationForm(FlaskForm):
     password = PasswordField('Password', validators=[DataRequired()])
     confirm  = PasswordField('Confirm Password',
                              validators=[DataRequired(), EqualTo('password')])
-    submit   = SubmitField('Register')
+    submit   = SubmitField('Create Account')
     agree_terms = BooleanField('I agree to privacy policy & terms', validators=[DataRequired()])
 
     def validate_username(self, field):

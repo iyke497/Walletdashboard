@@ -419,28 +419,3 @@ def disable_two_factor():
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
-
-# Decorator for features that require email verification
-def email_verified_required(f):
-    """Decorator to require email verification for specific features"""
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated:
-            return login_manager.unauthorized()
-        
-        if not current_user.email_verified:
-            flash('Please verify your email address to access this feature.', 'warning')
-            return redirect(url_for('auth.verify_email_notice', email=current_user.email))
-        
-        return f(*args, **kwargs)
-    return decorated_function
-
-# Decorator for basic features (login required but email verification optional)
-def basic_access_required(f):
-    """Decorator for features available to unverified users"""
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated:
-            return login_manager.unauthorized()
-        return f(*args, **kwargs)
-    return decorated_function

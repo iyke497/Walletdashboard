@@ -39,22 +39,17 @@
                   </svg>
                 </span>
               </span>
-              <span class="app-brand-text demo text-heading fw-bold">Fox Exchange</span>
+              <span class="app-brand-text demo text-heading fw-bold">Bloxxxchain</span>
             </a>
           </div>
           <!-- /Logo -->
-          <!--Form Errors-->
-          {% with messages = get_flashed_messages(category_filter=["account_error"]) %}
-            {% if messages %}
-            <div class="alert alert-danger">
-              {{ messages[0] }}
-            </div>
-            {% endif %}
-          {% endwith %}
 
-          <!--Form Errors-->
-          <h4 class="mb-1">Adventure starts here 🚀</h4>
-          <p class="mb-6">Make your app management easy and fun!</p>
+          <h4 class="mb-1 text-center">Join Bloxxxchain 🚀</h4>
+          <p class="mb-3 text-center">Your Gateway to Smart Crypto Trading</p>
+          <div class="divider my-2">
+            <div class="divider-text"></div>
+          </div>
+          <p class="text-center">Trade, stake, swap, and earn with cutting-edge tools trusted by thousands worldwide.</p>
 
           <form id="formAuthentication" class="mb-4" method="POST" action="{{ url_for('auth.register') }}">
             {{ form.hidden_tag() }}
@@ -104,7 +99,10 @@
 
             <div class="mb-6 form-check">
               {{ form.agree_terms(class="form-check-input") }}
-              {{ form.agree_terms.label(class="form-check-label") }}
+              {{ form.agree_terms.label(
+                class="form-check-label",
+                text=('By clicking Create Account you agree to  <a href="' + url_for('main.privacy_policy') + '">Privacy Policy</a> & <a href="' + url_for('main.tos') + '">Terms of Service</a>')|safe
+            ) }}
             </div>
 
             <div class="mb-6">
@@ -117,30 +115,10 @@
           <p class="text-center">
             <span>Already have an account?</span>
             <a href="{{ url_for('auth.login') }}">
-              <span>Sign in instead</span>
+              <span>Login instead</span>
             </a>
           </p>
 
-          <div class="divider my-6">
-            <div class="divider-text">or</div>
-          </div>
-
-          <div class="d-flex justify-content-center">
-            <a href="javascript:;" class="btn btn-icon rounded-circle btn-text-facebook me-1_5">
-              <i class="icon-base ti tabler-brand-facebook-filled icon-20px"></i>
-            </a>
-
-            <a href="javascript:;" class="btn btn-icon rounded-circle btn-text-twitter me-1_5">
-              <i class="icon-base ti tabler-brand-twitter-filled icon-20px"></i>
-            </a>
-
-            <a href="javascript:;" class="btn btn-icon rounded-circle btn-text-github me-1_5">
-              <i class="icon-base ti tabler-brand-github-filled icon-20px"></i>
-            </a>
-
-            <a href="javascript:;" class="btn btn-icon rounded-circle btn-text-google-plus">
-              <i class="icon-base ti tabler-brand-google-filled icon-20px"></i>
-            </a>
           </div>
         </div>
       </div>

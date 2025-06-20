@@ -10,7 +10,7 @@
         <div class="card-body">
           <!-- Logo -->
           <div class="app-brand justify-content-center mb-6">
-            <a href="{{ url_for('dashboard.show_portfolio') }}" class="app-brand-link">
+            <a href="{{ url_for('main.index') }}" class="app-brand-link">
               <span class="app-brand-logo demo">
                 <span class="text-primary">
                   <svg width="32" height="22" viewBox="0 0 32 22" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -39,12 +39,12 @@
                   </svg>
                 </span>
               </span>
-              <span class="app-brand-text demo text-heading fw-bold">Fox Exchange</span>
+              <span class="app-brand-text demo text-heading fw-bold">Bloxxxchain</span>
             </a>
           </div>
           <!-- /Logo -->
-          <h4 class="mb-1">Welcome to Fox Exchange 👋</h4>
-          <p class="mb-6">Please sign-in to your account and start the adventure</p>
+          <h4 class="mb-1">Welcome Back 👋</h4>
+          <p class="mb-6">Log-in to your Bloxxxchain account.</p>
 
           <form id="formAuthentication" class="mb-4" method="POST" action="{{ url_for('auth.login') }}">
             {{ form.hidden_tag() }}
@@ -84,32 +84,12 @@
           </form>
 
           <p class="text-center">
-            <span>New on our platform?</span>
+            <span>New to Bloxxxchain?</span>
             <a href="{{ url_for('auth.register') }}">
               <span>Create an account</span>
             </a>
           </p>
-
-          <div class="divider my-6">
-            <div class="divider-text">or</div>
-          </div>
-
-          <div class="d-flex justify-content-center">
-            <a href="javascript:;" class="btn btn-icon rounded-circle btn-text-facebook me-1_5">
-              <i class="icon-base ti tabler-brand-facebook-filled icon-20px"></i>
-            </a>
-
-            <a href="javascript:;" class="btn btn-icon rounded-circle btn-text-twitter me-1_5">
-              <i class="icon-base ti tabler-brand-twitter-filled icon-20px"></i>
-            </a>
-
-            <a href="javascript:;" class="btn btn-icon rounded-circle btn-text-github me-1_5">
-              <i class="icon-base ti tabler-brand-github-filled icon-20px"></i>
-            </a>
-
-            <a href="javascript:;" class="btn btn-icon rounded-circle btn-text-google-plus">
-              <i class="icon-base ti tabler-brand-google-filled icon-20px"></i>
-            </a>
+    
           </div>
         </div>
       </div>
