@@ -36,3 +36,21 @@ def contact():
         return redirect(url_for('contact'))
     
     return render_template('main/contact_support.html', form=form)
+
+
+@main_bp.route('/about')
+def about():
+    return render_template('main/about.html')\
+    
+
+@main_bp.route('/terms-of-service')
+def tos():
+    return render_template('main/terms_of_service.html')
+
+@main_bp.route('/privacy-policy')
+def privacy_policy():
+    return render_template('main/privacy_policy.html')
+
+@main_bp.route('/cookies')
+def cookies():
+    return render_template('main/cookies.html')

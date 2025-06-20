@@ -9,7 +9,6 @@
 
 <!-- Sections:Start -->
 
-<div data-bs-spy="scroll" class="scrollspy-example">
   <!-- Hero: Start -->
   <section id="hero-animation">
     <div id="landingHero" class="section-py landing-hero position-relative">
@@ -21,7 +20,7 @@
       <div class="container">
         <div class="hero-text-box text-center position-relative">
           <h1 class="text-primary hero-title display-6 fw-extrabold">
-            Automate your crypto trading experience:
+            Automate your crypto trading experience
           </h1>
           <h2 class="hero-sub-title h6 mb-6">
             Access advanced Copy trading, Arbitrage, Staking and Mining tools and diverse assets, <br class="d-none d-lg-block" />
@@ -35,7 +34,7 @@
                 alt="Join community arrow"
                 class="scaleX-n1-rtl"
             /></span>
-            <a href="#landingPricing" class="btn btn-primary btn-lg">Register today</a>
+            <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg">Create Wallet</a>
           </div>
         </div>
         
@@ -48,17 +47,17 @@
   <section id="landingFeatures" class="section-py landing-features">
     <div class="container">
       <div class="text-center mb-4">
-        <span class="badge bg-label-primary">How Bloxxxchain benefits you</span>
+        <span class="badge bg-label-primary">Scalable Layer-2 Solutions</span>
       </div>
       <h4 class="text-center mb-1">
         <span class="position-relative fw-extrabold z-1"
-          >Unlock Your Crypto Potential.
+          >Why choose
           <img
             src="{{ url_for('static', filename='img/front-pages/icons/section-title-icon.png') }}"
             alt="laptop charging"
             class="section-title-img position-absolute object-fit-contain bottom-0 z-n1" />
         </span>
-        Powerful Features for Every Strategy.
+        Bloxxxchain
       </h4>
       <p class="text-center mb-12">
         Access advanced tools and diverse investment opportunities, all integrated for your success.
@@ -79,9 +78,10 @@
                 stroke-linejoin="round" />
             </svg>
           </div>
-          <h5 class="mb-2">Copy Trading</h5>
+          <h5 class="mb-2">User-Friendly Experience</h5>
           <p class="features-icon-description">
-            Backtest and optimize your strategy using full history
+            Beginner or a pro trader, our intuitive platform is designed to be fast, clean, and easy to use. 
+            Real-time data, customizable dashboards, and mobile-friendly design make trading on Bloxxxchain seamless.
           </p>
         </div>
         <div class="col-lg-4 col-sm-6 text-center features-icon-box">
@@ -100,9 +100,9 @@
                 fill="currentColor" />
             </svg>
           </div>
-          <h5 class="mb-2">Arbitrage Trading</h5>
+          <h5 class="mb-2">Fast Transactions, High Liquidity</h5>
           <p class="features-icon-description">
-            Stay emotionally detached during market volatility.
+            Bloxxxchain offers lightning-fast trade execution and deep liquidity across all markets. Get in and out of positions efficiently.
           </p>
         </div>
         <div class="col-lg-4 col-sm-6 text-center features-icon-box">
@@ -119,9 +119,10 @@
                 fill="currentColor" />
             </svg>
           </div>
-          <h5 class="mb-2">Staking Rewards</h5>
+          <h5 class="mb-2">Whatsapp Customer Support</h5>
           <p class="features-icon-description">
-            Services are available globally and have obtained relevant compliance licenses in Europe and other regions.
+            Our global support team is here for you around the clock.
+            Whether it’s technical help or trading questions, we’re committed to providing timely, helpful assistance when you need it.
           </p>
         </div>
         <div class="col-lg-4 col-sm-6 text-center features-icon-box">
@@ -139,9 +140,9 @@
                 stroke-linejoin="round" />
             </svg>
           </div>
-          <h5 class="mb-2">Bot Trading</h5>
+          <h5 class="mb-2">Low fees, transparent pricing </h5>
           <p class="features-icon-description">
-            Turn TradingView signals into automated instruments
+            Enjoy competitive trading fees with no hidden charges. Our fee structure is simple, fair, and fully transparent.
           </p>
         </div>
         <div class="col-lg-4 col-sm-6 text-center features-icon-box">
@@ -159,8 +160,8 @@
                 stroke-linejoin="round" />
             </svg>
           </div>
-          <h5 class="mb-2">Diverse Asset Portfolio</h5>
-          <p class="features-icon-description">Access all your exchanges within a single ecosystem.</p>
+          <h5 class="mb-2">Security First</h5>
+          <p class="features-icon-description">At Bloxxxchain, your assets are protected by advanced encryption, multi-layer authentication, and cold storage reserves.</p>
         </div>
         <div class="col-lg-4 col-sm-6 text-center features-icon-box">
           <div class="text-center mb-4 text-primary">
@@ -176,8 +177,8 @@
                 fill="currentColor" />
             </svg>
           </div>
-          <h5 class="mb-2">Advanced Analytics</h5>
-          <p class="features-icon-description">User assets are separate from operational funds, maintaining a reserve ratio of over 100%.</p>
+          <h5 class="mb-2">Innovative features</h5>
+          <p class="features-icon-description">From staking and mining trading to API access and advanced charting tools, Bloxxxchain gives you more ways to grow and manage your crypto portfolio.</p>
         </div>
       </div>
     </div>
@@ -208,7 +209,7 @@
         <div class="col-lg-5">
           <div class="text-center">
             <img
-              src="{{ url_for('static', filename='img/front-pages/landing-page/candle-chart.jpg') }}"
+              src="{{ url_for('static', filename='img/front-pages/landing-page/landing-page-faq.jpg') }}"
               alt="faq boy with logos"
               class="faq-image" />
           </div>
@@ -224,15 +225,19 @@
                   data-bs-target="#accordionOne"
                   aria-expanded="true"
                   aria-controls="accordionOne">
-                  Do you charge for each upgrade?
+                  Is Bloxxxchain Exchange safe to use?
                 </button>
               </h2>
 
               <div id="accordionOne" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
                 <div class="accordion-body">
-                  Lemon drops chocolate cake gummies carrot cake chupa chups muffin topping. Sesame snaps icing
-                  marzipan gummi bears macaroon dragée danish caramels powder. Bear claw dragée pastry topping
-                  soufflé. Wafer gummi bears marshmallow pastry pie.
+                  <span>Yes. We use industry-leading security practices including:</span>
+                  <ul>
+                    <li>Cold wallet storage for user funds</li>
+                    <li>End-to-end encryption</li>
+                    <li>Two-factor authentication (2FA)</li>
+                    <li>Regular third-party audits</li>
+                  </ul>
                 </div>
               </div>
             </div>
@@ -245,7 +250,7 @@
                   data-bs-target="#accordionTwo"
                   aria-expanded="false"
                   aria-controls="accordionTwo">
-                  Do I need to purchase a license for each website?
+                  Which cryptocurrencies can I trade?
                 </button>
               </h2>
               <div
@@ -254,9 +259,12 @@
                 aria-labelledby="headingTwo"
                 data-bs-parent="#accordionExample">
                 <div class="accordion-body">
-                  Dessert ice cream donut oat cake jelly-o pie sugar plum cheesecake. Bear claw dragée oat cake
-                  dragée ice cream halvah tootsie roll. Danish cake oat cake pie macaroon tart donut gummies. Jelly
-                  beans candy canes carrot cake. Fruitcake chocolate chupa chups.
+                  <span>We support major coins and emerging tokens, including:</span>
+                  <ul>
+                    <li>BTC, ETH, USDT, SOL, BNB</li>
+                    <li>BloxxxToken (BXC) (rewarded on pairs)</li>
+                    <li>Select DeFi, NFT, and GameFi assets</li>
+                  </ul>
                 </div>
               </div>
             </div>
@@ -269,7 +277,7 @@
                   data-bs-target="#accordionThree"
                   aria-expanded="false"
                   aria-controls="accordionThree">
-                  What is regular license?
+                  How do I deposit to my wallet?
                 </button>
               </h2>
               <div
@@ -278,12 +286,13 @@
                 aria-labelledby="headingThree"
                 data-bs-parent="#accordionExample">
                 <div class="accordion-body">
-                  Regular license can be used for end products that do not charge users for access or service(access
-                  is free and there will be no monthly subscription fee). Single regular license can be used for
-                  single end product and end product can be used by you or your client. If you want to sell end
-                  product to multiple clients then you will need to purchase separate license for each client. The
-                  same rule applies if you want to use the same end product on multiple domains(unique setup). For
-                  more info on regular license you can check official description.
+                  <span></span>
+                  <ul>
+                    <li>Go to your Wallet</li>
+                    <li>Choose the asset</li>
+                    <li>Click Deposit</li>
+                    <li>Follow on-screen instructions for blockchain address.</li>
+                  </ul>
                 </div>
               </div>
             </div>
@@ -296,7 +305,7 @@
                   data-bs-target="#accordionFour"
                   aria-expanded="false"
                   aria-controls="accordionFour">
-                  What is extended license?
+                  Do I need to complete KYC?
                 </button>
               </h2>
               <div
@@ -305,9 +314,12 @@
                 aria-labelledby="headingFour"
                 data-bs-parent="#accordionExample">
                 <div class="accordion-body">
-                  Lorem ipsum dolor sit amet consectetur adipisicing elit. Nobis et aliquid quaerat possimus maxime!
-                  Mollitia reprehenderit neque repellat deleniti delectus architecto dolorum maxime, blanditiis
-                  earum ea, incidunt quam possimus cumque.
+                  <p>Basic trading can be done with just an email.
+                  However, for higher limits and fiat transactions, you must complete KYC Level 2, which includes:</p>
+                  <ul>
+                    <li>ID verification</li>
+                    <li>Selfie scan</li>
+                  </ul>
                 </div>
               </div>
             </div>
@@ -320,7 +332,7 @@
                   data-bs-target="#accordionFive"
                   aria-expanded="false"
                   aria-controls="accordionFive">
-                  Which license is applicable for SASS application?
+                  What are the trading fees?
                 </button>
               </h2>
               <div
@@ -329,9 +341,11 @@
                 aria-labelledby="headingFive"
                 data-bs-parent="#accordionExample">
                 <div class="accordion-body">
-                  Lorem ipsum dolor sit amet consectetur, adipisicing elit. Sequi molestias exercitationem ab cum
-                  nemo facere voluptates veritatis quia, eveniet veniam at et repudiandae mollitia ipsam quasi
-                  labore enim architecto non!
+                 <ul>
+                  <li>Spot Trading: 0.1% maker / 0.15% taker</li>
+                  <li>Copy Trafing: 0.02% maker / 0.05% taker</li>
+                  <li>Zero fees on select BXC trading pairs</li>
+                 </ul>
                 </div>
               </div>
             </div>
@@ -348,18 +362,18 @@
       src="{{ url_for('static', filename='img/front-pages/backgrounds/cta-bg-light.png') }}"
       class="position-absolute bottom-0 end-0 scaleX-n1-rtl h-100 w-100 z-n1"
       alt="cta image"
-      data-app-light-img="front-pages/backgrounds/cta-bg-light.png"
-      data-app-dark-img="front-pages/backgrounds/cta-bg-dark.png"/>
+      data-app-light-img="{{ url_for('static', filename='img/front-pages/backgrounds/cta-bg-light.png') }}"
+      data-app-dark-img="{{ url_for('static', filename='img/front-pages/backgrounds/cta-bg-dark.png') }}"/>
     <div class="container">
       <div class="row align-items-center gy-12">
         <div class="col-lg-6 text-start text-sm-center text-lg-start">
           <h3 class="cta-title text-primary fw-bold mb-1">Trade easily, anytime, anywhere</h3>
           <h5 class="text-body mb-8">Join the Bloxxxchain App now.</h5>
-          <a href="#" class="btn btn-lg btn-primary">Get Started</a>
+          <a href="{{ url_for('auth.register') }}" class="btn btn-lg btn-primary">Create Wallet</a>
         </div>
         <div class="col-lg-6 pt-lg-12 text-center text-lg-end">
           <img
-            src="{{ url_for('static', filename='img/front-pages/landing-page/faq-phone-bitcoin.jpg') }}"
+            src="{{ url_for('static', filename='img/front-pages/landing-page/landing-image.jpg') }}"
             alt="cta dashboard"
             class="img-fluid mt-lg-4" />
         </div>
@@ -367,7 +381,7 @@
     </div>
   </section>
   <!-- CTA: End -->
-</div>
+
 
 <!-- / Sections:End -->
 {% endblock %}

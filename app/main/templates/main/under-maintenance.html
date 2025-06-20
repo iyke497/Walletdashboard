@@ -12,13 +12,13 @@
 
     <!--Under Maintenance -->
     <div class="container-xxl container-p-y">
-        <div class="misc-wrapper">
+        <div class="misc-wrapper text-center">
           <h4 class="mb-2 mx-2">Under Maintenance! 🚧</h4>
           <p class="mb-6 mx-2">Sorry for the inconvenience but we're performing some maintenance at the moment</p>
-          <a href="{{ url_for(main.index) }}" class="btn btn-primary">Back to home</a>
+          <a href="{{ url_for('main.index') }}" class="btn btn-primary">Back to home</a>
           <div class="mt-12">
             <img
-              src="../../assets/img/illustrations/page-misc-under-maintenance.png"
+              src="{{ url_for('static', filename='img/illustrations/page-misc-under-maintenance.png') }}"
               alt="page-misc-under-maintenance"
               width="550"
               class="img-fluid" />
@@ -27,7 +27,6 @@
       </div>
       <div class="container-fluid misc-bg-wrapper misc-under-maintenance-bg-wrapper">
         <img
-          src="../../assets/img/illustrations/bg-shape-image-light.png"
           src="{{ url_for('static', filename='img/illustrations/bg-shape-image-light.png') }}"
           height="355"
           alt="page-misc-under-maintenance"
