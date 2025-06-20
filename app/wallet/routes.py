@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 import base64
 from . import wallet_bp
 from app.extensions import db
+from app.decorators import email_verified_required
 from .services import WalletService
 from .forms import WithdrawForm, DepositForm
 from app.models import Asset, AssetType, Holding
@@ -16,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 @wallet_bp.route('/deposit/crypto', methods=['GET'])
 @login_required
+@email_verified_required
 def deposit_crypto_form():
     """Render the crypto deposit form"""
     form = DepositForm()
@@ -71,12 +73,33 @@ def search_assets(search_term):
 
     return jsonify(serialized_assets)
 
+# @wallet_bp.route('/get-networks/<asset_symbol>')
+# def get_networks(asset_symbol):
+#     asset = Asset.query.filter_by(symbol=asset_symbol).first()
+#     nets = [{'id': n['id'], 'symbol': n['symbol']} for n in (asset.networks or [])]
+#     #return jsonify(asset.networks if asset else [])  # Directly return the JSON array
+#     return jsonify(nets)
+
+#--- NEW NETWORKS FETCH ---#
 @wallet_bp.route('/get-networks/<asset_symbol>')
 def get_networks(asset_symbol):
     asset = Asset.query.filter_by(symbol=asset_symbol).first()
-    nets = [{'id': n['id'], 'symbol': n['symbol']} for n in (asset.networks or [])]
-    #return jsonify(asset.networks if asset else [])  # Directly return the JSON array
-    return jsonify(nets)
+    
+    if not asset or not asset.networks:
+        return jsonify([])
+    
+    # Filter networks that have deposit_address field populated
+    networks_with_deposits = [
+        {
+            'id': n['id'], 
+            'symbol': n['symbol'],
+            'deposit_address': n.get('deposit_address')  # Include address if needed
+        }
+        for n in asset.networks 
+        if n.get('deposit_address')  # Only include if deposit_address exists and is not empty
+    ]
+
+    return jsonify(networks_with_deposits)
 
 @wallet_bp.route('/deposit-info/<asset_symbol>/<network_id>')
 @login_required
@@ -95,6 +118,7 @@ def get_deposit_info(asset_symbol, network_id):
 
 @wallet_bp.route('/deposit/crypto', methods=['POST'])
 @login_required
+@email_verified_required
 def deposit_crypto():
     """Handle crypto deposit form submission"""
     try:
@@ -168,6 +192,7 @@ def deposit_fiat():
 # ********** Withdraw **********
 @wallet_bp.route('/withdraw/crypto', methods=['GET'])
 @login_required
+@email_verified_required
 def withdraw_crypto_form():
     """Render crypto withdrawal form"""
     form = WithdrawForm()
