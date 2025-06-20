@@ -50,6 +50,7 @@ def create_app(config_name=None):
     from .copytrade import copytrade_bp
     from .staking import staking_bp
     from .errors import error_bp
+    from .admin import admin_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix="/auth")
@@ -59,5 +60,6 @@ def create_app(config_name=None):
     app.register_blueprint(copytrade_bp, url_prefix="/copytrade")
     app.register_blueprint(staking_bp, url_prefix="/staking")
     app.register_blueprint(error_bp)
+    app.register_blueprint(admin_bp)
     
     return app
