@@ -779,6 +779,91 @@ class MiningService:
         return query.order_by(HashratePackage.sort_order).all()
     
     @staticmethod
+    def create_mining_contract_old(user_id, pool_id, hashrate, duration, package_id=None):
+        """
+        Create a new mining contract
+        
+        Args:
+            user_id (int): User ID
+            pool_id (int): Mining pool ID
+            hashrate (float): Purchased hashrate
+            duration (int): Contract duration in MONTHS (changed from days)
+            package_id (int, optional): Hashrate package ID
+            
+        Returns:
+            MiningContract: The newly created mining contract
+        """
+        try:
+            # Get the pool
+            pool = MiningService.get_pool_by_id(pool_id)
+            if not pool or not pool.is_active:
+                raise ValueError("Mining pool not available")
+            
+            # Get package if provided
+            package = None
+            if package_id:
+                package = HashratePackage.query.get(package_id)
+                if not package or not package.is_active:
+                    raise ValueError("Invalid hashrate package")
+                
+                # Use package hashrate if provided
+                hashrate = package.hashrate
+            
+            # Validate hashrate
+            if hashrate < float(pool.min_hashrate):
+                raise ValueError(f"Minimum hashrate is {pool.min_hashrate} {pool.min_hashrate_unit.value}")
+            
+            # Duration is now in months directly
+            duration_months = duration
+            
+            # Use package cost if available, otherwise calculate
+            if package:
+                monthly_cost = package.monthly_cost_usd
+                total_cost = monthly_cost * duration_months
+                power_consumption = package.power_consumption_watts
+                hardware_type = package.name
+            else:
+                # Calculate cost based on hashrate (simplified - replace with your pricing logic)
+                cost_per_hashrate = 5.0  # $5 per unit per month
+                monthly_cost = float(hashrate) * cost_per_hashrate
+                total_cost = monthly_cost * duration_months
+                power_consumption = None
+                hardware_type = f"{pool.asset.symbol} Miner"
+            
+            # Create contract name if not provided
+            contract_name = f"{pool.asset.symbol} Mining - {hashrate} {pool.min_hashrate_unit.value}"
+            
+            # Create the contract
+            contract = MiningContract(
+                user_id=user_id,
+                pool_id=pool_id,
+                package_id=package_id,
+                name=contract_name,
+                hashrate=hashrate,
+                hashrate_unit=pool.min_hashrate_unit,
+                duration_months=int(duration_months),
+                monthly_cost_usd=monthly_cost,
+                total_cost_usd=total_cost,
+                status=MiningContractStatus.PENDING,
+                power_consumption_watts=power_consumption,
+                hardware_type=hardware_type
+            )
+            
+            # Add to database
+            db.session.add(contract)
+            db.session.commit()
+            
+            current_app.logger.info(f"Mining contract created: ID={contract.id}, User={user_id}, Pool={pool_id}")
+            return contract
+            
+        except Exception as e:
+            current_app.logger.error(f"Failed to create mining contract: {str(e)}")
+            db.session.rollback()
+            raise e
+
+    # Update your MiningService.create_mining_contract method in services.py
+
+    @staticmethod
     def create_mining_contract(user_id, pool_id, hashrate, duration, package_id=None):
         """
         Create a new mining contract
@@ -787,66 +872,93 @@ class MiningService:
             user_id (int): User ID
             pool_id (int): Mining pool ID
             hashrate (float): Purchased hashrate
-            duration (int): Contract duration in days
+            duration (int): Contract duration in MONTHS
             package_id (int, optional): Hashrate package ID
             
         Returns:
             MiningContract: The newly created mining contract
         """
-        # Get the pool
-        pool = MiningService.get_pool_by_id(pool_id)
-        if not pool or not pool.is_active:
-            raise ValueError("Mining pool not available")
-        
-        # Get package if provided
-        package = None
-        if package_id:
-            package = HashratePackage.query.get(package_id)
-            if not package or not package.is_active or package.pool_id != pool.id:
-                raise ValueError("Invalid hashrate package")
+        try:
+            # Get the pool
+            pool = MiningService.get_pool_by_id(pool_id)
+            if not pool or not pool.is_active:
+                raise ValueError("Mining pool not available")
             
-            # Use package hashrate if provided
-            hashrate = package.hashrate
-        
-        # Validate hashrate
-        if hashrate < float(pool.min_hashrate):
-            raise ValueError(f"Minimum hashrate is {pool.min_hashrate} {pool.min_hashrate_unit.value}")
-        
-        # Calculate costs and duration
-        duration_months = duration / 30  # Convert days to months
-        
-        # Use package cost if available, otherwise calculate
-        if package:
-            monthly_cost = package.monthly_cost_usd
-            total_cost = monthly_cost * duration_months
-            power_consumption = package.power_consumption_watts
-            hardware_type = package.name
-        else:
-            # Calculate cost based on hashrate (simplified - replace with your pricing logic)
-            cost_per_hashrate = 5.0  # $5 per unit per month
-            monthly_cost = float(hashrate) * cost_per_hashrate
-            total_cost = monthly_cost * duration_months
-            power_consumption = None
-            hardware_type = None
-        
-        # Create the contract
-        contract = MiningContract(
-            user_id=user_id,
-            pool_id=pool_id,
-            package_id=package_id,
-            name=f"{pool.asset.symbol} Mining - {hashrate} {pool.min_hashrate_unit.value}",
-            hashrate=hashrate,
-            hashrate_unit=pool.min_hashrate_unit,
-            duration_months=int(duration_months),
-            monthly_cost_usd=monthly_cost,
-            total_cost_usd=total_cost,
-            status=MiningContractStatus.PENDING,
-            power_consumption_watts=power_consumption,
-            hardware_type=hardware_type
-        )
-        
-        # Add to database
-        db.session.add(contract)
-        db.session.commit()
-        
-        return contract
+            current_app.logger.info(f"Pool min_hashrate: {pool.min_hashrate} {pool.min_hashrate_unit.value}")
+            current_app.logger.info(f"Requested hashrate: {hashrate}")
+            
+            # Get package if provided
+            package = None
+            if package_id:
+                package = HashratePackage.query.get(package_id)
+                if not package or not package.is_active:
+                    raise ValueError("Invalid hashrate package")
+                
+                current_app.logger.info(f"Using package {package.id}: {package.name} - {package.hashrate} {package.hashrate_unit.value}")
+                # Use package hashrate if provided
+                hashrate = float(package.hashrate)
+            
+            # FIXED: Better hashrate validation with tolerance for floating point precision
+            min_hashrate = float(pool.min_hashrate)
+            tolerance = 0.01  # Small tolerance for floating point comparison
+            
+            current_app.logger.info(f"Validation: {hashrate} >= {min_hashrate} (tolerance: {tolerance})")
+            
+            if hashrate < (min_hashrate - tolerance):
+                current_app.logger.error(f"Hashrate validation failed: {hashrate} < {min_hashrate}")
+                raise ValueError(f"Minimum hashrate is {pool.min_hashrate} {pool.min_hashrate_unit.value}")
+            else:
+                current_app.logger.info(f"Hashrate validation passed: {hashrate} >= {min_hashrate}")
+            
+            # Duration is now in months directly
+            duration_months = duration
+            
+            # Use package cost if available, otherwise calculate
+            if package:
+                monthly_cost = float(package.monthly_cost_usd)
+                total_cost = monthly_cost * duration_months
+                power_consumption = package.power_consumption_watts
+                hardware_type = package.name
+                current_app.logger.info(f"Using package pricing: ${monthly_cost}/month")
+            else:
+                # Calculate cost based on hashrate (simplified - replace with your pricing logic)
+                cost_per_hashrate = 5.0  # $5 per unit per month
+                monthly_cost = float(hashrate) * cost_per_hashrate
+                total_cost = monthly_cost * duration_months
+                power_consumption = None
+                hardware_type = f"{pool.asset.symbol} Miner"
+                current_app.logger.info(f"Using default pricing: ${monthly_cost}/month")
+            
+            # Create contract name if not provided
+            contract_name = f"{pool.asset.symbol} Mining - {hashrate} {pool.min_hashrate_unit.value}"
+            
+            current_app.logger.info(f"Creating contract: {contract_name}")
+            current_app.logger.info(f"Cost breakdown: ${monthly_cost}/month x {duration_months} months = ${total_cost}")
+            
+            # Create the contract
+            contract = MiningContract(
+                user_id=user_id,
+                pool_id=pool_id,
+                package_id=package_id,
+                name=contract_name,
+                hashrate=hashrate,
+                hashrate_unit=pool.min_hashrate_unit,
+                duration_months=int(duration_months),
+                monthly_cost_usd=monthly_cost,
+                total_cost_usd=total_cost,
+                status=MiningContractStatus.PENDING,
+                power_consumption_watts=power_consumption,
+                hardware_type=hardware_type
+            )
+            
+            # Add to database
+            db.session.add(contract)
+            db.session.commit()
+            
+            current_app.logger.info(f"Mining contract created successfully: ID={contract.id}, User={user_id}, Pool={pool_id}")
+            return contract
+            
+        except Exception as e:
+            current_app.logger.error(f"Failed to create mining contract: {str(e)}")
+            db.session.rollback()
+            raise e    

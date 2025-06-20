@@ -7,23 +7,6 @@
 
 {% block content %}
 <div class="container-xxl flex-grow-1 container-p-y">
-
-    {# FLASH MESSAGES – (existing code) #}
-    {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-        <div class="row mb-3">
-            <div class="col-md-12"> {# Changed to full width for better layout with tabs #}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ 'success' if category=='success' else 'danger' }} alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                {% endfor %}
-            </div>
-        </div>
-    {% endif %}
-    {% endwith %}
-
     {# CARD WITH TABS for Staking and Positions #}
     <div class="row">
         <div class="col-12">
@@ -174,7 +157,7 @@
                                             <nav aria-label="Asset list navigation">
                                                 <ul class="pagination">
                                                     <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
-                                                        <a class="page-link" href="{{ url_for('staking.staking_home', page=pagination.prev_num, per_page=current_per_page, search=search_query) if pagination.has_prev else '#'}}#navs-pills-tab-stake-assets"><i class="ti ti-chevron-left"></i></a>
+                                                        <a class="page-link" href="{{ url_for('staking.staking_home', page=pagination.prev_num, per_page=current_per_page, search=search_query) if pagination.has_prev else '#'}}#navs-pills-tab-stake-assets"><i class="ti tabler-chevron-left"></i></a>
                                                     </li>
                                                     {% for p_num in pagination.iter_pages %}
                                                         {% if p_num %}
@@ -186,7 +169,7 @@
                                                         {% endif %}
                                                     {% endfor %}
                                                     <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
-                                                        <a class="page-link" href="{{ url_for('staking.staking_home', page=pagination.next_num, per_page=current_per_page, search=search_query) if pagination.has_next else '#'}}#navs-pills-tab-stake-assets"><i class="ti ti-chevron-right"></i></a>
+                                                        <a class="page-link" href="{{ url_for('staking.staking_home', page=pagination.next_num, per_page=current_per_page, search=search_query) if pagination.has_next else '#'}}#navs-pills-tab-stake-assets"><i class="ti tabler-chevron-right"></i></a>
                                                     </li>
                                                 </ul>
                                             </nav>
@@ -234,7 +217,7 @@
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td>{{ "%.8f"|format(pos.amount|float) }}</td>
+                                            <td>{{ "%.4f"|format(pos.amount|float) }}</td>
                                             <td>{{ pos.period_display }}</td> {# Assuming StakingService provides this #}
                                             <td><span class="badge bg-label-info">{{ pos.apr }}%</span></td> {# Assuming StakingService provides this #}
                                             <td>{{ pos.estimated_rewards }}</td>
@@ -257,7 +240,7 @@
                                                         data-position-id="{{ pos.id }}"
                                                         data-asset-symbol="{{ pos.asset_symbol }}"
                                                         data-staked-amount="{{ "%.8f"|format(pos.amount|float) }}">
-                                                    <i class="ti ti-logout me-1 ti-xs"></i>Unstake
+                                                    <i class="ti ti-logout me-1 ti-xs tabler-circle-x"></i>Unstake
                                                 </button>
                                                 {% elif pos.status == 'active' and not pos.can_unstake %}
                                                     <span class="text-muted small fst-italic">Locked</span>

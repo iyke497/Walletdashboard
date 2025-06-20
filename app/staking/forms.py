@@ -141,6 +141,10 @@ class MiningPoolSearchForm(FlaskForm):
         validators=[Optional()]
     )
 
+# forms.py - Updated MiningContractForm with proper conditional validation
+
+# Update your MiningContractForm class in forms.py
+
 class MiningContractForm(FlaskForm):
     """Main form for creating a mining contract"""
     
@@ -165,10 +169,7 @@ class MiningContractForm(FlaskForm):
     # For custom hashrate
     custom_hashrate = DecimalField(
         'Custom Hashrate',
-        validators=[
-            Optional(),
-            NumberRange(min=0.1, max=1000, message="Hashrate must be between 0.1 and 1000")
-        ],
+        validators=[Optional()],  # Only validate conditionally
         places=2,
         render_kw={'placeholder': '0.0', 'step': '0.1', 'min': '0.1'}
     )
@@ -181,7 +182,7 @@ class MiningContractForm(FlaskForm):
             ('MH/s', 'MH/s - Megahash per second')
         ],
         default='TH/s',
-        validators=[Optional()]
+        validators=[Optional()]  # Only validate conditionally
     )
     
     # Contract duration
@@ -209,20 +210,36 @@ class MiningContractForm(FlaskForm):
             if not field.data or field.data <= 0:
                 raise ValidationError('Custom hashrate is required and must be greater than 0')
     
+    def validate_custom_hashrate_unit(self, field):
+        """Validate custom hashrate unit when custom package is selected"""
+        if self.package_selection.data == 'custom':
+            valid_units = ['TH/s', 'GH/s', 'MH/s']
+            if not field.data or field.data not in valid_units:
+                raise ValidationError('Please select a valid hashrate unit')
+        # For non-custom selections, we don't validate this field
+        # The route will handle getting the hashrate unit from the pool/package
+    
     def validate_pool_id(self, field):
         """Validate pool exists and is active"""
         if field.data:
-            pool = MiningPool.query.get(field.data)
-            if not pool or not pool.is_active:
-                raise ValidationError('Selected mining pool is not available')
+            try:
+                pool_id = int(field.data)
+                pool = MiningPool.query.get(pool_id)
+                if not pool or not pool.is_active:
+                    raise ValidationError('Selected mining pool is not available')
+            except (ValueError, TypeError):
+                raise ValidationError('Invalid pool ID')
     
     def validate_package_id(self, field):
-        """Validate package when not using custom hashrate"""
-        if self.package_selection.data != 'custom' and field.data:
-            package = HashratePackage.query.get(field.data)
-            if not package or not package.is_active:
-                raise ValidationError('Selected package is not available')
-
+        """Validate package when provided"""
+        if field.data and str(field.data).strip():
+            try:
+                package_id = int(field.data)
+                package = HashratePackage.query.get(package_id)
+                if not package or not package.is_active:
+                    raise ValidationError('Selected package is not available')
+            except (ValueError, TypeError):
+                raise ValidationError('Invalid package ID format')
 class MiningContractConfirmForm(FlaskForm):
     """Confirmation form for mining contract with terms agreement"""
     
@@ -249,12 +266,11 @@ class MiningContractConfirmForm(FlaskForm):
     def validate_total_cost(self, field):
         """Validate user can afford the contract"""
         try:
-            cost = Decimal(field.data)
+            cost = Decimal(field.data) if field.data else Decimal('0')
             if cost <= 0:
                 raise ValidationError('Invalid contract cost')
         except (ValueError, InvalidOperation):
             raise ValidationError('Invalid cost format')
-
 class MinerControlForm(FlaskForm):
     """Form for controlling individual mining contracts"""
     

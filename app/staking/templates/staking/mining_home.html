@@ -25,7 +25,7 @@
                                 <button type="button" class="nav-link" role="tab" data-bs-toggle="tab"
                                         data-bs-target="#navs-pills-tab-my-positions"
                                         aria-controls="navs-pills-tab-my-positions" aria-selected="false">
-                                    My Staking Positions
+                                    Mining Contracts
                                 </button>
                             </li>
                             {# Add other tabs here if needed, e.g., "Earnings History" #}
@@ -38,7 +38,7 @@
                         <div class="tab-pane fade show active" id="navs-pills-tab-mining-pools" role="tabpanel">
                             {# SEARCH / FILTER CARD (existing code from your staking_home.html) #}
                             <div class="row mb-4">
-                                <div class="col-md-10 col-lg-8 mx-auto">
+                                <div class="col-md-12 col-lg-10 mx-auto">
                                     <div class="card shadow-sm">
                                         <div class="card-body">
                                             <form method="GET" action="{{ url_for('staking.mining_home') }}#navs-pills-tab-mining-pools" class="d-flex flex-wrap gap-3 align-items-end">
@@ -113,7 +113,7 @@
 
                             {# POOLS/ASSET LIST #}
                             <div class="row">
-                                <div class="col-md-10 col-lg-8 mx-auto">
+                                <div class="col-md-12 col-lg-10 mx-auto">
                                     <div class="card shadow-sm">
                                         <div class="card-datatable table-responsive pt-0">
                                             <table class="datatables-basic table">
@@ -124,6 +124,8 @@
                                                         <th>Algorithm</th>
                                                         <th>Pool fee</th>
                                                         <th>Difficulty</th>
+                                                        <th>Hashrate</th>
+                                                        <th>Price</th>
                                                         <th>APR</th>
                                                         <th>Action</th>
                                                     </tr>
@@ -169,8 +171,8 @@
                                                                 <span class="badge bg-label-secondary">{{ pool.difficulty.name.title() }}</span>
                                                             {% endif %}
                                                         </td>
-                                                        <td>{{ pool.min_hashrate }} {{ pool.min_hashrate_unit.value }}</td>
-                                                        <td>${{ "%.4f"|format(pool.estimated_daily_earnings_per_unit) }} per {{ pool.min_hashrate_unit.value }}</td>
+                                                        <td>{{ "%.2f"|format(pool.min_hashrate) }} {{ pool.min_hashrate_unit.value }}</td>
+                                                        <td>${{ "%.4f"|format(pool.estimated_daily_earnings_per_unit) }} / ({{ pool.min_hashrate_unit.value }})</td>
                                                         <td><span class="badge bg-label-success">4.5%</span></td> {# This APR should be dynamic from asset data if available #}
                                                         <td>
                                                             <button class="btn btn-primary btn-sm mining-btn"
@@ -186,8 +188,6 @@
                                                                     data-hashrate-unit="{{ pool.min_hashrate_unit.value }}"
                                                                     data-earnings-per-unit="{{ pool.estimated_daily_earnings_per_unit }}"
                                                                     data-difficulty="{{ pool.difficulty.name.title() }}">
-                                                                <i class="icon-base ti tabler-pickaxe me-1"></i>Mine
-                                                            </button>
                                                                 <i class="icon-base ti tabler-coins me-1"></i>Mine
                                                             </button>
                                                         </td>
@@ -239,70 +239,127 @@
                             </div>
                         </div>{# /#navs-pills-tab-mining-pools #}
 
-                        {# ------------- TAB 2: MY MINERS ------------- #}
+                        {# ------------- TAB 2: MY MINING CONTRACTS ------------- #}
                         <div class="tab-pane fade" id="navs-pills-tab-my-positions" role="tabpanel">
-                            <h4 class="mb-3 pt-3">Your Active Miners</h4>
-                            <p>Total Positions: <span class="fw-bold">{{ total_positions }}</span> | Currently Active: <span class="fw-bold text-success">{{ active_positions }}</span></p>
+                            <h4 class="mb-3 pt-3">Your Active Mining Contracts</h4>
+                            <p>Total Contracts: <span class="fw-bold">{{ total_mining_positions }}</span> | Currently Active: <span class="fw-bold text-success">{{ active_mining_positions }}</span></p>
 
-                            {% if user_positions %}
+                            {% if user_mining_positions %}
                             <div class="table-responsive text-nowrap">
                                 <table class="table table-hover">
                                     <thead>
                                         <tr>
                                             <th>Asset</th>
-                                            <th>Amount Staked</th>
-                                            <th>Period</th>
-                                            <th>APR</th>
-                                            <th>Est. Rewards</th>
+                                            <th>Contract Name</th>
+                                            <th>Hashrate</th>
+                                            <th>Duration</th>
+                                            <th>Monthly Cost</th>
                                             <th>Start Date</th>
-                                            <th>End Date / Unlock</th>
+                                            <th>End Date</th>
                                             <th>Status</th>
                                             <th>Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody class="table-border-bottom-0">
-                                        {% for pos in user_positions %}
+                                        {% for contract in user_mining_positions %}
                                         <tr>
                                             <td>
                                                 <div class="d-flex align-items-center">
-                                                    {% if pos.asset_image %}
-                                                        <img src="{{ pos.asset_image }}" alt="{{ pos.asset_symbol }}" class="avatar avatar-xs rounded-circle me-2">
+                                                    {% if contract.asset_image %}
+                                                        <img src="{{ contract.asset_image }}" alt="{{ contract.asset_symbol }}" class="avatar avatar-xs rounded-circle me-2">
                                                     {% else %}
-                                                        <div class="avatar avatar-xs avatar-initial rounded-circle bg-label-secondary me-2">{{ pos.asset_symbol[0] if pos.asset_symbol else '?' }}</div>
+                                                        <div class="avatar avatar-xs avatar-initial rounded-circle bg-label-secondary me-2">{{ contract.asset_symbol[0] if contract.asset_symbol else '?' }}</div>
                                                     {% endif %}
                                                     <div>
-                                                        <span class="fw-medium">{{ pos.asset_symbol }}</span><br>
-                                                        <small class="text-muted">{{ pos.asset_name }}</small>
+                                                        <span class="fw-medium">{{ contract.asset_symbol }}</span><br>
+                                                        <small class="text-muted">{{ contract.asset_name }}</small>
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td>{{ "%.8f"|format(pos.amount|float) }}</td>
-                                            <td>{{ pos.period_display }}</td> {# Assuming StakingService provides this #}
-                                            <td><span class="badge bg-label-info">{{ pos.apr }}%</span></td> {# Assuming StakingService provides this #}
-                                            <td>{{ pos.estimated_rewards }}</td>
-                                            <td>{{ pos.start_date.strftime('%Y-%m-%d %H:%M') if pos.start_date else 'N/A' }}</td>
-                                            <td>{{ pos.end_date.strftime('%Y-%m-%d %H:%M') if pos.end_date else 'Flexible' }}</td>
+                                            <td>
+                                                <div>
+                                                    <span class="fw-medium">{{ contract.name }}</span><br>
+                                                    {% if contract.hardware_type %}
+                                                        <small class="text-muted">{{ contract.hardware_type }}</small>
+                                                    {% endif %}
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="fw-medium">{{ contract.hashrate }} {{ contract.hashrate_unit }}</span>
+                                                {% if contract.power_consumption %}
+                                                    <br><small class="text-muted">{{ contract.power_consumption }}W</small>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <span class="fw-medium">{{ contract.duration_months }} Month{{ 's' if contract.duration_months > 1 else '' }}</span>
+                                                {% if contract.end_date %}
+                                                    <br><small class="text-muted">Until {{ contract.end_date.strftime('%Y-%m-%d') }}</small>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <span class="fw-medium">${{ "%.2f"|format(contract.monthly_cost) }}</span>
+                                                <br><small class="text-muted">Total: ${{ "%.2f"|format(contract.total_cost) }}</small>
+                                            </td>
+                                            <td>{{ contract.start_date.strftime('%Y-%m-%d %H:%M') if contract.start_date else contract.created_at.strftime('%Y-%m-%d %H:%M') if contract.created_at else 'N/A' }}</td>
+                                            <td>{{ contract.end_date.strftime('%Y-%m-%d %H:%M') if contract.end_date else 'Ongoing' }}</td>
                                             <td>
                                                 <span class="badge rounded-pill
-                                                    {% if pos.status == 'active' %} bg-label-success
-                                                    {% elif pos.status == 'completed' %} bg-label-primary
-                                                    {% elif pos.status == 'unstaked' %} bg-label-warning
+                                                    {% if contract.status == 'pending' %} bg-label-warning
+                                                    {% elif contract.status == 'active' %} bg-label-success
+                                                    {% elif contract.status == 'paused' %} bg-label-secondary
+                                                    {% elif contract.status == 'completed' %} bg-label-primary
+                                                    {% elif contract.status == 'cancelled' %} bg-label-danger
                                                     {% else %} bg-label-secondary {% endif %}">
-                                                    {{ pos.status|capitalize }}
+                                                    {{ contract.status|capitalize }}
                                                 </span>
                                             </td>
                                             <td>
-                                                {% if pos.status == 'active' and pos.can_unstake %} {# Assuming StakingService provides can_unstake #}
-                                                <button type="button" class="btn btn-danger btn-sm unstake-pos-btn"
-                                                        data-bs-toggle="modal"
-                                                        data-bs-target="#unstakePositionModal"
-                                                        data-position-id="{{ pos.id }}"
-                                                        data-asset-symbol="{{ pos.asset_symbol }}"
-                                                        data-staked-amount="{{ "%.8f"|format(pos.amount|float) }}">
-                                                    <i class="ti ti-logout me-1 ti-xs"></i>Unstake
-                                                </button>
-                                                {% elif pos.status == 'active' and not pos.can_unstake %}
-                                                    <span class="text-muted small fst-italic">Locked</span>
+                                                {% if contract.status == 'active' %}
+                                                    <div class="btn-group" role="group">
+                                                        <button type="button" class="btn btn-warning btn-sm pause-contract-btn"
+                                                                data-contract-id="{{ contract.id }}"
+                                                                data-asset-symbol="{{ contract.asset_symbol }}"
+                                                                title="Pause Contract">
+                                                            <i class="ti ti-player-pause ti-xs tabler-player-pause"></i>
+                                                        </button>
+                                                        <button type="button" class="btn btn-danger btn-sm cancel-contract-btn"
+                                                                data-bs-toggle="modal"
+                                                                data-bs-target="#cancelContractModal"
+                                                                data-contract-id="{{ contract.id }}"
+                                                                data-contract-name="{{ contract.name }}"
+                                                                data-asset-symbol="{{ contract.asset_symbol }}"
+                                                                title="Cancel Contract">
+                                                            <i class="ti ti-x ti-xs tabler-circle-x"></i>
+                                                        </button>
+                                                    </div>
+                                                {% elif contract.status == 'paused' %}
+                                                    <div class="btn-group" role="group">
+                                                        <button type="button" class="btn btn-success btn-sm resume-contract-btn"
+                                                                data-contract-id="{{ contract.id }}"
+                                                                data-asset-symbol="{{ contract.asset_symbol }}"
+                                                                title="Resume Contract">
+                                                            <i class="ti ti-player-play ti-xs"></i>
+                                                        </button>
+                                                        <button type="button" class="btn btn-danger btn-sm cancel-contract-btn"
+                                                                data-bs-toggle="modal"
+                                                                data-bs-target="#cancelContractModal"
+                                                                data-contract-id="{{ contract.id }}"
+                                                                data-contract-name="{{ contract.name }}"
+                                                                data-asset-symbol="{{ contract.asset_symbol }}"
+                                                                title="Cancel Contract">
+                                                            <i class="ti ti-x ti-xs"></i>
+                                                        </button>
+                                                    </div>
+                                                {% elif contract.status == 'pending' %}
+                                                    <button type="button" class="btn btn-danger btn-sm cancel-contract-btn"
+                                                            data-bs-toggle="modal"
+                                                            data-bs-target="#cancelContractModal"
+                                                            data-contract-id="{{ contract.id }}"
+                                                            data-contract-name="{{ contract.name }}"
+                                                            data-asset-symbol="{{ contract.asset_symbol }}"
+                                                            title="Cancel Contract">
+                                                        <i class="ti ti-x me-1 ti-xs tabler-circle-x"></i>Cancel
+                                                    </button>
                                                 {% else %}
                                                     <span class="text-muted small fst-italic">-</span>
                                                 {% endif %}
@@ -314,9 +371,9 @@
                             </div>
                             {% else %}
                             <div class="text-center py-5">
-                                <i class="ti ti-ghost ti-lg mb-2 d-block mx-auto text-muted"></i>
-                                <p class="text-muted">You have no staking positions yet.</p>
-                                <p><small>Explore assets in the "Stake Assets" tab to get started!</small></p>
+                                <i class="ti ti-pickaxe ti-lg mb-2 d-block mx-auto text-muted"></i>
+                                <p class="text-muted">You have no mining contracts yet.</p>
+                                <p><small>Explore mining pools in the "Mining Pools" tab to get started!</small></p>
                             </div>
                             {% endif %}
                         </div>{# /#navs-pills-tab-my-positions #}
@@ -331,7 +388,7 @@
         <div class="modal-dialog modal-dialog-centered modal-md" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="miningModalLabel"><i class="icon-base ti tabler-pickaxe me-2"></i>Create Mining Contract</h5>
+                    <h5 class="modal-title" id="miningModalLabel"><i class="icon-base ti tabler-coins me-2"></i>Create Mining Contract</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -629,6 +686,63 @@
             </div>
         </div>
     </div>
+
+    {# MODAL: CANCEL CONTRACT CONFIRMATION #}
+    <div class="modal fade" id="cancelContractModal" tabindex="-1" aria-labelledby="cancelContractModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form id="confirmCancelForm" method="POST" action="{{ url_for('staking.cancel_mining_contract') }}">
+                    {{ csrf_token() }}
+                    <input type="hidden" id="cancel-contract-id" name="contract_id" value="">
+                    
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="cancelContractModalLabel">
+                            <i class="ti ti-alert-triangle me-2 text-warning"></i>Cancel Mining Contract
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-warning">
+                            <h6 class="alert-heading">⚠️ Important Notice</h6>
+                            <p class="mb-0">Cancelling your mining contract may result in:</p>
+                            <ul class="mb-0">
+                                <li>Loss of any prepaid mining time</li>
+                                <li>Potential cancellation fees</li>
+                                <li>Immediate termination of mining rewards</li>
+                            </ul>
+                        </div>
+                        
+                        <p>Are you sure you want to cancel the mining contract:</p>
+                        <div class="card border">
+                            <div class="card-body">
+                                <h6 id="cancel-contract-name" class="mb-1">Contract Name</h6>
+                                <small class="text-muted" id="cancel-contract-details">Asset details</small>
+                            </div>
+                        </div>
+                        
+                        <div class="form-check mt-3">
+                            <input class="form-check-input" type="checkbox" id="cancelContractConfirm" name="confirm_cancel" required>
+                            <label class="form-check-label" for="cancelContractConfirm">
+                                I understand the consequences and wish to cancel this mining contract.
+                            </label>
+                            <div class="invalid-feedback">
+                                You must confirm to proceed with cancellation.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                            <i class="ti ti-x me-1"></i>Keep Contract
+                        </button>
+                        <button type="submit" id="cancelContractSubmitBtn" class="btn btn-danger" disabled>
+                            <i class="ti ti-trash me-1"></i>Cancel Contract
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
 </div>
 {% endblock %}
 
@@ -637,565 +751,376 @@
 <script src="{{ url_for('static', filename='js/ui-modals.js') }}"></script>
 <script src="{{ url_for('static', filename='js/cards-advance.js') }}"></script>
 <script>
-// Mining contract modal functionality
+// Replace your complex mining JavaScript with this simplified version
+// that follows the exact same pattern as your working staking modal
+// Replace your complex mining JavaScript with this simplified version
+// that follows the exact same pattern as your working staking modal
 document.addEventListener('DOMContentLoaded', function() {
-    // Get references to mining modal elements
-    const miningModal = document.getElementById('miningModal');
-    const confirmModal = document.getElementById('miningConfirmModal');
-    const confirmForm = document.getElementById('confirmMiningForm');
-    const proceedButton = document.getElementById('proceedToConfirm');
-    const confirmButton = document.getElementById('confirmMining');
-    const agreeTerms = document.getElementById('agreeTerms');
-    
-    // Store mining pool data
-    let currentPool = {
-        id: null,
-        assetSymbol: '',
-        assetName: '',
-        assetImage: '',
-        algorithm: '',
-        poolFee: 0,
-        minHashrate: 0,
-        hashrateUnit: '',
-        earningsPerUnit: 0,
-        difficulty: ''
-    };
-    
-    // Store hashrate packages data
-    let hashratePackages = [];
-    
-    // Form elements in first modal
+    let currentMiningData = {};
+    const proceedBtn = document.getElementById('proceedToConfirm');
     const packageSelectionInputs = document.querySelectorAll('input[name="package_selection"]');
     const customHashrateInput = document.getElementById('custom_hashrate');
     const customHashrateUnitSelect = document.getElementById('custom_hashrate_unit');
     const durationSelect = document.getElementById('duration');
     const contractNameInput = document.getElementById('contract_name');
     const customHashrateFields = document.getElementById('customHashrateFields');
-    
-    // First modal elements
-    const modalAssetImage = document.getElementById('modalAssetImage');
-    const modalAssetInitial = document.getElementById('modalAssetInitial');
-    const modalAssetName = document.getElementById('modalAssetName');
-    const modalAssetSymbol = document.getElementById('modalAssetSymbol');
-    const modalAlgorithm = document.getElementById('modalAlgorithm');
-    const modalPoolFee = document.getElementById('modalPoolFee');
-    const modalDifficulty = document.getElementById('modalDifficulty');
-    const modalMinHashrate = document.getElementById('modalMinHashrate');
-    const modalEarningsPerUnit = document.getElementById('modalEarningsPerUnit');
-    const minHashrateText = document.getElementById('minHashrateText');
-    
-    // Cost and earnings elements
-    const monthlyCost = document.getElementById('monthlyCost');
-    const monthlyEarnings = document.getElementById('monthlyEarnings');
-    const totalCost = document.getElementById('totalCost');
-    const potentialProfit = document.getElementById('potentialProfit');
-    
-    // Form elements in second modal (hidden inputs)
+
+    // Form elements for modal 2 (hidden inputs)
     const formPoolId = document.getElementById('form-pool-id');
-    const formPackageId = document.getElementById('form-package-id');
     const formPackageSelection = document.getElementById('form-package-selection');
+    const formPackageId = document.getElementById('form-package-id');
     const formCustomHashrate = document.getElementById('form-custom-hashrate');
     const formCustomHashrateUnit = document.getElementById('form-custom-hashrate-unit');
     const formDuration = document.getElementById('form-duration');
     const formContractName = document.getElementById('form-contract-name');
-    
-    // Confirmation modal elements
-    const confirmAssetImage = document.getElementById('confirmAssetImage');
-    const confirmAssetInitial = document.getElementById('confirmAssetInitial');
-    const confirmAsset = document.getElementById('confirm-asset');
-    const confirmAlgorithm = document.getElementById('confirm-algorithm');
-    const confirmPackage = document.getElementById('confirm-package');
-    const confirmHashrate = document.getElementById('confirm-hashrate');
-    const confirmDuration = document.getElementById('confirm-duration');
-    const confirmFee = document.getElementById('confirm-fee');
-    const confirmMonthlyCost = document.getElementById('confirm-monthly-cost');
-    const confirmMonthlyEarnings = document.getElementById('confirm-monthly-earnings');
-    const confirmTotalCost = document.getElementById('confirm-total-cost');
-    const confirmProfit = document.getElementById('confirm-profit');
-    
-    // Debug logger function
-    function debugLog(message) {
-        console.log(`[Mining Debug] ${message}`);
-    }
-    
+
+    // Store hashrate packages data
+    let hashratePackages = [];
+
+    // Mining button click - populate modal 1 (SIMPLE like staking)
+    document.querySelectorAll('.mining-btn').forEach(button => {
+        button.addEventListener('click', async function() {
+            currentMiningData = {
+                poolId: this.getAttribute('data-pool-id'),
+                assetSymbol: this.getAttribute('data-asset-symbol'),
+                assetName: this.getAttribute('data-asset-name'),
+                assetImage: this.getAttribute('data-asset-image'),
+                algorithm: this.getAttribute('data-algorithm'),
+                poolFee: this.getAttribute('data-pool-fee'),
+                minHashrate: this.getAttribute('data-min-hashrate'),
+                hashrateUnit: this.getAttribute('data-hashrate-unit'),
+                earningsPerUnit: this.getAttribute('data-earnings-per-unit'),
+                difficulty: this.getAttribute('data-difficulty')
+            };
+
+            // Update modal 1 display
+            updateModalDisplay();
+
+            // Fetch hashrate packages for this pool
+            await fetchHashratePackages(currentMiningData.poolId);
+
+            // Reset form
+            resetForm();
+        });
+    });
+
     // Fetch hashrate packages for a pool
     async function fetchHashratePackages(poolId) {
         try {
-            // Only proceed if we have a valid pool ID
-            if (!poolId || poolId === 'null' || poolId === 'undefined' || isNaN(parseInt(poolId))) {
-                debugLog(`Invalid pool ID for API call: ${poolId}`);
-                throw new Error('Invalid pool ID');
-            }
-            
-            // Log the API call we're about to make
-            debugLog(`Fetching packages for pool ID: ${poolId}`);
-            
-            const response = await fetch(`api/mining/packages/${poolId}`);
+            console.log(`Fetching packages for pool ID: ${poolId}`);
+
+            const response = await fetch(`/staking/api/mining/packages/${poolId}`);
             if (!response.ok) {
-                throw new Error(`Failed to fetch packages: ${response.status} ${response.statusText}`);
+                throw new Error(`Failed to fetch packages: ${response.status}`);
             }
-            
+
             const data = await response.json();
-            debugLog(`API response received: ${JSON.stringify(data)}`);
-            
+            console.log(`API response:`, data);
+
             if (data.success && data.packages && data.packages.length > 0) {
                 hashratePackages = data.packages;
-                debugLog(`${hashratePackages.length} packages loaded successfully`);
+                console.log(`${hashratePackages.length} packages loaded successfully`);
+                updatePackageOptions();
             } else {
-                debugLog('No packages in response or success=false, using defaults');
-                throw new Error('No packages available');
+                console.log('No packages in response, using defaults');
+                createDefaultPackages();
+                updatePackageOptions();
             }
-            
-            updatePackageOptions();
         } catch (error) {
-            debugLog(`Error in fetchHashratePackages: ${error.message}`);
-            // Create default packages if API fails
-            debugLog('Creating default packages based on pool data');
-            hashratePackages = [
-                {
-                    id: 'basic',
-                    name: 'Basic Package',
-                    hashrate: currentPool.minHashrate,
-                    hashrateUnit: currentPool.hashrateUnit,
-                    monthlyCost: currentPool.minHashrate * 5,
-                    powerConsumption: currentPool.minHashrate * 10
-                },
-                {
-                    id: 'pro',
-                    name: 'Pro Package',
-                    hashrate: currentPool.minHashrate * 5,
-                    hashrateUnit: currentPool.hashrateUnit,
-                    monthlyCost: currentPool.minHashrate * 5 * 4.5, // Slight discount
-                    powerConsumption: currentPool.minHashrate * 5 * 9.5
-                },
-                {
-                    id: 'enterprise',
-                    name: 'Enterprise Package',
-                    hashrate: currentPool.minHashrate * 20,
-                    hashrateUnit: currentPool.hashrateUnit,
-                    monthlyCost: currentPool.minHashrate * 20 * 4, // Better discount
-                    powerConsumption: currentPool.minHashrate * 20 * 9
-                }
-            ];
+            console.error(`Error fetching packages: ${error.message}`);
+            createDefaultPackages();
             updatePackageOptions();
         }
-    }
-    
-    // Update package option displays
-    // Update the updatePackageOptions function to better match package types
-    function updatePackageOptions() {
-        debugLog('Updating package display options');
-        
-        // Define our standard package types
-        const packageTypes = ['basic', 'pro', 'enterprise'];
-        
-        // Get packages for each type
-        const basicPackage = hashratePackages.find(p => p.name === 'Basic');
-        const proPackage = hashratePackages.find(p => p.name === 'Pro');
-        const enterprisePackage = hashratePackages.find(p => p.name === 'Enterprise');
-        
-        // Map packages to their respective UI elements
-        updatePackageDisplay('basic', basicPackage);
-        updatePackageDisplay('pro', proPackage);
-        updatePackageDisplay('enterprise', enterprisePackage);
     }
 
-    // Helper function to update a package display
-    function updatePackageDisplay(type, package) {
-        const descEl = document.getElementById(`package_desc_${type}`);
-        const priceEl = document.getElementById(`package_price_${type}`);
-        const powerEl = document.getElementById(`package_power_${type}`);
-        
-        if (!package) {
-            // No package found for this type
-            if (descEl) descEl.innerHTML = `<small>Not available</small>`;
-            if (priceEl) priceEl.textContent = `N/A`;
-            if (powerEl) powerEl.textContent = ``;
-            return;
-        }
-        
-        // Update elements with package data
-        if (descEl) {
-            descEl.innerHTML = `<small>${package.hashrate} ${package.hashrateUnit}</small>`;
-        }
-        
-        if (priceEl) {
-            priceEl.textContent = `$${package.monthlyCost.toFixed(2)}/mo`;
-        }
-        
-        if (powerEl) {
-            powerEl.textContent = package.powerConsumption ? `${package.powerConsumption}W` : '';
-        }
+    // Create default packages if API fails
+    function createDefaultPackages() {
+        const baseHashrate = parseFloat(currentMiningData.minHashrate);
+        hashratePackages = [{
+                id: 'basic',
+                name: 'Basic',
+                type: 'basic',
+                hashrate: baseHashrate,
+                hashrateUnit: currentMiningData.hashrateUnit,
+                monthlyCost: baseHashrate * 50,
+                powerConsumption: baseHashrate * 10
+            },
+            {
+                id: 'pro',
+                name: 'Pro',
+                type: 'pro',
+                hashrate: baseHashrate * 5,
+                hashrateUnit: currentMiningData.hashrateUnit,
+                monthlyCost: baseHashrate * 5 * 45, // Slight discount
+                powerConsumption: baseHashrate * 5 * 9.5
+            },
+            {
+                id: 'enterprise',
+                name: 'Enterprise',
+                type: 'enterprise',
+                hashrate: baseHashrate * 20,
+                hashrateUnit: currentMiningData.hashrateUnit,
+                monthlyCost: baseHashrate * 20 * 40, // Better discount
+                powerConsumption: baseHashrate * 20 * 9
+            }
+        ];
     }
-    
-    // Handle mining button click
-    const miningButtons = document.querySelectorAll('.mining-btn');
-    miningButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            debugLog('Mining button clicked');
-            
-            // Get pool data from button attributes
-            const poolId = this.getAttribute('data-pool-id');
-            const assetSymbol = this.getAttribute('data-asset-symbol');
-            const assetName = this.getAttribute('data-asset-name');
-            const assetImage = this.getAttribute('data-asset-image');
-            const algorithm = this.getAttribute('data-algorithm');
-            const poolFee = parseFloat(this.getAttribute('data-pool-fee'));
-            const minHashrate = parseFloat(this.getAttribute('data-min-hashrate'));
-            const hashrateUnit = this.getAttribute('data-hashrate-unit');
-            const earningsPerUnit = parseFloat(this.getAttribute('data-earnings-per-unit'));
-            const difficulty = this.getAttribute('data-difficulty');
-            
-            debugLog(`Button data: poolId=${poolId}, assetSymbol=${assetSymbol}, algorithm=${algorithm}`);
-            
-            // Validate pool ID
-            if (!poolId || poolId === 'null' || poolId === 'undefined' || isNaN(parseInt(poolId))) {
-                debugLog(`Invalid pool ID detected: ${poolId}`);
-                alert('Invalid pool data. Please try again or contact support.');
-                return; // Don't proceed with invalid pool ID
-            }
-            
-            // Store pool data
-            currentPool = {
-                id: poolId,
-                assetSymbol,
-                assetName,
-                assetImage,
-                algorithm,
-                poolFee,
-                minHashrate,
-                hashrateUnit,
-                earningsPerUnit,
-                difficulty
-            };
-            
-            // Update hidden input - make sure it's a valid value
-            formPoolId.value = poolId;
-            debugLog(`Set form pool ID to: ${formPoolId.value}`);
-            
-            // Set default values
-            customHashrateInput.value = minHashrate;
-            customHashrateInput.min = minHashrate;
-            
-            // Set suggested contract name
-            contractNameInput.value = `${assetSymbol} Miner #1`;
-            
-            // Match hashrate unit in dropdown to pool's unit
-            for (let i = 0; i < customHashrateUnitSelect.options.length; i++) {
-                if (customHashrateUnitSelect.options[i].value === hashrateUnit) {
-                    customHashrateUnitSelect.selectedIndex = i;
-                    break;
+
+    // Update package option displays
+    // Update package option displays - simplified for exact name matching
+    function updatePackageOptions() {
+        const packageTypes = ['basic', 'pro', 'enterprise'];
+
+        console.log('Available packages:', hashratePackages);
+
+        packageTypes.forEach(type => {
+            // Find package by exact name match (case insensitive)
+            const package = hashratePackages.find(p => p.name.toLowerCase() === type);
+
+            const descEl = document.getElementById(`package_desc_${type}`);
+            const priceEl = document.getElementById(`package_price_${type}`);
+            const powerEl = document.getElementById(`package_power_${type}`);
+
+            if (package && descEl && priceEl) {
+                descEl.innerHTML = `<small>${package.hashrate} ${package.hashrateUnit}</small>`;
+                priceEl.textContent = `$${package.monthlyCost.toFixed(2)}/mo`;
+                if (powerEl) powerEl.textContent = package.powerConsumption ? `${package.powerConsumption}W` : '';
+                console.log(`Updated ${type} package display:`, package);
+            } else {
+                console.log(`No package found for ${type}, using fallback`);
+                // Fallback display
+                const baseHashrate = parseFloat(currentMiningData.minHashrate);
+                let multiplier = 1;
+                let cost = baseHashrate * 50;
+
+                if (type === 'pro') {
+                    multiplier = 5;
+                    cost = baseHashrate * 5 * 45;
+                } else if (type === 'enterprise') {
+                    multiplier = 20;
+                    cost = baseHashrate * 20 * 40;
                 }
+
+                if (descEl) descEl.innerHTML = `<small>${(baseHashrate * multiplier).toFixed(1)} ${currentMiningData.hashrateUnit}</small>`;
+                if (priceEl) priceEl.textContent = `$${cost.toFixed(2)}/mo`;
+                if (powerEl) powerEl.textContent = `${(baseHashrate * multiplier * 10).toFixed(0)}W`;
             }
-            
-            // Fetch hashrate packages for this pool
-            fetchHashratePackages(poolId);
-            
-            // Update modal content
-            updateModalContent();
-            
-            // Select default package option
-            if (packageSelectionInputs.length > 0) {
-                packageSelectionInputs[1].checked = true; // Select Pro package by default
-                toggleCustomHashrateFields();
-            }
-            
-            // Update calculations
-            updateCalculations();
         });
-    });
-    
-    // Update modal content with current pool data
-    function updateModalContent() {
-        debugLog('Updating modal content with pool data');
-        
-        // Update asset info
-        modalAssetName.textContent = currentPool.assetName;
-        modalAssetSymbol.textContent = currentPool.assetSymbol;
-        modalAlgorithm.textContent = currentPool.algorithm;
-        modalPoolFee.textContent = `${currentPool.poolFee}% Pool Fee`;
-        modalDifficulty.textContent = currentPool.difficulty;
-        
-        // Update hashrate info
-        modalMinHashrate.textContent = `${currentPool.minHashrate} ${currentPool.hashrateUnit}`;
-        modalEarningsPerUnit.textContent = `$${currentPool.earningsPerUnit.toFixed(4)} per ${currentPool.hashrateUnit}`;
-        minHashrateText.textContent = `${currentPool.minHashrate} ${currentPool.hashrateUnit}`;
-        
-        // Update asset image
-        if (currentPool.assetImage) {
-            modalAssetImage.src = currentPool.assetImage;
+    }
+
+    function updateModalDisplay() {
+        // Update modal content (same as before)
+        document.getElementById('modalAssetName').textContent = currentMiningData.assetName;
+        document.getElementById('modalAssetSymbol').textContent = currentMiningData.assetSymbol;
+        document.getElementById('modalAlgorithm').textContent = currentMiningData.algorithm;
+        document.getElementById('modalPoolFee').textContent = `${currentMiningData.poolFee}% Pool Fee`;
+        document.getElementById('modalDifficulty').textContent = currentMiningData.difficulty;
+        document.getElementById('modalMinHashrate').textContent = `${currentMiningData.minHashrate} ${currentMiningData.hashrateUnit}`;
+        document.getElementById('modalEarningsPerUnit').textContent = `$${currentMiningData.earningsPerUnit} per ${currentMiningData.hashrateUnit}`;
+
+        // Update image
+        const modalAssetImage = document.getElementById('modalAssetImage');
+        const modalAssetInitial = document.getElementById('modalAssetInitial');
+        if (currentMiningData.assetImage) {
+            modalAssetImage.src = currentMiningData.assetImage;
             modalAssetImage.style.display = 'block';
             modalAssetInitial.style.display = 'none';
         } else {
             modalAssetImage.style.display = 'none';
             modalAssetInitial.style.display = 'flex';
-            modalAssetInitial.textContent = currentPool.assetSymbol.charAt(0);
+            modalAssetInitial.textContent = currentMiningData.assetSymbol.charAt(0);
         }
     }
-    
-    // Toggle custom hashrate fields based on selection
-    function toggleCustomHashrateFields() {
-        const customSelected = Array.from(packageSelectionInputs).find(radio => radio.checked && radio.value === 'custom');
-        
-        if (customSelected) {
-            customHashrateFields.style.display = 'flex';
-        } else {
-            customHashrateFields.style.display = 'none';
-        }
-        
+
+    function resetForm() {
+        // Select default package
+        document.getElementById('package_selection_pro').checked = true;
+
+        // Set defaults
+        customHashrateInput.value = currentMiningData.minHashrate;
+        customHashrateUnitSelect.value = currentMiningData.hashrateUnit;
+        contractNameInput.value = `${currentMiningData.assetSymbol} Miner #1`;
+
+        // Hide custom fields initially
+        customHashrateFields.style.display = 'none';
+
         updateCalculations();
     }
-    
-    // Calculate costs and earnings
-    function updateCalculations() {
-        // Get selected package or custom hashrate
-        let hashrate = currentPool.minHashrate;
-        let monthlyCostValue = 0;
-        let powerConsumption = 0;
-        let packageLabel = '';
-        
-        const selectedPackage = Array.from(packageSelectionInputs).find(radio => radio.checked);
-        
-        if (selectedPackage) {
-            if (selectedPackage.value === 'custom') {
-                // Custom hashrate
-                hashrate = parseFloat(customHashrateInput.value) || currentPool.minHashrate;
-                monthlyCostValue = hashrate * 5; // $5 per unit per month - simplified pricing
-                powerConsumption = hashrate * 10; // 10W per unit - simplified
-                packageLabel = 'Custom';
-                formPackageId.value = '';
-            } else {
-                // Predefined package
-                const packageIndex = ['basic', 'pro', 'enterprise'].indexOf(selectedPackage.value);
-                if (packageIndex >= 0 && hashratePackages[packageIndex]) {
-                    const package = hashratePackages[packageIndex];
-                    hashrate = package.hashrate;
-                    monthlyCostValue = package.monthlyCost;
-                    powerConsumption = package.powerConsumption;
-                    packageLabel = `${selectedPackage.value.charAt(0).toUpperCase() + selectedPackage.value.slice(1)} Package`;
-                    
-                    // Set package ID if available
-                    if (package.id && !isNaN(package.id)) {
-                        formPackageId.value = package.id;
-                    } else {
-                        formPackageId.value = '';
-                    }
-                }
-            }
-        }
-        
-        // Get duration and apply discounts
-        const durationValue = parseInt(durationSelect.value) || 1;
-        let discount = 0;
-        
-        switch (durationValue) {
-            case 3: discount = 0.05; break; // 5% discount for 3 months
-            case 6: discount = 0.10; break; // 10% discount for 6 months
-            case 12: discount = 0.15; break; // 15% discount for 12 months
-        }
-        
-        const discountedMonthlyCost = monthlyCostValue * (1 - discount);
-        const totalContractCost = discountedMonthlyCost * durationValue;
-        
-        // Calculate earnings
-        const dailyEarnings = hashrate * currentPool.earningsPerUnit;
-        const monthlyEarningsValue = dailyEarnings * 30;
-        const totalEarnings = monthlyEarningsValue * durationValue;
-        const profitValue = totalEarnings - totalContractCost;
-        
-        // Update UI
-        monthlyCost.textContent = `$${discountedMonthlyCost.toFixed(2)}`;
-        monthlyEarnings.textContent = `$${monthlyEarningsValue.toFixed(2)}`;
-        totalCost.textContent = `$${totalContractCost.toFixed(2)}`;
-        
-        if (profitValue > 0) {
-            potentialProfit.textContent = `$${profitValue.toFixed(2)}`;
-            potentialProfit.parentElement.classList.add('text-success');
-            potentialProfit.parentElement.classList.remove('text-danger');
-        } else {
-            potentialProfit.textContent = `-$${Math.abs(profitValue).toFixed(2)}`;
-            potentialProfit.parentElement.classList.remove('text-success');
-            potentialProfit.parentElement.classList.add('text-danger');
-        }
-    }
-    
-    // Listen for package selection changes
+
+    // Package selection change
     packageSelectionInputs.forEach(input => {
         input.addEventListener('change', function() {
-            toggleCustomHashrateFields();
+            const isCustom = this.value === 'custom';
+            customHashrateFields.style.display = isCustom ? 'flex' : 'none';
+            updateCalculations();
         });
     });
-    
-    // Listen for custom hashrate changes
+
+    // Update calculations on input change
     customHashrateInput.addEventListener('input', updateCalculations);
-    customHashrateUnitSelect.addEventListener('change', updateCalculations);
-    
-    // Listen for duration changes
     durationSelect.addEventListener('change', updateCalculations);
-    
-    // Enable/disable confirm button based on terms checkbox
-    agreeTerms.addEventListener('change', function() {
-        confirmButton.disabled = !this.checked;
-    });
-    
-    // Handle proceeding to confirmation modal
-    proceedButton.addEventListener('click', function(e) {
-        debugLog('Proceed to confirm button clicked');
-        
-        // Basic validation before proceeding
-        const selectedPackage = Array.from(packageSelectionInputs).find(radio => radio.checked);
-        if (!selectedPackage) {
-            alert('Please select a package');
-            e.preventDefault();
-            return false;
-        }
-        
-        if (selectedPackage.value === 'custom') {
-            const hashrate = parseFloat(customHashrateInput.value);
-            if (!hashrate || hashrate < currentPool.minHashrate) {
-                alert(`Minimum hashrate is ${currentPool.minHashrate} ${currentPool.hashrateUnit}`);
-                e.preventDefault();
-                return false;
-            }
-        }
-        
-        // Check if pool ID is valid
-        if (!formPoolId.value || formPoolId.value === 'null' || formPoolId.value === 'undefined' || isNaN(parseInt(formPoolId.value))) {
-            alert('Invalid pool selection. Please try again or contact support.');
-            e.preventDefault();
-            return false;
-        }
-        
-        // Transfer data to confirmation modal
-        transferDataToConfirmation();
-    });
-    
-    // Transfer data from first modal to confirmation modal
-    function transferDataToConfirmation() {
-        debugLog('Transferring data to confirmation modal');
-        
+
+    function updateCalculations() {
         // Get current values
         const selectedPackage = Array.from(packageSelectionInputs).find(radio => radio.checked);
-        let hashrate = currentPool.minHashrate;
-        let hashrateUnit = currentPool.hashrateUnit;
-        let packageLabel = '';
-        
+        const duration = parseInt(durationSelect.value) || 1;
+
+        let hashrate = parseFloat(currentMiningData.minHashrate);
+        let monthlyCost = 0;
+        let packageData = null;
+
+        console.log('Selected package:', selectedPackage?.value);
+        console.log('Available packages:', hashratePackages);
+
         if (selectedPackage) {
-            // Set package selection in form
-            formPackageSelection.value = selectedPackage.value;
-            
             if (selectedPackage.value === 'custom') {
-                // Custom hashrate
-                hashrate = parseFloat(customHashrateInput.value) || currentPool.minHashrate;
-                hashrateUnit = customHashrateUnitSelect.value;
-                packageLabel = 'Custom';
-                
-                // Set custom hashrate values in form
-                formCustomHashrate.value = hashrate;
-                formCustomHashrateUnit.value = hashrateUnit;
+                hashrate = parseFloat(customHashrateInput.value) || hashrate;
+                monthlyCost = hashrate * 50; // Default pricing for custom
+                console.log('Using custom hashrate:', hashrate);
             } else {
-                // Predefined package
-                const packageIndex = ['basic', 'pro', 'enterprise'].indexOf(selectedPackage.value);
-                if (packageIndex >= 0 && hashratePackages[packageIndex]) {
-                    const package = hashratePackages[packageIndex];
-                    hashrate = package.hashrate;
-                    hashrateUnit = package.hashrateUnit || currentPool.hashrateUnit;
-                    packageLabel = `${selectedPackage.value.charAt(0).toUpperCase() + selectedPackage.value.slice(1)} Package`;
-                    
-                    // Clear custom hashrate values in form
-                    formCustomHashrate.value = '';
-                    formCustomHashrateUnit.value = hashrateUnit;
+                // Find package by exact name match
+                packageData = hashratePackages.find(p => p.name.toLowerCase() === selectedPackage.value);
+
+                if (packageData) {
+                    hashrate = packageData.hashrate;
+                    monthlyCost = packageData.monthlyCost;
+                    console.log(`Found API package: ${packageData.name} - ${hashrate} ${packageData.hashrateUnit} - $${monthlyCost}/mo`);
+                } else {
+                    // Fallback calculation
+                    const baseHashrate = parseFloat(currentMiningData.minHashrate);
+                    let multiplier = 1;
+                    let costMultiplier = 50;
+
+                    if (selectedPackage.value === 'basic') {
+                        multiplier = 1;
+                        costMultiplier = 50;
+                    } else if (selectedPackage.value === 'pro') {
+                        multiplier = 5;
+                        costMultiplier = 45;
+                    } else if (selectedPackage.value === 'enterprise') {
+                        multiplier = 20;
+                        costMultiplier = 40;
+                    }
+
+                    hashrate = baseHashrate * multiplier;
+                    monthlyCost = hashrate * costMultiplier;
+                    console.log(`Using fallback: ${selectedPackage.value} - ${hashrate} ${currentMiningData.hashrateUnit} - $${monthlyCost}/mo`);
                 }
             }
         }
-        
-        // Set duration and contract name in form
-        const durationValue = parseInt(durationSelect.value) || 1;
-        const durationText = durationSelect.options[durationSelect.selectedIndex].text;
-        formDuration.value = durationValue;
-        
-        const contractName = contractNameInput.value || `${currentPool.assetSymbol} Miner #1`;
-        formContractName.value = contractName;
-        
-        // Calculate costs and earnings for confirmation
-        let monthlyCostValue = parseFloat(monthlyCost.textContent.replace('$', ''));
-        let monthlyEarningsValue = parseFloat(monthlyEarnings.textContent.replace('$', ''));
-        let totalCostValue = parseFloat(totalCost.textContent.replace('$', ''));
-        let profitValue = parseFloat(potentialProfit.textContent.replace('$', '').replace('-$', '-'));
-        
-        // Update confirmation modal elements
-        confirmAsset.textContent = currentPool.assetSymbol;
-        confirmAlgorithm.textContent = currentPool.algorithm;
-        confirmPackage.textContent = packageLabel;
-        confirmHashrate.textContent = `${hashrate} ${hashrateUnit}`;
-        confirmDuration.textContent = durationText;
-        confirmFee.textContent = `${currentPool.poolFee}%`;
-        confirmMonthlyCost.textContent = `$${monthlyCostValue.toFixed(2)}`;
-        confirmMonthlyEarnings.textContent = `$${monthlyEarningsValue.toFixed(2)}`;
-        confirmTotalCost.textContent = `$${totalCostValue.toFixed(2)}`;
-        
-        if (profitValue > 0) {
-            confirmProfit.textContent = `$${profitValue.toFixed(2)}`;
-            confirmProfit.classList.add('text-success');
-            confirmProfit.classList.remove('text-danger');
-        } else {
-            confirmProfit.textContent = `-$${Math.abs(profitValue).toFixed(2)}`;
-            confirmProfit.classList.remove('text-success');
-            confirmProfit.classList.add('text-danger');
+
+        // Calculate totals
+        const totalCost = monthlyCost * duration;
+        const monthlyEarnings = hashrate * parseFloat(currentMiningData.earningsPerUnit) * 30;
+        const totalEarnings = monthlyEarnings * duration;
+        const profit = totalEarnings - totalCost;
+
+        // Update display
+        document.getElementById('monthlyCost').textContent = `$${monthlyCost.toFixed(2)}`;
+        document.getElementById('monthlyEarnings').textContent = `$${monthlyEarnings.toFixed(2)}`;
+        document.getElementById('totalCost').textContent = `$${totalCost.toFixed(2)}`;
+        document.getElementById('potentialProfit').textContent = `$${profit.toFixed(2)}`;
+
+        // Enable proceed button if basic validation passes
+        const isValid = hashrate > 0 && duration > 0;
+        proceedBtn.disabled = !isValid;
+
+        console.log('Calculation results:', {
+            hashrate,
+            monthlyCost,
+            totalCost,
+            monthlyEarnings,
+            profit
+        });
+
+        return {
+            hashrate,
+            packageData
+        };
+    }
+    // Proceed to confirmation (SIMPLE like staking)
+    proceedBtn.addEventListener('click', function() {
+        // Get current form values
+        const selectedPackage = Array.from(packageSelectionInputs).find(radio => radio.checked);
+        const duration = parseInt(durationSelect.value) || 1;
+        const contractName = contractNameInput.value || `${currentMiningData.assetSymbol} Miner #1`;
+
+        // Get calculation results
+        const calcResults = updateCalculations();
+        let hashrate = calcResults.hashrate;
+        let hashrateUnit = currentMiningData.hashrateUnit;
+        let packageId = '';
+
+        // Set package ID if using a real package from API
+        if (selectedPackage.value !== 'custom' && calcResults.packageData && calcResults.packageData.id) {
+            packageId = calcResults.packageData.id;
         }
-        
-        // Update asset image in confirmation modal
-        if (currentPool.assetImage) {
-            confirmAssetImage.src = currentPool.assetImage;
+
+        // SIMPLE TRANSFER - just like staking
+        formPoolId.value = currentMiningData.poolId;
+        formPackageSelection.value = selectedPackage.value;
+        formPackageId.value = packageId; // Use real package ID when available
+        formDuration.value = duration;
+        formContractName.value = contractName;
+
+        // FIXED: Only set custom fields when actually using custom package
+        if (selectedPackage.value === 'custom') {
+            hashrate = parseFloat(customHashrateInput.value);
+            hashrateUnit = customHashrateUnitSelect.value;
+            formCustomHashrate.value = hashrate;
+            formCustomHashrateUnit.value = hashrateUnit;
+        } else {
+            // Clear custom fields for predefined packages
+            formCustomHashrate.value = '';
+            formCustomHashrateUnit.value = ''; // Don't set any value - let validation skip it
+        }
+
+        console.log('Form data set:', {
+            poolId: formPoolId.value,
+            packageSelection: formPackageSelection.value,
+            packageId: formPackageId.value,
+            customHashrate: formCustomHashrate.value,
+            customHashrateUnit: formCustomHashrateUnit.value,
+            duration: formDuration.value,
+            contractName: formContractName.value
+        });
+
+        // Update confirmation modal display
+        updateConfirmationDisplay(hashrate, hashrateUnit, duration, contractName);
+
+        // Reset confirmation modal state
+        document.getElementById('agreeTerms').checked = false;
+        document.getElementById('confirmMining').disabled = true;
+    });
+
+    function updateConfirmationDisplay(hashrate, hashrateUnit, duration, contractName) {
+        // Update confirmation modal (simple version)
+        document.getElementById('confirm-asset').textContent = currentMiningData.assetSymbol;
+        document.getElementById('confirm-algorithm').textContent = currentMiningData.algorithm;
+        document.getElementById('confirm-hashrate').textContent = `${hashrate} ${hashrateUnit}`;
+        document.getElementById('confirm-duration').textContent = `${duration} Month${duration > 1 ? 's' : ''}`;
+        document.getElementById('confirm-fee').textContent = `${currentMiningData.poolFee}%`;
+
+        // Update image in confirmation
+        const confirmAssetImage = document.getElementById('confirmAssetImage');
+        const confirmAssetInitial = document.getElementById('confirmAssetInitial');
+        if (currentMiningData.assetImage) {
+            confirmAssetImage.src = currentMiningData.assetImage;
             confirmAssetImage.style.display = 'block';
             confirmAssetInitial.style.display = 'none';
         } else {
             confirmAssetImage.style.display = 'none';
             confirmAssetInitial.style.display = 'flex';
-            confirmAssetInitial.textContent = currentPool.assetSymbol.charAt(0);
+            confirmAssetInitial.textContent = currentMiningData.assetSymbol.charAt(0);
         }
-        
-        // Reset terms checkbox
-        agreeTerms.checked = false;
-        confirmButton.disabled = true;
-        
-        debugLog('Data transfer to confirmation modal complete');
     }
-    
-    // Form submission
-    confirmForm.addEventListener('submit', function(e) {
-        debugLog('Confirm form submission attempted');
-        
-        // Additional validation if needed
-        if (!agreeTerms.checked) {
-            e.preventDefault();
-            alert('You must agree to the terms before proceeding');
-            return false;
-        }
-        
-        // Make sure pool ID is valid
-        if (!formPoolId.value || formPoolId.value === 'null' || formPoolId.value === 'undefined' || isNaN(parseInt(formPoolId.value))) {
-            e.preventDefault();
-            alert('Invalid pool selection. Please try again.');
-            return false;
-        }
-        
-        // Make sure hashrate unit is valid
-        if (formPackageSelection.value === 'custom' && (!formCustomHashrateUnit.value || formCustomHashrateUnit.value === '')) {
-            e.preventDefault();
-            alert('Please select a valid hashrate unit.');
-            return false;
-        }
-        
-        debugLog('Form submission validation passed, submitting form');
-        // Form will be submitted normally to the server
-        return true;
+
+    // Enable confirm button when terms are agreed (same as staking)
+    document.getElementById('agreeTerms').addEventListener('change', function() {
+        document.getElementById('confirmMining').disabled = !this.checked;
     });
-    
-    // Initialize package selection display
-    toggleCustomHashrateFields();
-    
-    debugLog('Mining modal JavaScript initialized');
+
+    console.log('Mining modal JavaScript initialized (simplified)');
 });
 </script>
 

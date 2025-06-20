@@ -315,10 +315,118 @@ def unstake_position_api(position_id):
 # <-----------------------/Staking------------------------->
 
 # <-----------------------Mining------------------------->
+# Update your mining_home route in routes.py to include mining contracts data
 
 @staking_bp.route('/mining')
 @login_required
 def mining_home():
+    # Get pagination and search parameters from request
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+    search = request.args.get('search', '', type=str).strip()
+    algorithm = request.args.get('algorithm', '', type=str)
+    difficulty = request.args.get('difficulty', '', type=str)
+    
+    # Get filtered pools based on parameters
+    paginated_pools = MiningService.get_available_pools(
+        page=page,
+        per_page=per_page,
+        search=search,
+        algorithm=algorithm,
+        difficulty=difficulty
+    )
+    
+    # Get enum options for dropdown filters
+    algorithms = MiningAlgorithm.__members__.values()
+    difficulties = MiningDifficulty.__members__.values()
+    
+    # Forms for modals
+    contract_form = MiningContractForm()
+    
+    # Set up pagination info
+    pagination_info = {
+        'page': paginated_pools.page,
+        'pages': paginated_pools.pages,
+        'per_page': paginated_pools.per_page,
+        'total': paginated_pools.total,
+        'has_prev': paginated_pools.has_prev,
+        'prev_num': paginated_pools.prev_num,
+        'has_next': paginated_pools.has_next,
+        'next_num': paginated_pools.next_num,
+        'iter_pages': list(paginated_pools.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2))
+    }
+    
+    # --- Fetch Mining Contracts Data ---
+    user_mining_positions = []
+    total_mining_positions = 0
+    active_mining_positions = 0
+    
+    if current_user.is_authenticated:
+        try:
+            # Get user's mining contracts
+            contracts = MiningContract.query.filter_by(
+                user_id=current_user.id
+            ).join(MiningPool).join(Asset).order_by(
+                MiningContract.created_at.desc()
+            ).all()
+            
+            total_mining_positions = len(contracts)
+            active_mining_positions = len([c for c in contracts if c.status.value in ['pending', 'active']])
+            
+            # Format contracts for template
+            for contract in contracts:
+                user_mining_positions.append({
+                    'id': contract.id,
+                    'name': contract.name or f"{contract.pool.asset.symbol} Miner #{contract.id}",
+                    'asset_symbol': contract.pool.asset.symbol,
+                    'asset_name': contract.pool.asset.name,
+                    'asset_image': contract.pool.asset.images.get('small', '') if contract.pool.asset.images else None,
+                    'hashrate': f"{contract.hashrate}",
+                    'hashrate_unit': contract.hashrate_unit.value,
+                    'duration_months': contract.duration_months,
+                    'monthly_cost': float(contract.monthly_cost_usd),
+                    'total_cost': float(contract.total_cost_usd),
+                    'power_consumption': contract.power_consumption_watts,
+                    'hardware_type': contract.hardware_type,
+                    'status': contract.status.value,
+                    'created_at': contract.created_at,
+                    'start_date': contract.start_date,
+                    'end_date': contract.end_date,
+                    'can_pause': contract.status.value == 'active',
+                    'can_resume': contract.status.value == 'paused',
+                    'can_cancel': contract.status.value in ['pending', 'active', 'paused']
+                })
+                
+        except Exception as e:
+            current_app.logger.error(f"Error fetching mining contracts for user {current_user.id}: {e}")
+            flash('Could not load your mining contracts at this time.', 'warning')
+    
+    # For debugging, we'll log the available pools
+    current_app.logger.info(f"Loaded {len(paginated_pools.items)} mining pools")
+    current_app.logger.info(f"User has {total_mining_positions} mining contracts ({active_mining_positions} active)")
+    
+    return render_template(
+        'staking/mining_home.html',
+        pools=paginated_pools.items,
+        pagination=pagination_info,
+        search_query=search,
+        current_per_page=per_page,
+        contract_form=contract_form,
+        algorithm_filter=algorithm,
+        difficulty_filter=difficulty,
+        algorithms=algorithms,
+        difficulties=difficulties,
+        # Mining contracts data
+        user_mining_positions=user_mining_positions,
+        total_mining_positions=total_mining_positions,
+        active_mining_positions=active_mining_positions
+    )
+
+
+
+#@staking_bp.route('/mining')
+@login_required
+def mining_home_old():
     # Get pagination and search parameters from request
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 10, type=int)
@@ -435,9 +543,8 @@ def get_mining_packages(pool_id):
             'packages': []
         }), 500
 
-@staking_bp.route('/mining/create-contract', methods=['POST'])
 @login_required
-def create_mining_contract():
+def create_mining_contract_old():
     """Create a new mining contract after confirmation"""
     form = MiningContractForm()
     
@@ -448,15 +555,11 @@ def create_mining_contract():
             # Get form data
             pool_id = form.pool_id.data
             
-            # Validate pool ID
-            if not pool_id or not isinstance(pool_id, int):
-                try:
-                    pool_id = int(pool_id) if pool_id and str(pool_id).isdigit() else None
-                except (ValueError, TypeError):
-                    pool_id = None
-            
-            if not pool_id:
-                flash('Pool ID is required', 'danger')
+            # Validate and convert pool ID
+            try:
+                pool_id = int(pool_id)
+            except (ValueError, TypeError):
+                flash('Invalid pool ID', 'danger')
                 return redirect(url_for('staking.mining_home'))
             
             # Get the pool to validate it exists
@@ -467,103 +570,248 @@ def create_mining_contract():
             
             current_app.logger.info(f"Valid pool found: {pool.id} - {pool.asset.symbol}")
             
+            # Handle package selection
             package_id = None
-            if form.package_selection.data != 'custom' and form.package_id.data:
-                try:
-                    package_id = int(form.package_id.data) if form.package_id.data and str(form.package_id.data).isdigit() else None
-                except (ValueError, TypeError):
-                    package_id = None
-                
-                # Validate package if provided
-                if package_id:
-                    package = HashratePackage.query.get(package_id)
-                    if not package or not package.is_active:
-                        current_app.logger.warning(f"Invalid package ID: {package_id}")
-                        package_id = None
-            
-            # Determine hashrate and unit
             hashrate = None
             hashrate_unit = None
             
             if form.package_selection.data == 'custom':
-                # For custom selection, both hashrate and unit are required
+                # Custom hashrate selection
                 try:
-                    hashrate = float(form.custom_hashrate.data) if form.custom_hashrate.data else None
+                    hashrate = float(form.custom_hashrate.data)
+                    hashrate_unit = form.custom_hashrate_unit.data
+                    
+                    if hashrate <= 0:
+                        flash('Invalid custom hashrate', 'danger')
+                        return redirect(url_for('staking.mining_home'))
+                        
+                    current_app.logger.info(f"Custom hashrate: {hashrate} {hashrate_unit}")
+                    
                 except (ValueError, TypeError):
-                    hashrate = None
-                
-                hashrate_unit = form.custom_hashrate_unit.data
-                
-                if not hashrate:
-                    flash('Custom hashrate is required', 'danger')
+                    flash('Invalid custom hashrate value', 'danger')
                     return redirect(url_for('staking.mining_home'))
-                
-                if not hashrate_unit:
-                    flash('Hashrate unit is required', 'danger')
-                    return redirect(url_for('staking.mining_home'))
-                
-                current_app.logger.info(f"Custom hashrate: {hashrate} {hashrate_unit}")
             else:
-                # Get hashrate from package
-                if package_id:
-                    package = HashratePackage.query.get(package_id)
-                    if package:
-                        hashrate = float(package.hashrate)
-                        hashrate_unit = package.hashrate_unit.value
-                        current_app.logger.info(f"Using package: {package.id} - {package.name}")
-                else:
-                    # Use default package values based on selection
+                # Predefined package selection
+                if form.package_id.data:
+                    try:
+                        package_id = int(form.package_id.data)
+                        package = HashratePackage.query.get(package_id)
+                        if package and package.is_active:
+                            hashrate = float(package.hashrate)
+                            hashrate_unit = package.hashrate_unit.value
+                            current_app.logger.info(f"Using package: {package.id} - {package.name}")
+                        else:
+                            package_id = None
+                    except (ValueError, TypeError):
+                        package_id = None
+                
+                # If no valid package ID, create default based on selection
+                if not package_id:
+                    current_app.logger.info(f"No package ID, using default for {form.package_selection.data}")
+                    base_hashrate = float(pool.min_hashrate)
+                    hashrate_unit = pool.min_hashrate_unit.value
+                    
                     if form.package_selection.data == 'basic':
-                        hashrate = float(pool.min_hashrate)
-                        hashrate_unit = pool.min_hashrate_unit.value
-                        current_app.logger.info(f"Using basic package with hashrate: {hashrate} {hashrate_unit}")
+                        hashrate = base_hashrate
                     elif form.package_selection.data == 'pro':
-                        hashrate = float(pool.min_hashrate) * 5
-                        hashrate_unit = pool.min_hashrate_unit.value
-                        current_app.logger.info(f"Using pro package with hashrate: {hashrate} {hashrate_unit}")
+                        hashrate = base_hashrate * 5
                     elif form.package_selection.data == 'enterprise':
-                        hashrate = float(pool.min_hashrate) * 20
-                        hashrate_unit = pool.min_hashrate_unit.value
-                        current_app.logger.info(f"Using enterprise package with hashrate: {hashrate} {hashrate_unit}")
+                        hashrate = base_hashrate * 20
+                    else:
+                        hashrate = base_hashrate
+                    
+                    current_app.logger.info(f"Using default {form.package_selection.data} package: {hashrate} {hashrate_unit}")
             
-            if not hashrate:
-                flash('Invalid hashrate specified', 'danger')
+            # Validate final hashrate
+            if not hashrate or hashrate <= 0:
+                flash('Invalid hashrate configuration', 'danger')
                 return redirect(url_for('staking.mining_home'))
             
-            # Get duration in months
+            # Get duration
             try:
-                duration_months = int(form.duration.data) if form.duration.data else 1
+                duration_months = int(form.duration.data)
             except (ValueError, TypeError):
                 duration_months = 1
-            
-            current_app.logger.info(f"Duration: {duration_months} months")
             
             # Get contract name
             contract_name = form.contract_name.data or f"{pool.asset.symbol} Miner #{hashrate} {hashrate_unit}"
             
-            # Create the contract
+            current_app.logger.info(f"Creating contract: user={current_user.id}, pool={pool_id}, hashrate={hashrate}, duration={duration_months}")
+            
+            # Create the contract using the service
             contract = MiningService.create_mining_contract(
                 user_id=current_user.id,
                 pool_id=pool_id,
-                package_id=package_id,
                 hashrate=hashrate,
-                hashrate_unit=hashrate_unit,
-                duration_months=duration_months,
-                name=contract_name
+                duration=duration_months,  # This should match the 'duration' parameter
+                package_id=package_id
             )
             
-            flash(f'Mining contract created successfully! Your {contract.hashrate} {contract.hashrate_unit.value} miner will start working soon.', 'success')
-            return redirect(url_for('staking.mining_contracts'))
+            if contract:
+                current_app.logger.info(f"Mining contract created successfully: {contract.id}")
+                flash(f'Mining contract created successfully! Your {contract.hashrate} {contract.hashrate_unit.value} miner will start working soon.', 'success')
+                return redirect(url_for('staking.mining_contracts'))
+            else:
+                flash('Failed to create mining contract', 'danger')
+                return redirect(url_for('staking.mining_home'))
             
         except Exception as e:
             current_app.logger.error(f"Error creating mining contract: {str(e)}")
             flash(f'Error creating mining contract: {str(e)}', 'danger')
             return redirect(url_for('staking.mining_home'))
     else:
-        # If form validation failed
+        # Form validation failed
         current_app.logger.warning(f"Form validation failed: {form.errors}")
         for field, errors in form.errors.items():
             for error in errors:
+                flash(f"{getattr(form, field).label.text}: {error}", 'danger')
+    
+    return redirect(url_for('staking.mining_home'))
+@staking_bp.route('/mining/create-contract', methods=['POST'])
+@login_required
+def create_mining_contract():
+    """Create a new mining contract after confirmation"""
+    form = MiningContractForm()
+    
+    # Enhanced logging to see what we receive
+    current_app.logger.info("=== MINING CONTRACT SUBMISSION DEBUG ===")
+    current_app.logger.info(f"Form data received:")
+    current_app.logger.info(f"  pool_id: {form.pool_id.data} (type: {type(form.pool_id.data)})")
+    current_app.logger.info(f"  package_selection: {form.package_selection.data}")
+    current_app.logger.info(f"  package_id: {form.package_id.data} (type: {type(form.package_id.data)})")
+    current_app.logger.info(f"  custom_hashrate: {form.custom_hashrate.data}")
+    current_app.logger.info(f"  duration: {form.duration.data}")
+    
+    if form.validate_on_submit():
+        try:
+            # Get form data and convert pool ID
+            try:
+                pool_id = int(form.pool_id.data)
+            except (ValueError, TypeError):
+                current_app.logger.error(f"Invalid pool_id: {form.pool_id.data}")
+                flash('Invalid pool ID', 'danger')
+                return redirect(url_for('staking.mining_home'))
+            
+            # Get the pool to validate it exists
+            pool = MiningPool.query.get(pool_id)
+            if not pool:
+                flash('Mining pool not found', 'danger')
+                return redirect(url_for('staking.mining_home'))
+            
+            current_app.logger.info(f"Valid pool found: {pool.id} - {pool.asset.symbol}")
+            
+            # Handle package selection and hashrate determination
+            package_id = None
+            hashrate = None
+            hashrate_unit = None
+            
+            if form.package_selection.data == 'custom':
+                # Custom hashrate selection
+                try:
+                    hashrate = float(form.custom_hashrate.data)
+                    hashrate_unit = form.custom_hashrate_unit.data
+                    
+                    if hashrate <= 0:
+                        flash('Invalid custom hashrate', 'danger')
+                        return redirect(url_for('staking.mining_home'))
+                        
+                    current_app.logger.info(f"Using custom hashrate: {hashrate} {hashrate_unit}")
+                    
+                except (ValueError, TypeError):
+                    flash('Invalid custom hashrate value', 'danger')
+                    return redirect(url_for('staking.mining_home'))
+            else:
+                # Predefined package selection - FIXED LOGIC
+                current_app.logger.info(f"Processing predefined package: {form.package_selection.data}")
+                
+                # Try to get package from package_id first (from API)
+                if form.package_id.data and str(form.package_id.data).strip():
+                    try:
+                        package_id = int(form.package_id.data)
+                        current_app.logger.info(f"Attempting to use package_id: {package_id}")
+                        
+                        package = HashratePackage.query.get(package_id)
+                        if package and package.is_active:
+                            hashrate = float(package.hashrate)
+                            hashrate_unit = package.hashrate_unit.value
+                            current_app.logger.info(f"Found package in DB: {package.id} - {package.name} - {hashrate} {hashrate_unit}")
+                        else:
+                            current_app.logger.warning(f"Package {package_id} not found or inactive")
+                            package_id = None
+                    except (ValueError, TypeError) as e:
+                        current_app.logger.warning(f"Invalid package_id conversion: {form.package_id.data} - {e}")
+                        package_id = None
+                
+                # If no valid package found, use fallback calculations
+                if not package_id:
+                    current_app.logger.info(f"No valid package ID, using fallback for {form.package_selection.data}")
+                    base_hashrate = float(pool.min_hashrate)
+                    hashrate_unit = pool.min_hashrate_unit.value
+                    
+                    if form.package_selection.data == 'basic':
+                        hashrate = base_hashrate
+                    elif form.package_selection.data == 'pro':
+                        hashrate = base_hashrate * 5
+                    elif form.package_selection.data == 'enterprise':
+                        hashrate = base_hashrate * 20
+                    else:
+                        hashrate = base_hashrate
+                    
+                    current_app.logger.info(f"Using fallback {form.package_selection.data} package: {hashrate} {hashrate_unit}")
+            
+            # Final validation
+            if not hashrate or hashrate <= 0:
+                current_app.logger.error(f"Final hashrate validation failed: {hashrate}")
+                flash('Invalid hashrate configuration', 'danger')
+                return redirect(url_for('staking.mining_home'))
+            
+            # Get duration and contract name
+            try:
+                duration_months = int(form.duration.data)
+            except (ValueError, TypeError):
+                duration_months = 1
+            
+            contract_name = form.contract_name.data or f"{pool.asset.symbol} Miner #{hashrate} {hashrate_unit}"
+            
+            # Log final parameters before service call
+            current_app.logger.info("=== FINAL CONTRACT PARAMETERS ===")
+            current_app.logger.info(f"user_id: {current_user.id}")
+            current_app.logger.info(f"pool_id: {pool_id}")
+            current_app.logger.info(f"hashrate: {hashrate}")
+            current_app.logger.info(f"duration_months: {duration_months}")
+            current_app.logger.info(f"package_id: {package_id}")
+            current_app.logger.info(f"contract_name: {contract_name}")
+            
+            # Create the contract using the service
+            contract = MiningService.create_mining_contract(
+                user_id=current_user.id,
+                pool_id=pool_id,
+                hashrate=hashrate,
+                duration=duration_months,
+                package_id=package_id
+            )
+            
+            if contract:
+                current_app.logger.info(f"SUCCESS: Mining contract created: {contract.id}")
+                flash(f'Mining contract created successfully! Your {contract.hashrate} {contract.hashrate_unit.value} miner will start working soon.', 'success')
+                return redirect(url_for('staking.mining_home'))
+            else:
+                current_app.logger.error("Service returned None - no contract created")
+                flash('Failed to create mining contract', 'danger')
+                return redirect(url_for('staking.mining_home'))
+            
+        except Exception as e:
+            current_app.logger.error(f"Exception in route: {str(e)}")
+            current_app.logger.exception("Full traceback:")
+            flash(f'Error creating mining contract: {str(e)}', 'danger')
+            return redirect(url_for('staking.mining_home'))
+    else:
+        # Form validation failed
+        current_app.logger.error("=== FORM VALIDATION FAILED ===")
+        current_app.logger.error(f"Form errors: {form.errors}")
+        for field, errors in form.errors.items():
+            for error in errors:
+                current_app.logger.error(f"Field '{field}': {error}")
                 flash(f"{getattr(form, field).label.text}: {error}", 'danger')
     
     return redirect(url_for('staking.mining_home'))
@@ -578,7 +826,174 @@ def mining_contracts():
     
     current_app.logger.info(f"Loaded {len(contracts)} mining contracts for user {current_user.id}")
     
-    return render_template(
-        'staking/mining_contracts.html',
-        contracts=contracts
-    )
+    # return render_template(
+    #     'staking/mining_contracts.html',
+    #     contracts=contracts
+    # )
+    return "Success"
+
+
+# - -------------------- Contract Actions ------------------------------ -#
+# Add these routes to handle mining contract actions
+
+@staking_bp.route('/mining/contract/pause/<int:contract_id>', methods=['POST'])
+@login_required
+def pause_mining_contract(contract_id):
+    """Pause a mining contract"""
+    try:
+        contract = MiningContract.query.filter_by(
+            id=contract_id,
+            user_id=current_user.id
+        ).first()
+        
+        if not contract:
+            flash('Mining contract not found.', 'danger')
+            return redirect(url_for('staking.mining_home'))
+        
+        if contract.status != MiningContractStatus.ACTIVE:
+            flash('Only active contracts can be paused.', 'warning')
+            return redirect(url_for('staking.mining_home'))
+        
+        # Update contract status
+        contract.status = MiningContractStatus.PAUSED
+        contract.last_active_at = datetime.utcnow()
+        
+        db.session.commit()
+        
+        flash(f'Mining contract "{contract.name}" has been paused.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error pausing mining contract {contract_id}: {str(e)}")
+        flash('Error pausing mining contract. Please try again.', 'danger')
+    
+    return redirect(url_for('staking.mining_home'))
+
+@staking_bp.route('/mining/contract/resume/<int:contract_id>', methods=['POST'])
+@login_required
+def resume_mining_contract(contract_id):
+    """Resume a paused mining contract"""
+    try:
+        contract = MiningContract.query.filter_by(
+            id=contract_id,
+            user_id=current_user.id
+        ).first()
+        
+        if not contract:
+            flash('Mining contract not found.', 'danger')
+            return redirect(url_for('staking.mining_home'))
+        
+        if contract.status != MiningContractStatus.PAUSED:
+            flash('Only paused contracts can be resumed.', 'warning')
+            return redirect(url_for('staking.mining_home'))
+        
+        # Update contract status
+        contract.status = MiningContractStatus.ACTIVE
+        
+        db.session.commit()
+        
+        flash(f'Mining contract "{contract.name}" has been resumed.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error resuming mining contract {contract_id}: {str(e)}")
+        flash('Error resuming mining contract. Please try again.', 'danger')
+    
+    return redirect(url_for('staking.mining_home'))
+
+@staking_bp.route('/mining/contract/cancel', methods=['POST'])
+@login_required
+def cancel_mining_contract():
+    """Cancel a mining contract"""
+    try:
+        contract_id = request.form.get('contract_id')
+        confirm_cancel = request.form.get('confirm_cancel')
+        
+        if not contract_id or not confirm_cancel:
+            flash('Invalid cancellation request.', 'danger')
+            return redirect(url_for('staking.mining_home'))
+        
+        contract = MiningContract.query.filter_by(
+            id=int(contract_id),
+            user_id=current_user.id
+        ).first()
+        
+        if not contract:
+            flash('Mining contract not found.', 'danger')
+            return redirect(url_for('staking.mining_home'))
+        
+        if contract.status not in [MiningContractStatus.PENDING, MiningContractStatus.ACTIVE, MiningContractStatus.PAUSED]:
+            flash('This contract cannot be cancelled.', 'warning')
+            return redirect(url_for('staking.mining_home'))
+        
+        # Update contract status
+        contract.status = MiningContractStatus.CANCELLED
+        contract.end_date = datetime.utcnow()
+        
+        db.session.commit()
+        
+        flash(f'Mining contract "{contract.name}" has been cancelled.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error cancelling mining contract: {str(e)}")
+        flash('Error cancelling mining contract. Please try again.', 'danger')
+    
+    return redirect(url_for('staking.mining_home'))
+
+# AJAX endpoints for smoother UX
+@staking_bp.route('/api/mining/contract/<int:contract_id>/pause', methods=['POST'])
+@login_required
+def api_pause_mining_contract(contract_id):
+    """API endpoint to pause mining contract"""
+    try:
+        success = MiningService.control_mining_contract(
+            current_user.id, 
+            contract_id, 
+            'pause'
+        )
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Contract paused successfully'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Failed to pause contract'
+            }), 400
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
+
+@staking_bp.route('/api/mining/contract/<int:contract_id>/resume', methods=['POST'])
+@login_required
+def api_resume_mining_contract(contract_id):
+    """API endpoint to resume mining contract"""
+    try:
+        success = MiningService.control_mining_contract(
+            current_user.id, 
+            contract_id, 
+            'resume'
+        )
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Contract resumed successfully'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Failed to resume contract'
+            }), 400
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
