@@ -10,13 +10,11 @@
   data-bs-theme="light">
   <head>
     <meta charset="utf-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0" />
 
-    <title>Demo: Page 1 - Starter Kit | Vuexy - Bootstrap Dashboard PRO</title>
 
     <meta name="description" content="" />
+    <title>Bloxxxchain™ | Invest in Bitcoin, Ethereum, 100+ assets | Auto buy low and sell high Altcoin/Bitcoin bot | Swap | Copy Top Traders</title>
 
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/favicon/favicon.ico') }}" />
@@ -45,6 +43,8 @@
   </head>
 
   <body>
+    
+
     <!-- Toasts -->
     <div id="toastContainer"
     class="toast-container position-fixed p-3 top-0 end-0"></div>
@@ -85,7 +85,7 @@
                   </svg>
                 </span>
               </span>
-              <span class="app-brand-text demo menu-text fw-bold ms-3">Vuexy</span>
+              <span class="app-brand-text demo menu-text fw-bold ms-3">Bloxxxchain</span>
             </a>
 
             <a href="javascript:void(0);" class="layout-menu-toggle menu-link text-large ms-auto">
@@ -115,7 +115,7 @@
                   </a>
                 </li>
                 <li class="menu-item">
-                  <a href="{{ url_for('wallet.withdraw_crypto_form') }}" class="menu-link">
+                  <a href="{{ url_for('wallet.withdraw_crypto') }}" class="menu-link">
                     <div data-i18n="Withdraw">Withdraw</div>
                   </a>
                 </li>
@@ -130,23 +130,13 @@
               </a>
               <ul class="menu-sub">
                 <li class="menu-item">
-                  <a href="{{ url_for('trading.limit_trade') }}" class="menu-link">
+                  <a href="{{ url_for('trading.swap') }}" class="menu-link">
                     <div data-i18n="Limit Trade">Swap</div>
                   </a>
                 </li>
                 <li class="menu-item">
                   <a href="{{ url_for('copytrade.trader_list') }}" class="menu-link">
                     <div data-i18n="Copy Trade">Copy Trade</div>
-                  </a>
-                </li>
-                <li class="menu-item">
-                  <a href="#" class="menu-link">
-                    <div data-i18n="Bot Trade">Bot Trade</div>
-                  </a>
-                </li>
-                <li class="menu-item">
-                  <a href="#" class="menu-link">
-                    <div data-i18n="Arbitrage Trade">Arbitrage Trade</div>
                   </a>
                 </li>
               </ul>
@@ -181,12 +171,7 @@
             </li>
 
             <!-- Transaction History -->
-            <li class="menu-item">
-              <a href="" class="menu-link">
-                <i class="menu-icon icon-base ti tabler-history-toggle"></i>
-                <div data-i18n="Transaction History">Transaction History</div>
-              </a>
-            </li>
+            
 
             <!-- Referals -->
             <li class="menu-item">
@@ -280,6 +265,7 @@
               </div>
 
               <ul class="navbar-nav flex-row align-items-center ms-md-auto">
+                {% if current_user.is_authenticated %}
                 <!-- User -->
                 <li class="nav-item navbar-dropdown dropdown-user dropdown">
                   <a
@@ -287,7 +273,7 @@
                     href="javascript:void(0);"
                     data-bs-toggle="dropdown">
                     <div class="avatar avatar-online">
-                      <img src="{{ url_for('static', filename='img/avatars/1.png') }}" alt class="rounded-circle" />
+                      <img src="{{ url_for('static', filename='img/avatars/default_avatar.jpg') }}" alt class="rounded-circle" />
                     </div>
                   </a>
                   <ul class="dropdown-menu dropdown-menu-end">
@@ -296,7 +282,7 @@
                         <div class="d-flex">
                           <div class="flex-shrink-0 me-3">
                             <div class="avatar avatar-online">
-                              <img src="{{ url_for('static', filename='img/avatars/1.png') }}" alt class="w-px-40 h-auto rounded-circle" />
+                              <img src="{{ url_for('static', filename='img/avatars/default_avatar.jpg') }}" alt class="w-px-40 h-auto rounded-circle" />
                             </div>
                           </div>
                           <div class="flex-grow-1">
@@ -308,11 +294,6 @@
                     </li>
                     <li>
                       <div class="dropdown-divider my-1 mx-n2"></div>
-                    </li>
-                    <li>
-                      <a class="dropdown-item" href="{{ url_for('auth.user_profile') }}">
-                        <i class="icon-base ti tabler-user icon-md me-3"></i><span>My Profile</span>
-                      </a>
                     </li>
                     <li>
                       <a class="dropdown-item" href="{{ url_for('auth.user_settings')}}">
@@ -330,12 +311,29 @@
                   </ul>
                 </li>
                 <!--/ User -->
+                {% endif %}
               </ul>
             </div>
           </nav>
 
           <!-- / Navbar -->
-
+          <!-- Flash Messages as Toasts -->
+          <div class="position-fixed top-0 end-0 p-3" style="z-index: 1100">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}
+                {% for category, message in messages %}
+                  <div class="toast show align-items-center text-white bg-{{ category }} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                      <div class="toast-body">
+                        {{ message }}
+                      </div>
+                      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                  </div>
+                {% endfor %}
+              {% endif %}
+            {% endwith %}
+          </div>
           <!-- Content wrapper -->
           <div class="content-wrapper">
             <!-- Content -->
@@ -365,6 +363,7 @@
                         <a href="https://x.com/bloxxxchain?s=21" class="btn btn-icon btn-sm btn-twitter me-2"
                           ><i class="icon-base ti tabler-brand-twitter icon-20px"></i
                         ></a>
+                        <a href="https://wa.me/17203353834" class="btn btn-icon btn-sm ntn-whatsapp me-2"><i class="icon-base ti tabler-brand-whatsapp icon-20px"></i></a>
                       </div>
                       <p class="pt-6">
                         <script>
@@ -376,17 +375,17 @@
                     <div class="col-12 col-sm-6 col-md-4 mb-6 mb-md-0">
                       <h5>Company</h5>
                       <ul class="list-unstyled">
-                        <li><a href="javascript:void(0)" class="footer-link d-block pb-2">About</a></li>
-                        <li><a href="javascript:void(0)" class="footer-link d-block pb-2">Blog</a></li>
-                        <li><a href="javascript:void(0)" class="footer-link d-block pb-2">Customers</a></li>
-                        <li><a href="javascript:void(0)" class="footer-link d-block pb-2">FAQs</a></li>
+                        <li><a href="{{ url_for('main.about') }}" class="footer-link d-block pb-2">About</a></li>
+                        <li><a href="{{ url_for('main.tos') }}" class="footer-link d-block pb-2">Terms of Service</a></li>
+                        <li><a href="{{ url_for('main.privacy_policy') }}" class="footer-link d-block pb-2">Privacy Policy</a></li>
+                        <li><a href="{{ url_for('main.cookies') }}" class="footer-link d-block pb-2">Cookies</a></li>
                       </ul>
                     </div>
                     <div class="col-12 col-sm-6 col-md-4 mb-6 mb-sm-0">
-                      <h5>Products</h5>
+                      <h5>Documentation</h5>
                       <ul class="list-unstyled">
-                        <li><a href="javascript:void(0)" class="footer-link d-block pb-2">API</a></li>
-                        <li><a href="javascript:void(0)" class="footer-link d-block pb-2">Documentation</a></li>
+                        <li><a href="https://abr.business.gov.au/ABN/View?id=82650855459" class="footer-link d-block pb-2">Australian Business Register (ABR)</a></li>
+                        <li><a href="{{ url_for('static', filename='files/asic_bloxxxchain.pdf') }}" class="footer-link d-block pb-2">Australian Securities and Investments Commission (ASIC)</a></li>
                       </ul>
                     </div>
                   </div>

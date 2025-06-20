@@ -4,7 +4,7 @@
 {% if current_user.is_authenticated and not current_user.email_verified %}
 <div class="alert alert-warning alert-dismissible d-flex align-items-center mb-3" role="alert" id="verificationBanner">
     <div class="flex-shrink-0">
-        <i class="ti ti-mail-exclamation fs-4"></i>
+        <i class="ti tabler-mail-exclamation fs-4"></i>
     </div>
     <div class="flex-grow-1 ms-3">
         <h6 class="alert-heading mb-1">Email Verification Required</h6>
@@ -14,12 +14,12 @@
         <div class="d-flex gap-2">
             <a href="{{ url_for('auth.verify_email_notice', email=current_user.email) }}" 
                class="btn btn-warning btn-sm">
-                <i class="ti ti-mail me-1"></i>
+                <i class="ti tabler-mail me-1"></i>
                 Check Email
             </a>
             <a href="{{ url_for('auth.resend_verification', email=current_user.email) }}" 
                class="btn btn-outline-warning btn-sm">
-                <i class="ti ti-refresh me-1"></i>
+                <i class="ti tabler-refresh me-1"></i>
                 Resend
             </a>
         </div>
