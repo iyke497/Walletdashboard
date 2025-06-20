@@ -25,11 +25,11 @@
                                 ><i class="icon-base ti tabler-user-dollar icon-28px"></i
                             ></span>
                             </div>
-                            <h4 class="mb-0">${{ portfolio_value }}</h4>
+                            <h4 class="mb-0">${{ "{:,.2f}".format(portfolio_value) }}</h4>
                         </div>
                         <p class="mb-1">Your Portfolio Value</p>
                         <p class="mb-0">
-                            <span class="text-heading fw-medium me-2">+4.2%</span>
+                            <span class="text-heading fw-medium me-2">+0.0%</span>
                             <small class="text-body-secondary">than last week</small>
                         </p>
                         </div>
@@ -59,11 +59,11 @@
                                 ><i class="icon-base ti tabler-arrow-autofit-height icon-28px"></i
                             ></span>
                             </div>
-                            <h4 class="mb-0">+$1,238.53</h4>
+                            <h4 class="mb-0">+$0.00</h4>
                         </div>
                         <p class="mb-1">Total Profit/Loss</p>
                         <p class="mb-0">
-                            <span class="text-heading fw-medium me-2">12.6%</span>
+                            <span class="text-heading fw-medium me-2">0.0%</span>
                             <small class="text-body-secondary">all time</small>
                         </p>
                         </div>
@@ -193,7 +193,7 @@
                                 <!-- Trader Avatar Badge -->
                                 <div class="card-icon">
                                     <span class="badge bg-label-primary rounded p-2">
-                                        <img src="{{ url_for('static', filename='img/avatars/1.png') }}" alt="Trader Avatar" class="rounded-circle" style="width: 26px; height: 26px;">
+                                        <img src="{{ trader.avatar_url or url_for('static', filename='img/avatars/1.png') }}" alt="Trader Avatar" class="rounded-circle" style="width:26px; height: 26px;">
                                     </span>
                                 </div>
                                 <!-- Trader Name and Verification -->
@@ -323,22 +323,32 @@
                                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                         </div>
                                         <div class="modal-body">
+                                            <!-- Replace the copy method section in your modal with this: -->
                                             <div class="row mb-3">
                                                 <div class="col-12">
-                                                    <h6 class="mb-3">Copy By</h6>  <!-- Increased margin-bottom -->
-                                                    <div class="d-flex gap-2">  <!-- Reduced gap between buttons -->
+                                                    <h6 class="mb-3">Copy By</h6>
+                                                    <div class="d-flex gap-2">
                                                         <div class="col">
-                                                            <button type="button" 
-                                                                    class="btn btn-outline-primary btn-xs rounded-pill w-100">  <!-- xs size + full width -->
+                                                            <input type="radio" class="btn-check" name="copy_method_{{ trader.id }}" id="position_ratio_{{ trader.id }}" value="position_ratio" checked>
+                                                            <label class="btn btn-outline-primary btn-sm rounded-pill w-100" for="position_ratio_{{ trader.id }}">
+                                                                <i class="fas fa-percentage me-1"></i>
                                                                 Position Ratio
-                                                            </button>
+                                                            </label>
                                                         </div>
                                                         <div class="col">
-                                                            <button type="button" 
-                                                                    class="btn btn-outline-primary btn-xs rounded-pill w-100">  <!-- xs size + full width -->
+                                                            <input type="radio" class="btn-check" name="copy_method_{{ trader.id }}" id="per_order_{{ trader.id }}" value="per_order">
+                                                            <label class="btn btn-outline-primary btn-sm rounded-pill w-100" for="per_order_{{ trader.id }}">
+                                                                <i class="fas fa-layer-group me-1"></i>
                                                                 Per Order
-                                                            </button>
+                                                            </label>
                                                         </div>
+                                                    </div>
+                                                    
+                                                    <!-- Dynamic explanation text -->
+                                                    <div class="mt-2">
+                                                        <small class="text-muted copy-method-explanation" id="copy_method_explanation_{{ trader.id }}">
+                                                            Copy trades based on the percentage of your total portfolio allocation
+                                                        </small>
                                                     </div>
                                                 </div>
                                             </div>
@@ -353,11 +363,50 @@
                                                         {% endfor %}
                                                     </div>
                                                     {% endif %}
+                                                    <!-- Update the balance display in your template -->
                                                     <div class="form-text">Available Balance:
                                                         <span class="text-primary fw-medium">
-                                                        <span id="balance-amount">0.00</span>
-                                                        <span id="balance-currency">CUR</span>
+                                                            <span id="balance-amount">{{ "%.2f"|format(user_balance) }}</span>
+                                                            <span id="balance-currency">{{ balance_currency }}</span>
                                                         </span>
+                                                    </div>
+
+                                                    <!-- Add a warning if insufficient balance -->
+                                                    {% if not can_trade %}
+                                                    <div class="alert alert-warning alert-sm mt-2">
+                                                        <i class="fas fa-exclamation-triangle me-1"></i>
+                                                        Insufficient balance for copy trading
+                                                    </div>
+                                                    {% endif %}
+
+                                                    <!-- Add quick amount buttons with server-side data -->
+                                                    <div class="mt-2" id="quick-amounts">
+                                                        <div class="d-flex gap-1 flex-wrap">
+                                                            <button type="button" class="btn btn-outline-secondary btn-sm quick-amount" 
+                                                                    data-amount="{{ user_balance * 0.25 }}" 
+                                                                    data-percentage="25" 
+                                                                    {% if not can_trade %}disabled{% endif %}>
+                                                                25%
+                                                            </button>
+                                                            <button type="button" class="btn btn-outline-secondary btn-sm quick-amount" 
+                                                                    data-amount="{{ user_balance * 0.50 }}" 
+                                                                    data-percentage="50" 
+                                                                    {% if not can_trade %}disabled{% endif %}>
+                                                                50%
+                                                            </button>
+                                                            <button type="button" class="btn btn-outline-secondary btn-sm quick-amount" 
+                                                                    data-amount="{{ user_balance * 0.75 }}"
+                                                                    data-percentage="75" 
+                                                                    {% if not can_trade %}disabled{% endif %}>
+                                                                75%
+                                                            </button>
+                                                            <button type="button" class="btn btn-outline-secondary btn-sm quick-amount" 
+                                                                    data-amount="{{ user_balance }}" 
+                                                                    data-percentage="100" 
+                                                                    {% if not can_trade %}disabled{% endif %}>
+                                                                Max
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -426,7 +475,7 @@
                                         <div class="modal-footer">
                                             <div class="form-check">
                                                 {{ form.agree_terms(id='agreeTerms', class='form-check-input') }}
-                                                <label class="form-check-label" for="agreeTerms">I understand the staking terms and conditions</label>
+                                                <label class="form-check-label" for="agreeTerms">By clicking "Confirm Copy" I agree to the terms and conditions</label>
                                                 {% for error in form.agree_terms.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
                                             </div>
                                             <button type="submit" class="btn btn-primary">{{ form.submit.label.text }}</button>
@@ -443,13 +492,13 @@
                     {% endfor %}
                 </div>
                 
-                <!-- ... (pagination links) ... -->
+                <!-- Fixed Pagination Section - Replace your existing pagination with this -->
                 <div class="row">
                     <div class="col-lg-12">
                         <div class="demo-inline-spacing">
-                            <!-- Update pagination in copytrading.html -->
                             <nav aria-label="Page navigation">
                                 <ul class="pagination pagination-rounded justify-content-end">
+                                    <!-- First Page Button -->
                                     {% if pagination.has_prev %}
                                     <li class="page-item first">
                                         <a class="page-link" 
@@ -463,10 +512,11 @@
                                             <i class="icon-base ti tabler-chevrons-left icon-sm"></i>
                                         </a>
                                     </li>
+                                    <!-- Previous Page Button -->
                                     <li class="page-item prev">
                                         <a class="page-link" 
                                         href="{{ url_for('copytrade.trader_list', 
-                                            page=1,
+                                            page=pagination.prev_num,
                                             sort_by=current_params.sort_by,
                                             sort_order=current_params.sort_order,
                                             market=current_params.market,
@@ -477,26 +527,40 @@
                                     </li>
                                     {% endif %}
 
+                                    <!-- Page Numbers -->
                                     {% for page_num in pagination.iter_pages() %}
-                                    <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
-                                        <a class="page-link" 
-                                        href="{{ url_for('copytrade.trader_list', 
-                                            page=1,
-                                            sort_by=current_params.sort_by,
-                                            sort_order=current_params.sort_order,
-                                            market=current_params.market,
-                                            time_period=current_params.time_period,
-                                            search=current_params.search) }}">
-                                            {{ page_num }}
-                                        </a>
-                                    </li>
+                                        {% if page_num %}
+                                            {% if page_num != pagination.page %}
+                                            <li class="page-item">
+                                                <a class="page-link" 
+                                                href="{{ url_for('copytrade.trader_list', 
+                                                    page=page_num,
+                                                    sort_by=current_params.sort_by,
+                                                    sort_order=current_params.sort_order,
+                                                    market=current_params.market,
+                                                    time_period=current_params.time_period,
+                                                    search=current_params.search) }}">
+                                                    {{ page_num }}
+                                                </a>
+                                            </li>
+                                            {% else %}
+                                            <li class="page-item active">
+                                                <span class="page-link">{{ page_num }}</span>
+                                            </li>
+                                            {% endif %}
+                                        {% else %}
+                                        <li class="page-item disabled">
+                                            <span class="page-link">...</span>
+                                        </li>
+                                        {% endif %}
                                     {% endfor %}
 
+                                    <!-- Next Page Button -->
                                     {% if pagination.has_next %}
                                     <li class="page-item next">
                                         <a class="page-link" 
                                         href="{{ url_for('copytrade.trader_list', 
-                                            page=1,
+                                            page=pagination.next_num,
                                             sort_by=current_params.sort_by,
                                             sort_order=current_params.sort_order,
                                             market=current_params.market,
@@ -505,10 +569,11 @@
                                             <i class="icon-base ti tabler-chevron-right icon-sm"></i>
                                         </a>
                                     </li>
+                                    <!-- Last Page Button -->
                                     <li class="page-item last">
                                         <a class="page-link" 
                                         href="{{ url_for('copytrade.trader_list', 
-                                            page=1,
+                                            page=pagination.pages,
                                             sort_by=current_params.sort_by,
                                             sort_order=current_params.sort_order,
                                             market=current_params.market,
@@ -520,6 +585,18 @@
                                     {% endif %}
                                 </ul>
                             </nav>
+                            
+                            <!-- Optional: Add pagination info -->
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                <small class="text-muted">
+                                    Showing {{ ((pagination.page - 1) * pagination.per_page) + 1 }} to 
+                                    {{ pagination.page * pagination.per_page if pagination.page * pagination.per_page < pagination.total else pagination.total }} 
+                                    of {{ pagination.total }} traders
+                                </small>
+                                <small class="text-muted">
+                                    Page {{ pagination.page }} of {{ pagination.pages }}
+                                </small>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -536,6 +613,314 @@
 {% block extra_js %}
 <script src="{{ url_for('static', filename='js/cards-statistics.js') }}"></script>
 <script src="{{ url_for('static', filename='js/ui-modals.js') }}"></script>
+<script>
+// Complete Fixed JavaScript - Replace your entire script block with this
+
+// Global variables for copy trading (populated from template)
+let currentCopyTradeData = {
+    balance: {{ user_balance }},
+    canTrade: {{ can_trade|lower }},
+    minInvestment: {{ min_investment }},
+    currency: '{{ balance_currency }}'
+};
+
+// Function to validate investment amount against balance
+function validateInvestmentAmount() {
+    const investmentInput = document.querySelector('input[name="investment_amount"]');
+    if (!investmentInput) return true;
+    
+    const amount = parseFloat(investmentInput.value) || 0;
+    let balanceError = document.getElementById('investment-balance-error');
+    
+    // Create error element if it doesn't exist
+    if (!balanceError) {
+        balanceError = document.createElement('div');
+        balanceError.id = 'investment-balance-error';
+        balanceError.className = 'invalid-feedback';
+        balanceError.style.display = 'none';
+        investmentInput.parentNode.appendChild(balanceError);
+    }
+    
+    // Clear previous error states
+    investmentInput.classList.remove('is-invalid');
+    balanceError.style.display = 'none';
+    
+    // Skip validation if amount is 0 or empty
+    if (amount === 0) {
+        return true;
+    }
+    
+    // Validate minimum investment
+    if (amount < currentCopyTradeData.minInvestment) {
+        investmentInput.classList.add('is-invalid');
+        balanceError.textContent = `Minimum investment is ${currentCopyTradeData.minInvestment} ${currentCopyTradeData.currency}`;
+        balanceError.style.display = 'block';
+        return false;
+    }
+    
+    // Validate against available balance
+    if (amount > currentCopyTradeData.balance) {
+        investmentInput.classList.add('is-invalid');
+        balanceError.textContent = `Insufficient balance. Available: ${currentCopyTradeData.balance.toFixed(2)} ${currentCopyTradeData.currency}`;
+        balanceError.style.display = 'block';
+        return false;
+    }
+    
+    return true;
+}
+
+// Function to handle quick amount buttons
+function initializeQuickAmountButtons() {
+    const quickAmountButtons = document.querySelectorAll('.quick-amount');
+    
+    quickAmountButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const modal = this.closest('.modal');
+            const investmentInput = modal ? modal.querySelector('input[name="investment_amount"]') : null;
+            
+            if (investmentInput) {
+                const amount = parseFloat(this.getAttribute('data-amount')).toFixed(2);
+                investmentInput.value = amount;
+                validateInvestmentAmount();
+                
+                // Add visual feedback
+                this.classList.add('btn-primary');
+                this.classList.remove('btn-outline-secondary');
+                
+                // Remove active state from other buttons in this modal
+                modal.querySelectorAll('.quick-amount').forEach(btn => {
+                    if (btn !== this) {
+                        btn.classList.remove('btn-primary');
+                        btn.classList.add('btn-outline-secondary');
+                    }
+                });
+                
+                // Remove active state after a short delay
+                setTimeout(() => {
+                    this.classList.remove('btn-primary');
+                    this.classList.add('btn-outline-secondary');
+                }, 1000);
+            }
+        });
+    });
+}
+
+// Function to handle copy method selection for all modals
+function initializeCopyMethodButtons() {
+    // Use a more generic selector to find all copy method inputs
+    const copyMethodInputs = document.querySelectorAll('input[name^="copy_method"]');
+    
+    const explanations = {
+        'position_ratio': 'Copy trades based on the percentage of your total portfolio allocation',
+        'per_order': 'Copy each trade with a fixed amount regardless of portfolio size'
+    };
+    
+    copyMethodInputs.forEach(input => {
+        input.addEventListener('change', function() {
+            if (this.checked) {
+                // Get the trader ID from the input name (e.g., "copy_method_123")
+                const traderId = this.name.split('_').pop();
+                const explanationElement = document.getElementById(`copy_method_explanation_${traderId}`);
+                
+                // Update explanation text
+                if (explanationElement) {
+                    explanationElement.textContent = explanations[this.value];
+                }
+                
+                // Get the current modal context
+                const modal = this.closest('.modal');
+                if (modal) {
+                    // Visual feedback - remove active class from all labels in this modal
+                    modal.querySelectorAll('label[for*="position_ratio"], label[for*="per_order"]').forEach(l => {
+                        l.classList.remove('btn-primary');
+                        l.classList.add('btn-outline-primary');
+                    });
+                    
+                    // Add active class to selected label
+                    const label = modal.querySelector(`label[for="${this.id}"]`);
+                    if (label) {
+                        label.classList.remove('btn-outline-primary');
+                        label.classList.add('btn-primary');
+                    }
+                }
+                
+                // Optional: Show different fields based on selection
+                toggleCopyMethodFields(this.value);
+            }
+        });
+    });
+}
+
+// Function to toggle fields based on copy method
+function toggleCopyMethodFields(method) {
+    if (method === 'position_ratio') {
+        console.log('Position Ratio selected - show percentage fields');
+    } else if (method === 'per_order') {
+        console.log('Per Order selected - show fixed amount fields');
+    }
+}
+
+// Function to handle form submission validation
+function validateCopyTradeForm(event) {
+    const form = event.target;
+    const investmentInput = form.querySelector('input[name="investment_amount"]');
+    const agreeTerms = form.querySelector('input[name="agree_terms"]');
+    
+    let isValid = true;
+    
+    // Validate investment amount
+    if (!validateInvestmentAmount()) {
+        isValid = false;
+    }
+    
+    // Validate minimum amount
+    const amount = parseFloat(investmentInput.value) || 0;
+    if (amount <= 0) {
+        investmentInput.classList.add('is-invalid');
+        let error = form.querySelector('#investment-balance-error');
+        if (error) {
+            error.textContent = 'Please enter a valid investment amount';
+            error.style.display = 'block';
+        }
+        isValid = false;
+    }
+    
+    // Validate terms agreement
+    if (agreeTerms && !agreeTerms.checked) {
+        agreeTerms.classList.add('is-invalid');
+        isValid = false;
+    }
+    
+    if (!isValid) {
+        event.preventDefault();
+        return false;
+    }
+    
+    return true;
+}
+
+// Function to reset form when modal opens
+function initializeModalResets() {
+    document.querySelectorAll('[data-bs-target^="#copyTraderModal"]').forEach(button => {
+        button.addEventListener('click', function() {
+            setTimeout(() => {
+                const modalId = this.getAttribute('data-bs-target');
+                const modal = document.querySelector(modalId);
+                if (modal) {
+                    const form = modal.querySelector('form');
+                    if (form) {
+                        // Clear validation states
+                        form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+                        form.querySelectorAll('.invalid-feedback').forEach(el => el.style.display = 'none');
+                        
+                        // Reset copy method to first option
+                        const firstCopyMethod = form.querySelector('input[name^="copy_method"]:first-of-type');
+                        if (firstCopyMethod) {
+                            firstCopyMethod.checked = true;
+                            firstCopyMethod.dispatchEvent(new Event('change'));
+                        }
+                        
+                        // Clear investment amount
+                        const investmentInput = form.querySelector('input[name="investment_amount"]');
+                        if (investmentInput) {
+                            investmentInput.value = '';
+                        }
+                        
+                        // Reset quick amount buttons
+                        form.querySelectorAll('.quick-amount').forEach(btn => {
+                            btn.classList.remove('btn-primary');
+                            btn.classList.add('btn-outline-secondary');
+                        });
+                    }
+                }
+            }, 100);
+        });
+    });
+}
+
+// Initialize everything when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize all functionality
+    initializeCopyMethodButtons();
+    initializeQuickAmountButtons();
+    initializeModalResets();
+    
+    // Add form validation to all copy trader forms
+    const copyForms = document.querySelectorAll('form[action*="copy_trader"]');
+    copyForms.forEach(form => {
+        form.addEventListener('submit', validateCopyTradeForm);
+    });
+    
+    // Add real-time validation to investment inputs
+    document.addEventListener('input', function(e) {
+        if (e.target.name === 'investment_amount') {
+            validateInvestmentAmount();
+            
+            // Clear quick amount button selection when user types
+            const modal = e.target.closest('.modal');
+            if (modal) {
+                modal.querySelectorAll('.quick-amount').forEach(btn => {
+                    btn.classList.remove('btn-primary');
+                    btn.classList.add('btn-outline-secondary');
+                });
+            }
+        }
+    });
+    
+    document.addEventListener('blur', function(e) {
+        if (e.target.name === 'investment_amount') {
+            validateInvestmentAmount();
+        }
+    });
+});
+
+// Add CSS for better button interactions
+const style = document.createElement('style');
+style.textContent = `
+    /* Custom styles for better button interactions */
+    .btn-check:checked + .btn {
+        background-color: var(--bs-primary);
+        border-color: var(--bs-primary);
+        color: white;
+        transform: scale(0.98);
+        transition: all 0.2s ease;
+    }
+
+    .btn-check + .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .btn-check:checked + .btn:hover {
+        transform: scale(0.98) translateY(-1px);
+    }
+
+    .btn {
+        transition: all 0.2s ease;
+    }
+
+    @keyframes buttonSelect {
+        0% { transform: scale(1); }
+        50% { transform: scale(0.95); }
+        100% { transform: scale(0.98); }
+    }
+
+    .btn-check:checked + .btn {
+        animation: buttonSelect 0.3s ease;
+    }
+
+    .quick-amount:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .alert-sm {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.875rem;
+    }
+`;
+document.head.appendChild(style);
+</script>
 
 
 {% endblock %}

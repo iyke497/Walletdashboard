@@ -30,11 +30,6 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-auto">
-                        <!--Watchlist-->
-                        <button type="button" class="btn btn-outline-secondary">Copy</button>
-                        <!--Button Dropdown-->
-                    </div>
                 </div>
             </div>
         </div>
@@ -69,21 +64,6 @@
                     class="nav-link"
                     role="tab"
                     data-bs-toggle="tab"
-                    data-bs-target="#navs-justified-profile"
-                    aria-controls="navs-justified-profile"
-                    aria-selected="false">
-                    <span class="d-none d-sm-inline-flex align-items-center"
-                      ><i class="icon-base ti tabler-user icon-sm me-1_5"></i>Stats</span
-                    >
-                    <i class="icon-base ti tabler-user icon-sm d-sm-none"></i>
-                  </button>
-                </li>
-                <li class="nav-item">
-                  <button
-                    type="button"
-                    class="nav-link"
-                    role="tab"
-                    data-bs-toggle="tab"
                     data-bs-target="#navs-justified-messages"
                     aria-controls="navs-justified-messages"
                     aria-selected="false">
@@ -92,21 +72,6 @@
                     >
                     <i class="icon-base ti tabler-message-dots icon-sm d-sm-none"></i>
                   </button>
-                </li>
-                <li class="nav-item">
-                    <button
-                      type="button"
-                      class="nav-link"
-                      role="tab"
-                      data-bs-toggle="tab"
-                      data-bs-target="#navs-justified-charts"
-                      aria-controls="navs-justified-charts"
-                      aria-selected="false">
-                      <span class="d-none d-sm-inline-flex align-items-center"
-                        ><i class="icon-base ti tabler-message-dots icon-sm me-1_5"></i>Charts</span
-                      >
-                      <i class="icon-base ti tabler-message-dots icon-sm d-sm-none"></i>
-                    </button>
                 </li>
               </ul>
               <div class="tab-content">
@@ -122,7 +87,7 @@
                                     </div>
                                     <div class="d-flex align-items-center mt-2">
                                         <h2 class="mb-0 me-2">{{ trader.win_rate }}</h2>
-                                        <i class="ti ti-chevron-up text-success me-1"></i>
+                                        <i class="ti tabler-chevron-up text-success me-1"></i>
                                         <h6 class="text-success mb-0">{{ trader.avg_monthly_return }}</h6>
                                     </div>
                                 </div>
@@ -132,7 +97,7 @@
                                     </div>
                                     <div class="d-flex align-items-start mb-4">
                                         <div class="badge rounded bg-label-primary p-2 me-3">
-                                            <i class="ti ti-brand-paypal icon-md"></i>
+                                            <i class="ti tabler-arrow-back-up-double icon-md"></i>
                                         </div>
                                         <div class="d-flex justify-content-between w-100 gap-2 align-items-center">
                                             <div class="me-2">
@@ -143,7 +108,7 @@
                                     </div>
                                     <div class="d-flex align-items-start">
                                         <div class="badge rounded bg-label-secondary p-2 me-3">
-                                            <i class="ti ti-currency-dollar icon-md"></i>
+                                            <i class="ti tabler-number-10 icon-md"></i>
                                         </div>
                                         <div class="d-flex justify-content-between w-100 gap-2 align-items-center">
                                             <div class="me-2">
@@ -164,7 +129,7 @@
                                     <div class="card text-center info-card">
                                         <div class="card-header">
                                             <h5 class="mb-0">About {{ trader.user.username }}</h5>
-                                            <span class="badge rounded-pill badge-outline-primary">Country</span>
+                                            <span class="badge rounded-pill badge-outline-primary">{{ trader.performance_metrics['country'] }}</span>
                                         </div>
                                         <div class="card-body d-flex flex-column justify-content-center">
                                             <p class="card-text">{{ trader.bio or 'No bio available' }}</p>
@@ -181,11 +146,11 @@
                                         <div class="card-footer text-body-secondary">
                                             <div class="row text-center">
                                                 <div class="col-6">
-                                                    <h6 class="mb-0 text-dark">{{ trader.copiers_count or 0 }}</h6>
+                                                    <h6 class="mb-0 text-dark">{{ trader.performance_metrics['copiers'] }}</h6>
                                                     <small>Copiers</small>
                                                 </div>
                                                 <div class="col-6">
-                                                    <h6 class="mb-0 text-dark">{{ trader.followers|length or 0 }}</h6>
+                                                    <h6 class="mb-0 text-dark">{{ trader.performance_metrics['followers_count'] }}</h6>
                                                     <small>Followers</small>
                                                 </div>
                                             </div>
@@ -200,294 +165,40 @@
                                             <h5 class="mb-0">Top Traded</h5>
                                         </div>
                                         <div class="card-body">
-                                            <!-- BTC Row -->
-                                            <div class="d-flex align-items-center justify-content-between mb-3 pb-3 border-bottom border-secondary">
-                                                <div class="d-flex align-items-center">
-                                                    <div class="bg-warning rounded me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
-                                                        <i class="ti ti-currency-bitcoin text-white"></i>
+                                            {% if top_traded_assets %}
+                                                {% for asset in top_traded_assets %}
+                                                    <div class="d-flex align-items-center justify-content-between {% if not loop.last %}mb-3 pb-3 border-bottom border-secondary{% endif %}">
+                                                        <div class="d-flex align-items-center">
+                                                            <div class="rounded me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                                                {% if asset.asset_image %}
+                                                                    <img src="{{ asset.asset_image }}" 
+                                                                         alt="{{ asset.name }}" 
+                                                                         class="rounded" 
+                                                                         style="width: 24px; height: 24px;" 
+                                                                         onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                                                {% endif %}
+                                                                <i class="{% if asset.symbol == 'BTC' %}ti ti-currency-bitcoin{% elif asset.symbol == 'ETH' %}ti ti-diamond{% elif asset.symbol == 'DASH' %}ti ti-brand-android{% elif asset.symbol == 'SOL' %}ti ti-sun{% elif asset.symbol == 'RENDER' %}ti ti-3d-cube-sphere{% else %}ti ti-currency-generic{% endif %} text-white" 
+                                                                   {% if asset.asset_image %}style="display: none;"{% endif %}></i>
+                                                            </div>
+                                                            <div>
+                                                                <h6 class="mb-0">{{ asset.symbol }}</h6>
+                                                                <small class="text-muted">{{ asset.name }}</small>
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                    <div>
-                                                        <h6 class="mb-0">BTC</h6>
-                                                        <small class="text-muted">Bitcoin</small>
-                                                    </div>
+                                                {% endfor %}
+                                            {% else %}
+                                                <div class="alert alert-info mb-0" role="alert">
+                                                    <i class="ti ti-info-circle me-2"></i>
+                                                    No top traded assets available for this trader yet.
                                                 </div>
-                                                <div class="d-flex align-items-center gap-3">
-                                                    <span class="text-danger">-0.56%</span>
-                                                    <button class="btn btn-outline-success btn-sm rounded-pill">Trade</button>
-                                                </div>
-                                            </div>
-                                     
-                                            <!-- DASH Row -->
-                                            <div class="d-flex align-items-center justify-content-between mb-3 pb-3 border-bottom border-secondary">
-                                                <div class="d-flex align-items-center">
-                                                    <div class="bg-primary rounded me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
-                                                        <i class="ti ti-brand-android text-white"></i>
-                                                    </div>
-                                                    <div>
-                                                        <h6 class="mb-0">DASH</h6>
-                                                        <small class="text-muted">Dash</small>
-                                                    </div>
-                                                </div>
-                                                <div class="d-flex align-items-center gap-3">
-                                                    <span class="text-danger">-1.03%</span>
-                                                    <button class="btn btn-outline-success btn-sm rounded-pill">Trade</button>
-                                                </div>
-                                            </div>
-                                     
-                                            <!-- ETH Row -->
-                                            <div class="d-flex align-items-center justify-content-between">
-                                                <div class="d-flex align-items-center">
-                                                    <div class="bg-secondary rounded me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
-                                                        <i class="ti ti-diamond text-white"></i>
-                                                    </div>
-                                                    <div>
-                                                        <h6 class="mb-0">ETH</h6>
-                                                        <small class="text-muted">Ethereum</small>
-                                                    </div>
-                                                </div>
-                                                <div class="d-flex align-items-center gap-3">
-                                                    <span class="text-danger">-0.08%</span>
-                                                    <button class="btn btn-outline-success btn-sm rounded-pill">Trade</button>
-                                                </div>
-                                            </div>
+                                            {% endif %}
                                         </div>
                                      </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
-                <!--Stats-->
-                <div class="tab-pane fade" id="navs-justified-profile" role="tabpanel">
-                  <!--Barchart showing the years performance by year-->
-                  <div class="row g-4">
-                    
-                    <div class="chart-placeholder mb-4">
-                      <div id="barChart"></div>
-                    </div>
-                  </div>
-
-                  <!--Borderless table showing percentages of performance correlating to the barchart-->
-                  <div class="table-responsive text-nowrap">
-                    <table class="table table-borderless">
-                      <thead>
-                        <tr>
-                          <th>Project</th>
-                          <th>Client</th>
-                          <th>Users</th>
-                          <th>Status</th>
-                          <th>Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr>
-                          <td>
-                            <i class="icon-base ti tabler-brand-angular icon-md text-danger me-4"></i>
-                            <span class="fw-medium">Angular Project</span>
-                          </td>
-                          <td>Albert Cook</td>
-                          <td>
-                            <ul class="list-unstyled m-0 avatar-group d-flex align-items-center">
-                              <li
-                                data-bs-toggle="tooltip"
-                                data-popup="tooltip-custom"
-                                data-bs-placement="top"
-                                class="avatar avatar-xs pull-up"
-                                title="Lilian Fuller">
-                                <img src="../../assets/img/avatars/5.png" alt="Avatar" class="rounded-circle" />
-                              </li>
-                              <li
-                                data-bs-toggle="tooltip"
-                                data-popup="tooltip-custom"
-                                data-bs-placement="top"
-                                class="avatar avatar-xs pull-up"
-                                title="Sophia Wilkerson">
-                                <img src="../../assets/img/avatars/6.png" alt="Avatar" class="rounded-circle" />
-                              </li>
-                              <li
-                                data-bs-toggle="tooltip"
-                                data-popup="tooltip-custom"
-                                data-bs-placement="top"
-                                class="avatar avatar-xs pull-up"
-                                title="Christina Parker">
-                                <img src="../../assets/img/avatars/7.png" alt="Avatar" class="rounded-circle" />
-                              </li>
-                            </ul>
-                          </td>
-                          <td><span class="badge bg-label-primary me-1">Active</span></td>
-                          <td>
-                            <div class="dropdown">
-                              <button type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
-                                <i class="icon-base ti tabler-dots-vertical"></i>
-                              </button>
-                              <div class="dropdown-menu">
-                                <a class="dropdown-item" href="javascript:void(0);"
-                                  ><i class="icon-base ti tabler-pencil me-1"></i> Edit</a
-                                >
-                                <a class="dropdown-item" href="javascript:void(0);"
-                                  ><i class="icon-base ti tabler-trash me-1"></i> Delete</a
-                                >
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td>
-                            <i class="icon-base ti tabler-brand-react-native icon-md text-info me-4"></i>
-                            <span class="fw-medium">React Project</span>
-                          </td>
-                          <td>Barry Hunter</td>
-                          <td>
-                            <ul class="list-unstyled m-0 avatar-group d-flex align-items-center">
-                              <li
-                                data-bs-toggle="tooltip"
-                                data-popup="tooltip-custom"
-                                data-bs-placement="top"
-                                class="avatar avatar-xs pull-up"
-                                title="Lilian Fuller">
-                                <img src="../../assets/img/avatars/5.png" alt="Avatar" class="rounded-circle" />
-                              </li>
-                              <li
-                                data-bs-toggle="tooltip"
-                                data-popup="tooltip-custom"
-                                data-bs-placement="top"
-                                class="avatar avatar-xs pull-up"
-                                title="Sophia Wilkerson">
-                                <img src="../../assets/img/avatars/6.png" alt="Avatar" class="rounded-circle" />
-                              </li>
-                              <li
-                                data-bs-toggle="tooltip"
-                                data-popup="tooltip-custom"
-                                data-bs-placement="top"
-                                class="avatar avatar-xs pull-up"
-                                title="Christina Parker">
-                                <img src="../../assets/img/avatars/7.png" alt="Avatar" class="rounded-circle" />
-                              </li>
-                            </ul>
-                          </td>
-                          <td><span class="badge bg-label-success me-1">Completed</span></td>
-                          <td>
-                            <div class="dropdown">
-                              <button type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
-                                <i class="icon-base ti tabler-dots-vertical"></i>
-                              </button>
-                              <div class="dropdown-menu">
-                                <a class="dropdown-item" href="javascript:void(0);"
-                                  ><i class="icon-base ti tabler-pencil me-1"></i> Edit</a
-                                >
-                                <a class="dropdown-item" href="javascript:void(0);"
-                                  ><i class="icon-base ti tabler-trash me-1"></i> Delete</a
-                                >
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td>
-                            <i class="icon-base ti tabler-brand-vue icon-md text-success me-4"></i>
-                            <span class="fw-medium">VueJs Project</span>
-                          </td>
-                          <td>Trevor Baker</td>
-                          <td>
-                            <ul class="list-unstyled m-0 avatar-group d-flex align-items-center">
-                              <li
-                                data-bs-toggle="tooltip"
-                                data-popup="tooltip-custom"
-                                data-bs-placement="top"
-                                class="avatar avatar-xs pull-up"
-                                title="Lilian Fuller">
-                                <img src="../../assets/img/avatars/5.png" alt="Avatar" class="rounded-circle" />
-                              </li>
-                              <li
-                                data-bs-toggle="tooltip"
-                                data-popup="tooltip-custom"
-                                data-bs-placement="top"
-                                class="avatar avatar-xs pull-up"
-                                title="Sophia Wilkerson">
-                                <img src="../../assets/img/avatars/6.png" alt="Avatar" class="rounded-circle" />
-                              </li>
-                              <li
-                                data-bs-toggle="tooltip"
-                                data-popup="tooltip-custom"
-                                data-bs-placement="top"
-                                class="avatar avatar-xs pull-up"
-                                title="Christina Parker">
-                                <img src="../../assets/img/avatars/7.png" alt="Avatar" class="rounded-circle" />
-                              </li>
-                            </ul>
-                          </td>
-                          <td><span class="badge bg-label-info me-1">Scheduled</span></td>
-                          <td>
-                            <div class="dropdown">
-                              <button type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
-                                <i class="icon-base ti tabler-dots-vertical"></i>
-                              </button>
-                              <div class="dropdown-menu">
-                                <a class="dropdown-item" href="javascript:void(0);"
-                                  ><i class="icon-base ti tabler-pencil me-1"></i> Edit</a
-                                >
-                                <a class="dropdown-item" href="javascript:void(0);"
-                                  ><i class="icon-base ti tabler-trash me-1"></i> Delete</a
-                                >
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td>
-                            <i class="icon-base ti tabler-brand-bootstrap icon-md text-primary me-4"></i>
-                            <span class="fw-medium">Bootstrap Project</span>
-                          </td>
-                          <td>Jerry Milton</td>
-                          <td>
-                            <ul class="list-unstyled m-0 avatar-group d-flex align-items-center">
-                              <li
-                                data-bs-toggle="tooltip"
-                                data-popup="tooltip-custom"
-                                data-bs-placement="top"
-                                class="avatar avatar-xs pull-up"
-                                title="Lilian Fuller">
-                                <img src="../../assets/img/avatars/5.png" alt="Avatar" class="rounded-circle" />
-                              </li>
-                              <li
-                                data-bs-toggle="tooltip"
-                                data-popup="tooltip-custom"
-                                data-bs-placement="top"
-                                class="avatar avatar-xs pull-up"
-                                title="Sophia Wilkerson">
-                                <img src="../../assets/img/avatars/6.png" alt="Avatar" class="rounded-circle" />
-                              </li>
-                              <li
-                                data-bs-toggle="tooltip"
-                                data-popup="tooltip-custom"
-                                data-bs-placement="top"
-                                class="avatar avatar-xs pull-up"
-                                title="Christina Parker">
-                                <img src="../../assets/img/avatars/7.png" alt="Avatar" class="rounded-circle" />
-                              </li>
-                            </ul>
-                          </td>
-                          <td><span class="badge bg-label-warning me-1">Pending</span></td>
-                          <td>
-                            <div class="dropdown">
-                              <button type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
-                                <i class="icon-base ti tabler-dots-vertical"></i>
-                              </button>
-                              <div class="dropdown-menu">
-                                <a class="dropdown-item" href="javascript:void(0);"
-                                  ><i class="icon-base ti tabler-pencil me-1"></i> Edit</a
-                                >
-                                <a class="dropdown-item" href="javascript:void(0);"
-                                  ><i class="icon-base ti tabler-trash me-1"></i> Delete</a
-                                >
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                  <!--Card showing Additional Stats i.e Trades/Week, Avg Hold time, Active Since, Profitable weeks-->
                 </div>
                 <!--Portfolio-->
                 <div class="tab-pane fade" id="navs-justified-messages" role="tabpanel">
@@ -542,11 +253,6 @@
                     </table>
                   </div>
                 </div>
-                <!--Charts-->
-                <div class="tab-pane fade" id="navs-justified-charts" role="tabpanel">
-                    <!--So, if the chart goes up, it means your hypothetical $10,000 would have made money. If it goes down, 
-                    your hypothetical $10,000 would have lost money. It's a way to see how well copying that trader would have performed for your money-->
-                </div>
               </div>
             </div>
         </div>
@@ -561,7 +267,6 @@
 <script src="{{ url_for('static', filename='js/cards-analytics.js') }}"></script>
 
 <script>
-
 document.addEventListener('DOMContentLoaded', function() {
     // Define the missing color variables
     const chartColors = {
