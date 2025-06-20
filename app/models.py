@@ -79,6 +79,9 @@ class TransactionType(Enum):
     FEE = "fee"
     TRANSFER = "transfer"
 
+class TransactionStatus(Enum):
+    PENDING = 'pending'
+    SUCCESS = 'success'
 
 class AssetType(Enum):
     CRYPTO = "crypto"
@@ -368,6 +371,7 @@ class Transaction(db.Model, TimestampMixin, SoftDeleteMixin):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     external_tx_id = db.Column(db.String(255), nullable=True, index=True)  # For blockchain txs
     notes = db.Column(db.Text, nullable=True)
+    status = db.Column(SQLAlchemyEnum(TransactionStatus), nullable=True)
 
     # Relationships
     user = db.relationship('User', back_populates='transactions')
@@ -504,6 +508,7 @@ class Trader(db.Model, TimestampMixin, SoftDeleteMixin):
     risk_score = db.Column(db.String(20), default='medium')  # low/medium/high
     is_verified = db.Column(db.Boolean, default=False)
     performance_metrics = db.Column(db.JSON)  # For storing additional stats
+    avatar_url = db.Column(db.String(255), nullable=True) # Stores the URL or path to the avatar image
     
     # Relationships
     user = db.relationship('User', backref=db.backref('trader_profile', uselist=False))

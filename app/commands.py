@@ -11,7 +11,7 @@ from sqlalchemy import exc
 from flask.cli import with_appcontext
 from datetime import datetime
 from .extensions import db
-from app.models import Asset, User, NetworkType, AssetType, Holding, DepositAddress, Trader, AssetType, MiningAlgorithm, HashrateUnit, MiningPool, MiningDifficulty, HashratePackage
+from app.models import Asset, User, NetworkType, AssetType, Holding, DepositAddress, Trader, AssetType, MiningAlgorithm, HashrateUnit, MiningPool, MiningDifficulty, HashratePackage, PackageType
 from .dashboard.services import CoinGeckoService
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError, NoResultFound
 from app.utils.network_symbol import get_network_symbol
@@ -642,6 +642,7 @@ def seed_traders_command(json_file):
                     trader.max_drawdown = Decimal(str(trader_data.get('max_drawdown', 0)))
                     trader.risk_score = trader_data.get('risk_score', 'medium')
                     trader.is_verified = trader_data.get('is_verified', False)
+                    trader.avatar_url = trader_data.get('avatar_url', '')
                     
                     # Update performance metrics JSON
                     if performance_metrics:
@@ -890,6 +891,98 @@ def standardize_packages_command():
         db.session.rollback()
         click.echo(f"\n❌ Error committing changes: {str(e)}")
 
+# Add this command to fix the package_type field in your database
+
+@click.command('fix-package-types')
+@with_appcontext
+def fix_package_types_command():
+    """Fix package_type field for hashrate packages based on their names."""
+    click.echo("Fixing package types...")
+    
+    # Get all hashrate packages
+    packages = HashratePackage.query.filter_by(is_active=True).all()
+    
+    if not packages:
+        click.echo("No active packages found.")
+        return
+    
+    click.echo(f"Found {len(packages)} active packages")
+    updated_count = 0
+    
+    for package in packages:
+        old_type = package.package_type.value if package.package_type else 'None'
+        
+        # Set package_type based on name
+        if package.name.lower() == 'basic':
+            package.package_type = PackageType.BASIC
+        elif package.name.lower() == 'pro':
+            package.package_type = PackageType.PRO
+        elif package.name.lower() == 'enterprise':
+            package.package_type = PackageType.ENTERPRISE
+        else:
+            # For any other names, try to map based on hashrate
+            # Get the pool's minimum hashrate
+            pool = MiningPool.query.get(package.pool_id)
+            if pool and pool.min_hashrate:
+                ratio = float(package.hashrate) / float(pool.min_hashrate)
+                if ratio <= 2:
+                    package.package_type = PackageType.BASIC
+                elif ratio <= 10:
+                    package.package_type = PackageType.PRO
+                else:
+                    package.package_type = PackageType.ENTERPRISE
+            else:
+                package.package_type = PackageType.BASIC  # Default fallback
+        
+        new_type = package.package_type.value
+        
+        if old_type != new_type:
+            click.echo(f"Pool {package.pool_id} - {package.name}: {old_type} → {new_type}")
+            updated_count += 1
+        else:
+            click.echo(f"Pool {package.pool_id} - {package.name}: {new_type} (no change)")
+    
+    # Commit changes
+    try:
+        db.session.commit()
+        click.echo(f"\n✅ Successfully updated {updated_count} package types")
+    except Exception as e:
+        db.session.rollback()
+        click.echo(f"\n❌ Error committing changes: {str(e)}")
+
+@click.command('deactivate-invalid-assets')
+@with_appcontext
+def deactivate_invalid_assets():
+    """Deactivate assets with null images and no deposit addresses in any network."""
+    count = 0
+    
+    # Get all assets that have null images
+    assets_with_null_images = Asset.query.filter(Asset.images.is_(None)).all()
+    
+    for asset in assets_with_null_images:
+        networks = asset.networks or []
+        
+        # Check if all networks have empty deposit addresses
+        has_deposit_address = False
+        for network in networks:
+            if network.get('deposit_address'):
+                has_deposit_address = True
+                break
+        
+        # If no deposit addresses found in any network, deactivate the asset
+        if not has_deposit_address:
+            asset.is_active = False
+            db.session.add(asset)
+            count += 1
+            click.echo(f"Deactivating asset {asset.symbol} (ID: {asset.id}) - null image and no deposit addresses")
+    
+    if count > 0:
+        db.session.commit()
+        click.echo(f"Successfully deactivated {count} assets")
+    else:
+        click.echo("No assets matching the criteria found")
+
+
 def init_app(app):
     app.cli.add_command(seed_db_command)
     app.cli.add_command(seed_holdings_command)
@@ -901,3 +994,5 @@ def init_app(app):
     app.cli.add_command(update_network_structure)
     app.cli.add_command(load_mining_data)
     app.cli.add_command(standardize_packages_command)
+    app.cli.add_command(fix_package_types_command)
+    app.cli.add_command(deactivate_invalid_assets)
