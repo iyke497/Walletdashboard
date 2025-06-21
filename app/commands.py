@@ -3,13 +3,14 @@ import click
 from decimal import Decimal
 import json
 import time
+import secrets
 import math
 import random
 import requests
 from faker import Faker
 from sqlalchemy import exc
 from flask.cli import with_appcontext
-from datetime import datetime
+from datetime import datetime, timedelta
 from .extensions import db
 from app.models import Asset, User, NetworkType, AssetType, Holding, DepositAddress, Trader, AssetType, MiningAlgorithm, HashrateUnit, MiningPool, MiningDifficulty, HashratePackage, PackageType
 from .dashboard.services import CoinGeckoService
@@ -983,6 +984,121 @@ def deactivate_invalid_assets():
         click.echo("No assets matching the criteria found")
 
 
+@click.command('populate-copy-tx')
+@with_appcontext
+def populate_copy_trading_transactions():
+    """Populate sample copy trading transactions for testing"""
+    # Import within app context to ensure proper initialization
+    from app.extensions import db
+    from app.models import CopyTrade, CopyTradeTransaction, Asset, User
+
+    click.echo("Starting transaction population...")
+    
+    # Get active copy trades
+    copy_trades = CopyTrade.query.filter(CopyTrade.is_active == True).all()
+    
+    if not copy_trades:
+        click.echo("No active copy trades found. Please create some copy trades first.")
+        return
+    
+    # Get some common trading pairs
+    btc = Asset.query.filter_by(symbol='btc').first()
+    eth = Asset.query.filter_by(symbol='eth').first() 
+    usdt = Asset.query.filter_by(symbol='usdt').first()
+    
+    if not all([btc, eth, usdt]):
+        click.echo("Required assets (BTC, ETH, USDT) not found. Please ensure these assets exist.")
+        return
+    
+    # Common trading pairs
+    trading_pairs = [
+        (btc.id, usdt.id, 45000, 47000),  # BTC/USDT price range
+        (eth.id, usdt.id, 2800, 3200),    # ETH/USDT price range
+    ]
+    
+    transactions_created = 0
+    
+    for copy_trade in copy_trades:
+        click.echo(f"Creating transactions for copy trade {copy_trade.id}")
+        
+        # Create 5-10 transactions per copy trade
+        num_transactions = random.randint(5, 10)
+        
+        for i in range(num_transactions):
+            # Pick random trading pair
+            base_asset_id, quote_asset_id, min_price, max_price = random.choice(trading_pairs)
+            
+            # Random trade details
+            trade_type = random.choice(['buy', 'sell'])
+            price = random.uniform(min_price, max_price)
+            
+            # Amount based on allocation and price
+            max_amount_usd = float(copy_trade.allocation) * 0.1  # Use 10% of allocation per trade
+            amount = max_amount_usd / price
+            
+            # Generate realistic P&L
+            # 60% chance of profit, 40% chance of loss
+            is_profitable = random.random() < 0.6
+            
+            if is_profitable:
+                pnl_percentage = random.uniform(1.0, 8.0)  # 1-8% profit
+            else:
+                pnl_percentage = random.uniform(-5.0, -0.5)  # 0.5-5% loss
+            
+            pnl = (max_amount_usd * pnl_percentage) / 100
+            
+            # Random timestamp in last 30 days
+            days_ago = random.randint(0, 30)
+            hours_ago = random.randint(0, 23)
+            transaction_time = datetime.utcnow() - timedelta(days=days_ago, hours=hours_ago)
+            
+            # Status
+            if days_ago == 0 and hours_ago < 2:  # Recent transactions might be pending
+                status = random.choice(['pending', 'completed'])
+                if status == 'pending':
+                    pnl = 0
+                    pnl_percentage = 0
+            else:
+                status = 'completed'
+            
+            # Create transaction
+            transaction = CopyTradeTransaction(
+                follower_id=copy_trade.follower_id,
+                copy_trade_id=copy_trade.id,
+                base_asset_id=base_asset_id,
+                quote_asset_id=quote_asset_id,
+                trade_type=trade_type,
+                amount=amount,
+                price=price,
+                pnl=pnl,
+                pnl_percentage=pnl_percentage,
+                status=status,
+                remark=f"Copy trade from {copy_trade.trader.user.username}" if status == 'completed' else 'Trade in progress',
+                external_tx_id=f"ctx_{secrets.token_hex(8)}",
+                transaction_timestamp=transaction_time
+            )
+            
+            db.session.add(transaction)
+            transactions_created += 1
+    
+    try:
+        db.session.commit()
+        click.echo(f"✅ Successfully created {transactions_created} copy trading transactions")
+        
+        # Print summary
+        for copy_trade in copy_trades:
+            tx_count = CopyTradeTransaction.query.filter_by(copy_trade_id=copy_trade.id).count()
+            total_pnl = db.session.query(db.func.sum(CopyTradeTransaction.pnl)).filter(
+                CopyTradeTransaction.copy_trade_id == copy_trade.id,
+                CopyTradeTransaction.status == 'completed'
+            ).scalar() or 0
+            
+            click.echo(f"📊 Copy Trade {copy_trade.id}: {tx_count} transactions, Total P&L: ${total_pnl:.2f}")
+            
+    except Exception as e:
+        db.session.rollback()
+        click.echo(f"❌ Error creating transactions: {str(e)}", err=True)
+
 def init_app(app):
     app.cli.add_command(seed_db_command)
     app.cli.add_command(seed_holdings_command)
@@ -996,3 +1112,4 @@ def init_app(app):
     app.cli.add_command(standardize_packages_command)
     app.cli.add_command(fix_package_types_command)
     app.cli.add_command(deactivate_invalid_assets)
+    app.cli.add_command(populate_copy_trading_transactions)

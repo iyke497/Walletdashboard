@@ -1,0 +1,190 @@
+{% extends 'layouts/vertical.html' %}
+
+{% block title %}Transfer Balance{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-8 col-xl-6">
+            <!-- Header -->
+            <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #6366f1, #311346);">
+                <div class="card-body text-center text-white py-4">
+                    <h4 class="fw-bold mb-2 text-white">
+                        <i class="ti tabler-transfer me-2"></i>
+                        Internal Transfer
+                    </h4>
+                    <p class="mb-0">Send crypto to other Bloxxxchain users instantly</p>
+                </div>
+            </div>
+
+            <!-- Transfer Form -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <form method="POST" action="{{ url_for('wallet.transfer_balance') }}">
+                        {{ form.hidden_tag() }}
+                        
+                        <!-- Recipient Email -->
+                        <div class="mb-4">
+                            {{ form.recipient_email.label(class="form-label fw-semibold") }}
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="ti tabler-mail"></i>
+                                </span>
+                                {{ form.recipient_email(class="form-control" + (" is-invalid" if form.recipient_email.errors else "")) }}
+                            </div>
+                            {% if form.recipient_email.errors %}
+                                {% for error in form.recipient_email.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                            <small class="text-muted">Enter the email address of the Bloxxxchain user</small>
+                        </div>
+
+                        <!-- Asset Selection -->
+                        <div class="mb-4">
+                            {{ form.asset.label(class="form-label fw-semibold") }}
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="ti tabler-coins"></i>
+                                </span>
+                                {{ form.asset(class="form-select" + (" is-invalid" if form.asset.errors else "")) }}
+                            </div>
+                            {% if form.asset.errors %}
+                                {% for error in form.asset.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                            <small class="text-muted">Select the cryptocurrency to transfer</small>
+                        </div>
+
+                        <!-- Amount -->
+                        <div class="mb-4">
+                            {{ form.amount.label(class="form-label fw-semibold") }}
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="ti tabler-currency-bitcoin"></i>
+                                </span>
+                                {{ form.amount(class="form-control" + (" is-invalid" if form.amount.errors else "")) }}
+                            </div>
+                            {% if form.amount.errors %}
+                                {% for error in form.amount.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                            <small class="text-muted">Enter the amount to transfer</small>
+                        </div>
+
+                        <!-- Note -->
+                        <div class="mb-4">
+                            {{ form.note.label(class="form-label fw-semibold") }}
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="ti tabler-note"></i>
+                                </span>
+                                {{ form.note(class="form-control" + (" is-invalid" if form.note.errors else "")) }}
+                            </div>
+                            {% if form.note.errors %}
+                                {% for error in form.note.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                            <small class="text-muted">Add a note for the recipient (optional)</small>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="d-grid">
+                            {{ form.submit(class="btn btn-outline-primary btn-sm me-2 w-25") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transfer History Sidebar -->
+        <div class="col-12 col-lg-4 col-xl-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="ti tabler-history me-2"></i>
+                        Recent Transfers
+                    </h6>
+                </div>
+                <div class="card-body p-0">
+                    {% if recent_transfers %}
+                        <div class="list-group list-group-flush">
+                            {% for transfer in recent_transfers %}
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="d-flex align-items-center">
+                                        {% if transfer.tx_type.value == 'transfer_out' %}
+                                            <div class="bg-danger bg-opacity-10 rounded-circle p-2 me-3">
+                                                <i class="ti tabler-arrow-up text-danger"></i>
+                                            </div>
+                                        {% else %}
+                                            <div class="bg-success bg-opacity-10 rounded-circle p-2 me-3">
+                                                <i class="ti tabler-arrow-down text-success"></i>
+                                            </div>
+                                        {% endif %}
+                                        <div>
+                                            <div class="fw-semibold">
+                                                {% if transfer.tx_type.value == 'transfer_out' %}
+                                                    Sent to {{ transfer.notes.split(' to ')[1].split(' - ')[0] if transfer.notes and ' to ' in transfer.notes else 'Unknown' }}
+                                                {% else %}
+                                                    Received from {{ transfer.notes.split(' from ')[1].split(' - ')[0] if transfer.notes and ' from ' in transfer.notes else 'Unknown' }}
+                                                {% endif %}
+                                            </div>
+                                            <small class="text-muted">{{ transfer.timestamp.strftime('%Y-%m-%d %H:%M') }}</small>
+                                        </div>
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="fw-bold {% if transfer.tx_type.value == 'transfer_out' %}text-danger{% else %}text-success{% endif %}">
+                                            {% if transfer.tx_type.value == 'transfer_out' %}-{% else %}+{% endif %}{{ transfer.amount | round(4, 'floor') }} {{ transfer.asset.symbol.upper() }}
+                                        </div>
+                                        <span class="badge bg-success">Completed</span>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="ti tabler-transfer text-muted mb-2" style="font-size: 2rem;"></i>
+                            <p class="text-muted mb-0">No transfers yet</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Transfer Tips -->
+            <div class="card border-0 shadow-sm mt-4">
+                <div class="card-header bg-info bg-opacity-10">
+                    <h6 class="mb-0 text-info">
+                        <i class="ti tabler-info-circle me-2"></i>
+                        Transfer Tips
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-2">
+                            <i class="ti tabler-check text-success me-2"></i>
+                            Transfers between Bloxxxchain users are instant and free
+                        </li>
+                        <li class="mb-2">
+                            <i class="ti tabler-check text-success me-2"></i>
+                            Both sender and recipient must have verified accounts
+                        </li>
+                        <li class="mb-2">
+                            <i class="ti tabler-check text-success me-2"></i>
+                            Double-check the recipient's email address
+                        </li>
+                        <li class="mb-0">
+                            <i class="ti tabler-check text-success me-2"></i>
+                            All transfers are recorded for your security
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

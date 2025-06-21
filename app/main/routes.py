@@ -54,3 +54,15 @@ def privacy_policy():
 @main_bp.route('/cookies')
 def cookies():
     return render_template('main/cookies.html')
+
+@main_bp.route('/copytrade-terms-and-conditions')
+def copytrade_terms_and_conditions():
+    return render_template('main/copytrade_terms.html')
+
+@main_bp.route('/learn-more-2fa')
+def learn_more_2fa():
+    return render_template('main/learn_more_2fa.html')
+
+@main_bp.route('/referal-program')
+def referal():
+    return render_template('main/referal.html')

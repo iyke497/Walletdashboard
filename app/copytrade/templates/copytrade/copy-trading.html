@@ -89,23 +89,21 @@
                     </div>
                 </div>
                         
-                <h4 class="fw-bold py-3 mb-4">Top traders to follow</h4>
+                <h4 class="fw-bold py-3 mb-4">Traders to follow</h4>
                     
                 <!-- Filter and Search Row -->
                 <div class="row align-items-center mb-3">
-                    <!-- Left side - Filter dropdowns -->
-                    <div class="col-md-8">
+                    <!-- Left side - Filter dropdowns and Search -->
+                    <div class="col-md-10">
                         <div class="d-flex gap-2">
                             <!-- Update filter dropdowns in copytrading.html -->
                             <!-- Sort By Dropdown -->
                             <div class="btn-group">
-                                <button type="button" class="btn btn-outline-secondary dropdown-toggle" 
-                                        data-bs-toggle="dropdown" aria-expanded="false">
+                                <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
                                     Sort By: {{ current_params.sort_by|title }}
                                 </button>
                                 <ul class="dropdown-menu">
-                                    {% for sort_option in [('win_rate', 'Win Rate'), ('avg_monthly_return', 'Monthly Return'), 
-                                                        ('max_drawdown', 'Max Drawdown')] %}
+                                    {% for sort_option in [('win_rate', 'Win Rate'), ('avg_monthly_return', 'Monthly Return'), ('max_drawdown', 'Max Drawdown')] %}
                                     <li>
                                         <a class="dropdown-item {% if current_params.sort_by == sort_option[0] %}active{% endif %}"
                                         href="{{ url_for('copytrade.trader_list', 
@@ -121,66 +119,33 @@
                                     {% endfor %}
                                 </ul>
                             </div>
-
-                            <!-- Market Dropdown -->
-                            <div class="btn-group">
-                                <button type="button" class="btn btn-outline-secondary dropdown-toggle"data-bs-toggle="dropdown" aria-expanded="false">
-                                    Market: {{ current_params.market|title }}
-                                </button>
-                                <ul class="dropdown-menu">
-                                    <li>
-                                        <a href="{{ url_for('copytrade.trader_list', 
-                                            market='all',
-                                            sort_by=current_params.sort_by,
-                                            sort_order=current_params.sort_order,
-                                            time_period=current_params.time_period,
-                                            search=current_params.search,
-                                            page=1) }}">
-                                            All Markets
-                                        </a>
-                                    </li>
-                                    {% for market in ['spot', 'futures'] %}
-                                    <li>
-                                        <a class="dropdown-item {% if current_params.market == market %}active{% endif %}"
-                                        href="{{ url_for('copytrade.trader_list', 
-                                                market=market,
-                                                sort_by=current_params.sort_by,
-                                                sort_order=current_params.sort_order,
-                                                time_period=current_params.time_period,
-                                                search=current_params.search,
-                                                page=1) }}">
-                                            {{ market|title }}
-                                        </a>
-                                    </li>
-                                    {% endfor %}
-                                </ul>
-                            </div>
+                            <!-- Search form -->
+                            <form method="GET" action="{{ url_for('copytrade.trader_list') }}" class="d-flex gap-2">
+                                <input type="hidden" name="sort_by" value="{{ current_params.sort_by }}">
+                                <input type="hidden" name="sort_order" value="{{ current_params.sort_order }}">
+                                <input type="hidden" name="market" value="{{ current_params.market }}">
+                                <input type="hidden" name="time_period" value="{{ current_params.time_period }}">
+                                
+                                <div class="input-group input-group-merge">
+                                    <span class="input-group-text">
+                                        <i class="icon-base ti tabler-search"></i>
+                                    </span>
+                                    <input type="text" class="form-control" name="search" placeholder="Search traders..." value="{{ current_params.search }}">
+                                </div>
+                                <button type="submit" class="btn btn-primary d-flex justify-content-center align-items-center">Search</button>
+                                {% if current_params.search %}
+                                <a href="{{ url_for('copytrade.trader_list') }}" class="btn btn-outline-secondary d-flex justify-content-center align-items-center">Clear</a>
+                                {% endif %}
+                            </form>
                         </div>
                     </div>
                     
-                    <!-- Right side - Search box -->
-                    <!-- Update search form in copytrading.html -->
-                    <form method="GET" action="{{ url_for('copytrade.trader_list') }}" class="d-flex gap-2">
-                        <input type="hidden" name="sort_by" value="{{ current_params.sort_by }}">
-                        <input type="hidden" name="sort_order" value="{{ current_params.sort_order }}">
-                        <input type="hidden" name="market" value="{{ current_params.market }}">
-                        <input type="hidden" name="time_period" value="{{ current_params.time_period }}">
-                        
-                        <div class="input-group input-group-merge">
-                            <span class="input-group-text">
-                                <i class="icon-base ti tabler-search"></i>
-                            </span>
-                            <input type="text" 
-                                class="form-control" 
-                                name="search" 
-                                placeholder="Search traders..." 
-                                value="{{ current_params.search }}">
-                        </div>
-                        <button type="submit" class="btn btn-primary">Search</button>
-                        {% if current_params.search %}
-                        <a href="{{ url_for('copytrade.trader_list') }}" class="btn btn-outline-secondary">Clear</a>
-                        {% endif %}
-                    </form>
+                    <!-- Right side - Copied Trades Button -->
+                    <div class="col-md-2 text-end">
+                        <a href="{{ url_for('copytrade.copy_transactions') }}" class="btn btn-primary">
+                            Orderbook
+                        </a>
+                    </div>
                 </div>
                 
                 <!-- Traders -->
@@ -313,7 +278,7 @@
 
                             <!-- Copy Modal -->
                             <!-- Inside your trader loop -->
-                            <div class="modal fade" id="copyTraderModal{{ trader.id }}" tabindex="-1" aria-hidden="true">
+                            <div class="modal fade" id="copyTraderModal{{ trader.id }}" tabindex="-1" aria-hidden="true">       
                                 <div class="modal-dialog" role="document">
                                     <div class="modal-content">
                                         <form method="POST" action="{{ url_for('copytrade.copy_trader', trader_id=trader.id) }}">
@@ -472,13 +437,17 @@
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="modal-footer">
-                                            <div class="form-check">
+                                        <div class="modal-footer flex-column align-items-stretch">
+                                            <div class="form-check text-start mb-3">
                                                 {{ form.agree_terms(id='agreeTerms', class='form-check-input') }}
-                                                <label class="form-check-label" for="agreeTerms">By clicking "Confirm Copy" I agree to the terms and conditions</label>
+                                                <label class="form-check-label" for="agreeTerms">
+                                                    By clicking "Confirm Copy" I agree to the <a href="{{ url_for('main.copytrade_terms_and_conditions') }}">terms and conditions.</a>
+                                                </label>
                                                 {% for error in form.agree_terms.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
                                             </div>
-                                            <button type="submit" class="btn btn-primary">{{ form.submit.label.text }}</button>
+                                            <div class="text-end">
+                                                <button type="submit" class="btn btn-primary btn-sm">{{ form.submit.label.text }}</button>
+                                            </div>
                                         </div>
                                         </form>
                                     </div>

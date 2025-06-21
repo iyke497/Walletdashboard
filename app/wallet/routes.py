@@ -5,7 +5,7 @@ from . import wallet_bp
 from app.extensions import db
 from app.decorators import email_verified_required
 from .services import WalletService
-from .forms import WithdrawForm, DepositForm
+from .forms import WithdrawForm, DepositForm, TransferForm, TransferConfirmationForm
 from app.models import Asset, AssetType, Holding, Transaction, TransactionType, TransactionStatus
 from decimal import Decimal, InvalidOperation
 import logging
@@ -366,3 +366,40 @@ def verify_withdrawal():
     except Exception as e:
         logger.error(f"Withdrawal verification error: {str(e)}", exc_info=True)
         return jsonify({'error': 'Verification failed'}), 500
+    
+# -------------------- Transfer --------------------
+
+@wallet_bp.route('/transfer', methods=['GET', 'POST'])
+@login_required
+@email_verified_required
+def transfer_balance():
+    """Transfer balance between Bloxxxchain users"""
+    form = TransferForm()
+    
+    if form.validate_on_submit():
+        try:
+            # Process the transfer
+            result = WalletService.transfer_between_users(
+                sender_id=current_user.id,
+                recipient_email=form.recipient_email.data,
+                asset_id=int(form.asset.data),
+                amount=form.amount.data,
+                note=form.note.data
+            )
+            
+            flash(f'✅ {result["message"]}', 'success')
+            flash(f'Transaction ID: #{result["sender_transaction"].id}', 'info')
+            return redirect(url_for('wallet.transfer_balance'))
+            
+        except ValueError as e:
+            flash(f'❌ {str(e)}', 'error')
+        except Exception as e:
+            logger.error(f"Transfer error: {str(e)}", exc_info=True)
+            flash('❌ An unexpected error occurred. Please try again.', 'error')
+    
+    # Get recent transfers for display
+    recent_transfers = WalletService.get_user_transfers(current_user.id, limit=10)
+    
+    return render_template('wallet/transfer.html', 
+                         form=form, 
+                         recent_transfers=recent_transfers)

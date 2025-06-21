@@ -2,7 +2,7 @@ from datetime import datetime
 from sqlalchemy import desc
 from sqlalchemy.orm import joinedload
 from sqlalchemy.exc import IntegrityError
-from app.models import Transaction, Asset, Holding, TransactionType, AssetType, ExchangeRate, TransactionStatus
+from app.models import User, Transaction, Asset, Holding, TransactionType, AssetType, ExchangeRate, TransactionStatus
 from app.extensions import db
 import qrcode
 from io import BytesIO
@@ -432,3 +432,170 @@ class WalletService:
             db.session.rollback()
             logger.error(f"Error confirming deposit: {str(e)}")
             raise ValueError(f"Failed to confirm deposit: {str(e)}")
+        
+    # Add these methods to your WalletService class
+
+    @staticmethod
+    def transfer_between_users(sender_id, recipient_email, asset_id, amount, note=None):
+        """
+        Transfer funds between Bloxxxchain users
+        """
+
+        try:
+            # Validate inputs
+            amount = Decimal(str(amount))
+            if amount <= 0:
+                raise ValueError("Transfer amount must be greater than 0")
+            
+            # Get sender (current user)
+            sender = User.query.get(sender_id)
+            if not sender:
+                raise ValueError("Sender not found")
+            
+            # Get recipient
+            recipient = User.query.filter_by(email=recipient_email.lower()).first()
+            if not recipient:
+                raise ValueError("Recipient not found")
+            
+            if sender.id == recipient.id:
+                raise ValueError("Cannot transfer to yourself")
+            
+            # Validate recipient is active and verified
+            if not recipient.is_active:
+                raise ValueError("Recipient account is not active")
+            
+            if not recipient.email_verified:
+                raise ValueError("Recipient must verify their email to receive transfers")
+            
+            # Get asset
+            asset = Asset.query.get(asset_id)
+            if not asset or not asset.is_active:
+                raise ValueError("Invalid asset")
+            
+            # Check sender's balance
+            sender_holding = Holding.query.filter_by(
+                user_id=sender_id,
+                asset_id=asset_id
+            ).first()
+            
+            if not sender_holding or sender_holding.balance < amount:
+                raise ValueError("Insufficient balance")
+            
+            # Begin transaction
+            # Deduct from sender
+            sender_holding.balance -= amount
+            
+            # Add to recipient (create holding if doesn't exist)
+            recipient_holding = Holding.query.filter_by(
+                user_id=recipient.id,
+                asset_id=asset_id
+            ).first()
+            
+            if recipient_holding:
+                recipient_holding.balance += amount
+            else:
+                recipient_holding = Holding(
+                    user_id=recipient.id,
+                    asset_id=asset_id,
+                    balance=amount
+                )
+                db.session.add(recipient_holding)
+            
+            # Create transaction records
+            # Outgoing transaction for sender
+            sender_transaction = Transaction(
+                user_id=sender_id,
+                asset_id=asset_id,
+                tx_type=TransactionType.TRANSFER_OUT,
+                amount=amount,
+                status=TransactionStatus.SUCCESS,
+                notes=f"Transfer to {recipient.email}" + (f" - {note}" if note else ""),
+                timestamp=datetime.utcnow()
+            )
+            
+            # Incoming transaction for recipient
+            recipient_transaction = Transaction(
+                user_id=recipient.id,
+                asset_id=asset_id,
+                tx_type=TransactionType.TRANSFER_IN,
+                amount=amount,
+                status=TransactionStatus.SUCCESS,
+                notes=f"Transfer from {sender.email}" + (f" - {note}" if note else ""),
+                timestamp=datetime.utcnow()
+            )
+            
+            db.session.add(sender_transaction)
+            db.session.add(recipient_transaction)
+            
+            # Commit all changes
+            db.session.commit()
+            
+            return {
+                'success': True,
+                'sender_transaction': sender_transaction,
+                'recipient_transaction': recipient_transaction,
+                'message': f'Successfully transferred {amount} {asset.symbol.upper()} to {recipient.email}'
+            }
+            
+        except Exception as e:
+            db.session.rollback()
+            raise e
+
+    @staticmethod
+    def get_transfer_preview(sender_id, recipient_email, asset_id, amount):
+        """
+        Get transfer preview without executing the transfer
+        """
+        
+        try:
+            amount = Decimal(str(amount))
+            
+            # Get recipient info
+            recipient = User.query.filter_by(email=recipient_email.lower()).first()
+            if not recipient:
+                raise ValueError("Recipient not found")
+            
+            # Get asset info
+            asset = Asset.query.get(asset_id)
+            if not asset:
+                raise ValueError("Asset not found")
+            
+            # Get sender's balance
+            sender_holding = Holding.query.filter_by(
+                user_id=sender_id,
+                asset_id=asset_id
+            ).first()
+            
+            current_balance = sender_holding.balance if sender_holding else Decimal('0')
+            remaining_balance = current_balance - amount
+            
+            return {
+                'recipient_email': recipient.email,
+                'recipient_name': f"{recipient.first_name} {recipient.last_name}" if recipient.first_name else recipient.email,
+                'asset_symbol': asset.symbol.upper(),
+                'asset_name': asset.name,
+                'transfer_amount': amount,
+                'current_balance': current_balance,
+                'remaining_balance': remaining_balance,
+                'fees': Decimal('0'),  # No fees for internal transfers
+                'total_deducted': amount
+            }
+            
+        except Exception as e:
+            raise e
+
+    @staticmethod
+    def get_user_transfers(user_id, limit=None):
+        """
+        Get user's transfer history (both sent and received)
+        """
+        
+        query = Transaction.query.filter(
+            Transaction.user_id == user_id,
+            Transaction.tx_type.in_([TransactionType.TRANSFER_IN, TransactionType.TRANSFER_OUT])
+        ).order_by(Transaction.timestamp.desc())
+        
+        if limit:
+            query = query.limit(limit)
+        
+        return query.all()

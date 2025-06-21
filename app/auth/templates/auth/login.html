@@ -47,6 +47,7 @@
           <p class="mb-6">Log-in to your Bloxxxchain account.</p>
 
           <form id="formAuthentication" class="mb-4" method="POST" action="{{ url_for('auth.login') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             {{ form.hidden_tag() }}
             <div class="mb-6 form-control-validation">
               {{ form.email_or_username.label(class="form-label") }}

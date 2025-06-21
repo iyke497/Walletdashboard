@@ -1,0 +1,270 @@
+{% extends 'layouts/vertical.html' %}
+
+{% block title %}Two-Factor Authentication (2FA) Guide{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-10 col-xl-8">
+            <!-- Header Card -->
+            <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #6366f1, #8b5cf6);">
+                <div class="card-body text-center text-white py-5">
+                    <h1 class="display-6 fw-bold text-white mb-3">
+                        <i class="ti tabler-shield-lock me-3"></i>
+                        Two-Factor Authentication (2FA)
+                    </h1>
+                    <p class="lead mb-0">Learn how to secure your account with an extra layer of protection</p>
+                </div>
+            </div>
+
+            <!-- What is 2FA -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <h3 class="text-primary border-bottom pb-2 mb-4">
+                        <i class="ti tabler-question-mark me-2"></i>
+                        What is Two-Factor Authentication?
+                    </h3>
+                    <p class="lead mb-4">Two-Factor Authentication (2FA) is a security mechanism that adds a second step to the login process. It enhances protection by requiring not only your password (something you know) but also a time-sensitive verification code (something you have).</p>
+                    <div class="alert alert-info bg-info bg-opacity-10 border-info">
+                        <strong>Enhanced Security:</strong> This drastically reduces the risk of unauthorized access—even if your password is compromised.
+                    </div>
+                </div>
+            </div>
+
+            <!-- How 2FA Works -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <h3 class="text-primary border-bottom pb-2 mb-4">
+                        <i class="ti tabler-settings me-2"></i>
+                        How 2FA Works
+                    </h3>
+                    <p class="mb-3">When you sign in:</p>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="card bg-white h-100">
+                                <div class="card-body text-center">
+                                    <div class="text-primary mb-3" style="font-size: 2rem;">
+                                        <i class="ti tabler-user-circle"></i>
+                                    </div>
+                                    <h6 class="fw-bold">Step 1</h6>
+                                    <p class="small mb-0">Enter your username and password</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-white h-100">
+                                <div class="card-body text-center">
+                                    <div class="text-primary mb-3" style="font-size: 2rem;">
+                                        <i class="ti tabler-device-mobile"></i>
+                                    </div>
+                                    <h6 class="fw-bold">Step 2</h6>
+                                    <p class="small mb-0">Get prompted for a TOTP code from your authenticator app</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-white h-100">
+                                <div class="card-body text-center">
+                                    <div class="text-success mb-3" style="font-size: 2rem;">
+                                        <i class="ti tabler-square-check"></i>
+                                    </div>
+                                    <h6 class="fw-bold">Step 3</h6>
+                                    <p class="small mb-0">Enter the code to complete login</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="alert alert-warning bg-warning bg-opacity-10 border-warning mt-3">
+                        <strong>Note:</strong> The TOTP is usually valid for 30 seconds and changes continuously.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Why Use 2FA -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <h3 class="text-primary border-bottom pb-2 mb-4">
+                        <i class="ti tabler-shield-check me-2"></i>
+                        Why Use 2FA?
+                    </h3>
+                    <div class="row g-4">
+                        <div class="col-md-4">
+                            <div class="d-flex align-items-start">
+                                <div class="text-success me-3" style="font-size: 2rem;">🔒</div>
+                                <div>
+                                    <h6 class="fw-bold">Stronger Security</h6>
+                                    <p class="small text-muted mb-0">Passwords alone are vulnerable to phishing, brute-force attacks, and data breaches.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="d-flex align-items-start">
+                                <div class="text-primary me-3" style="font-size: 2rem;">👤</div>
+                                <div>
+                                    <h6 class="fw-bold">Identity Protection</h6>
+                                    <p class="small text-muted mb-0">Prevents attackers from accessing your account, even if they steal your password.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="d-flex align-items-start">
+                                <div class="text-warning me-3" style="font-size: 2rem;">📱</div>
+                                <div>
+                                    <h6 class="fw-bold">User-Controlled</h6>
+                                    <p class="small text-muted mb-0">The second factor (your device) is entirely under your control and is not transmitted online.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Supported Authenticator Apps -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <h3 class="text-primary border-bottom pb-2 mb-4">
+                        <i class="ti tabler-apps me-2"></i>
+                        Supported Authenticator Apps
+                    </h3>
+                    <p class="mb-3">You can use any app that supports the TOTP protocol, including:</p>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center p-3 bg-light rounded">
+                                <i class="ti tabler-brand-google text-danger me-3" style="font-size: 1.5rem;"></i>
+                                <span class="fw-medium">Google Authenticator</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center p-3 bg-light rounded">
+                                <i class="ti tabler-brand-windows text-primary me-3" style="font-size: 1.5rem;"></i>
+                                <span class="fw-medium">Microsoft Authenticator</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center p-3 bg-light rounded">
+                                <i class="ti tabler-shield me-3 text-success" style="font-size: 1.5rem;"></i>
+                                <span class="fw-medium">Authy</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center p-3 bg-light rounded">
+                                <i class="ti tabler-key me-3 text-warning" style="font-size: 1.5rem;"></i>
+                                <span class="fw-medium">1Password</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center p-3 bg-light rounded">
+                                <i class="ti tabler-device-mobile me-3 text-info" style="font-size: 1.5rem;"></i>
+                                <span class="fw-medium">Duo Mobile</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Setup Instructions -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <h3 class="text-primary border-bottom pb-2 mb-4">
+                        <i class="ti tabler-list-numbers me-2"></i>
+                        Setup Instructions
+                    </h3>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <ol class="list-group list-group-numbered">
+                                <li class="list-group-item d-flex justify-content-between align-items-start border-0 px-0">
+                                    <div class="ms-2 me-auto">
+                                        <div class="fw-bold">Navigate to Security Settings</div>
+                                        Go to your Account Settings → Security → Two-Factor Authentication
+                                    </div>
+                                    <span class="badge bg-primary rounded-pill">1</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-start border-0 px-0">
+                                    <div class="ms-2 me-auto">
+                                        <div class="fw-bold">Scan QR Code</div>
+                                        Scan the QR code with your preferred authenticator app
+                                    </div>
+                                    <span class="badge bg-primary rounded-pill">2</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-start border-0 px-0">
+                                    <div class="ms-2 me-auto">
+                                        <div class="fw-bold">Verify Setup</div>
+                                        Enter the generated 6-digit code to verify setup
+                                    </div>
+                                    <span class="badge bg-primary rounded-pill">3</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-start border-0 px-0">
+                                    <div class="ms-2 me-auto">
+                                        <div class="fw-bold">Save Backup Codes</div>
+                                        Save your backup codes in a secure location
+                                    </div>
+                                    <span class="badge bg-primary rounded-pill">4</span>
+                                </li>
+                            </ol>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <i class="ti tabler-qrcode text-primary mb-3" style="font-size: 4rem;"></i>
+                                    <h6 class="text-muted">QR Code Example</h6>
+                                    <p class="small text-muted mb-0">Scan with your authenticator app</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Backup and Recovery -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <h3 class="text-primary border-bottom pb-2 mb-4">
+                        <i class="ti tabler-backup me-2"></i>
+                        Backup and Recovery
+                    </h3>
+                    <div class="alert alert-warning bg-warning bg-opacity-10 border-warning">
+                        <h6 class="alert-heading">
+                            <i class="ti tabler-alert-triangle me-2"></i>
+                            If you lose access to your device:
+                        </h6>
+                        <ul class="mb-3">
+                            <li>Use backup codes (provided during setup)</li>
+                            <li>Or follow the account recovery process outlined on the login page</li>
+                        </ul>
+                        <hr>
+                        <p class="mb-0">
+                            <strong>Important:</strong> We strongly recommend storing backup codes in a secure password manager.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Need Help -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <h3 class="text-primary border-bottom pb-2 mb-4">
+                        <i class="ti tabler-help me-2"></i>
+                        Need Help?
+                    </h3>
+                    <div class="alert alert-info bg-info bg-opacity-10 border-info text-center">
+                        <h6 class="text-info-emphasis mb-3">Having trouble with 2FA setup?</h6>
+                        <p class="mb-3">If you experience issues setting up or using 2FA, our support team is here to help.</p>
+                        <div class="d-flex justify-content-center gap-3 flex-wrap">
+                            <a href="{{ url_for('main.contact') }}" class="btn btn-primary">
+                                <i class="ti tabler-mail me-1"></i>Visit Support Page
+                            </a>
+                            <a href="mailto:support@bloxxxchain.com" class="btn btn-outline-primary">
+                                <i class="ti tabler-mail me-1"></i>Email Support
+                            </a>
+                            <a href="https://wa.me/17203353834" target="_blank" class="btn btn-outline-success">
+                                <i class="ti tabler-brand-whatsapp me-1"></i>WhatsApp
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -164,9 +164,9 @@
             
             <!-- Transfer Balance -->
             <li class="menu-item">
-              <a href="" class="menu-link">
+              <a href="{{ url_for('wallet.transfer_balance') }}" class="menu-link">
                 <i class="menu-icon icon-base ti tabler-arrows-transfer-up"></i>
-                <div data-i18n="Transfer">Transfer</div>
+                <div data-i18n="Transfer">Internal Transfer</div>
               </a>
             </li>
 
@@ -175,7 +175,7 @@
 
             <!-- Referals -->
             <li class="menu-item">
-              <a href="" class="menu-link">
+              <a href="{{ url_for('main.referal') }}" class="menu-link">
                 <i class="menu-icon icon-base ti tabler-refresh-dot"></i>
                 <div data-i18n="Referals">Referals</div>
               </a>
@@ -213,7 +213,7 @@
             </div>
 
             <div class="navbar-nav-right d-flex align-items-center justify-content-end" id="navbar-collapse">
-
+              
               <ul class="navbar-nav flex-row align-items-center ms-md-auto">
                 {% if current_user.is_authenticated %}
                 <!-- User -->
@@ -263,6 +263,7 @@
                 <!--/ User -->
                 {% endif %}
               </ul>
+             
             </div>
           </nav>
 
@@ -293,7 +294,7 @@
             <!-- Footer -->
             <section id="adv-footer">
 
-              <footer class="footer bg-dark">
+              <footer class="footer bg-light">
                 <div class="container-fluid container-p-x pt-12 pb-6">
                   <div class="row">
                     <div class="col-12 col-sm-6 col-md-4 mb-6 mb-sm-0">
@@ -307,14 +308,14 @@
                       </h4>
                       <span>Join our community</span>
                       <div class="social-icon rounded-circle my-4">
-                        <a href="https://www.instagram.com/bloxhain" class="btn btn-icon btn-sm btn-facebook me-2">
-                          <img src="{{ url_for('static', filename='img/logos/ig-logo.jpg') }}" alt="" class="icon" style="width: 32px; height: 32px; object-fit: cover; border-radius: 50%;">
+                        <a href="https://www.instagram.com/bloxhain" class="btn btn-icon btn-sm me-2">
+                          <img src="https://i.ibb.co/pB4N2tdk/ig.png" alt="" class="icon" style="width: 32px; height: 32px; object-fit: cover; border-radius: 50%;">
                         </a>
-                        <a href="https://x.com/bloxxxchain?s=21" class="btn btn-icon btn-sm btn-twitter me-2">
-                          <img src="{{ url_for('static', filename='img/logos/x-logo.jpg') }}" alt="" class="icon rounded-circle" style="width: 32px; height: 32px;">
+                        <a href="https://x.com/bloxxxchain?s=21" class="btn btn-icon btn-sm me-2">
+                          <img src="https://i.ibb.co/HLJTXgtX/xcom.png" alt="" class="icon rounded-circle" style="width: 32px; height: 32px;">
                         </a>
-                        <a href="https://wa.me/17203353834" class="btn btn-icon btn-sm ntn-whatsapp me-2">
-                          <img src="{{ url_for('static', filename='img/logos/wa-logo.jpg') }}" alt="" class="icon" style="width: 32px; height: 32px; object-fit: cover; border-radius: 50%;">
+                        <a href="https://wa.me/17203353834" class="btn btn-icon btn-sm me-2">
+                          <img src="https://i.ibb.co/4RdKH5nH/wa.png" alt="" class="icon" style="width: 32px; height: 32px; object-fit: cover; border-radius: 50%;">
                         </a>
                       </div>
                       <p class="pt-6">
@@ -328,6 +329,7 @@
                       <h5>Company</h5>
                       <ul class="list-unstyled">
                         <li><a href="{{ url_for('main.about') }}" class="footer-link d-block pb-2">About</a></li>
+                        <li><a href="{{ url_for('main.contact') }}" class="footer-link d-block pb-2">Get in touch</a></li>
                         <li><a href="{{ url_for('main.tos') }}" class="footer-link d-block pb-2">Terms of Service</a></li>
                         <li><a href="{{ url_for('main.privacy_policy') }}" class="footer-link d-block pb-2">Privacy Policy</a></li>
                         <li><a href="{{ url_for('main.cookies') }}" class="footer-link d-block pb-2">Cookies</a></li>

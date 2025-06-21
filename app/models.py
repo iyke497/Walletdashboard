@@ -77,7 +77,8 @@ class TransactionType(Enum):
     STAKE = "stake"
     UNSTAKE = "unstake"
     FEE = "fee"
-    TRANSFER = "transfer"
+    TRANSFER_IN = 'transfer_in'    # Receiving a transfer
+    TRANSFER_OUT = 'transfer_out'  # Sending a transfer
 
 class TransactionStatus(Enum):
     PENDING = 'pending'
@@ -538,6 +539,85 @@ class CopyTrade(db.Model, TimestampMixin, SoftDeleteMixin):
     def __repr__(self):
         return f"<CopyTrade {self.follower.username} -> {self.trader.user.username}>"
 
+class CopyTradeTransaction(db.Model, TimestampMixin, SoftDeleteMixin):
+    """Model for tracking individual copy trading transactions"""
+    __tablename__ = 'copy_trade_transactions'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    
+    # User who is copying (follower)
+    follower_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    
+    # Link to the copy trade relationship
+    copy_trade_id = db.Column(db.Integer, db.ForeignKey('copy_trades.id'), nullable=False, index=True)
+    
+    # Trading pair information
+    base_asset_id = db.Column(db.Integer, db.ForeignKey('assets.id'), nullable=False)
+    quote_asset_id = db.Column(db.Integer, db.ForeignKey('assets.id'), nullable=False)
+    
+    # Trade details
+    trade_type = db.Column(db.String(10), nullable=False)  # 'buy' or 'sell'
+    amount = db.Column(db.Numeric(30, 18), nullable=False)  # Amount traded
+    price = db.Column(db.Numeric(30, 18), nullable=False)   # Price at execution
+    
+    # P&L information
+    pnl = db.Column(db.Numeric(15, 2), nullable=False, default=0)  # Profit/Loss in USD
+    pnl_percentage = db.Column(db.Numeric(8, 4), nullable=False, default=0)  # P&L percentage
+    
+    # Transaction details
+    external_tx_id = db.Column(db.String(100), nullable=True)  # External transaction ID
+    status = db.Column(db.String(20), nullable=False, default='pending')  # pending, completed, failed
+    remark = db.Column(db.Text, nullable=True)  # Additional notes or error messages
+    
+    # Timestamps - inherits created_at and updated_at from TimestampMixin
+    transaction_timestamp = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
+    completed_at = db.Column(db.DateTime, nullable=True)
+    
+    # Relationships
+    follower = db.relationship('User', backref='copy_transactions')
+    copy_trade = db.relationship('CopyTrade', backref='transactions')
+    base_asset = db.relationship('Asset', foreign_keys=[base_asset_id], backref='base_copy_transactions')
+    quote_asset = db.relationship('Asset', foreign_keys=[quote_asset_id], backref='quote_copy_transactions')
+    
+    __table_args__ = (
+        CheckConstraint('amount > 0', name='ck_copy_tx_amount_positive'),
+        CheckConstraint('price > 0', name='ck_copy_tx_price_positive'),
+        db.Index('idx_copy_tx_follower_status', 'follower_id', 'status'),
+        db.Index('idx_copy_tx_timestamp', 'transaction_timestamp'),
+    )
+    
+    def __repr__(self):
+        return f'<CopyTradeTransaction {self.id}: {self.trader_name} - {self.pnl}>'
+    
+    @property
+    def is_profitable(self):
+        """Check if this transaction was profitable"""
+        return self.pnl > 0
+    
+    @property
+    def pair_symbol(self):
+        """Get trading pair symbol"""
+        return f"{self.base_asset.symbol.upper()}/{self.quote_asset.symbol.upper()}"
+    
+    @property
+    def trader_name(self):
+        """Get trader name from the copy trade relationship"""
+        return self.copy_trade.trader.user.username if self.copy_trade and self.copy_trade.trader else "Unknown Trader"
+    
+    @property
+    def trader_username(self):
+        """Get trader username from the copy trade relationship"""
+        return self.copy_trade.trader.user.username if self.copy_trade and self.copy_trade.trader and self.copy_trade.trader.user else None
+    
+    @property
+    def trader_avatar(self):
+        """Get trader avatar from the copy trade relationship"""
+        return self.copy_trade.trader.avatar_url if self.copy_trade and self.copy_trade.trader else None
+    
+    @property
+    def timestamp(self):
+        """Alias for transaction_timestamp to match template expectations"""
+        return self.transaction_timestamp
 # ---- Mining Models ----
 class MiningPool(db.Model, TimestampMixin, SoftDeleteMixin):
     """Mining pools available for different cryptocurrencies"""

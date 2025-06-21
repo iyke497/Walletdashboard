@@ -52,8 +52,18 @@
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('admin.assets_list') }}">
+                                <i class="bi bi-currency-exchange"></i> Assets
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('admin.users') }}">
                                 <i class="bi bi-people"></i> Users
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('admin.copy_transactions_admin') }}">
+                                <i class="bi bi-box"></i>Copy Trading Data
                             </a>
                         </li>
                     </ul>

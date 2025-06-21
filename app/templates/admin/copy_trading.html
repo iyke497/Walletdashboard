@@ -1,0 +1,303 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Copy Trading Transactions Admin{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Copy Trading Transactions</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('copytrade.copy_transactions') }}" class="btn btn-outline-primary" target="_blank">
+            <i class="bi bi-eye"></i> View Live Table
+        </a>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="row mb-4">
+    <div class="col-lg-2 col-md-4 col-6">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4 class="text-primary">{{ stats.total_transactions }}</h4>
+                <small class="text-muted">Total Transactions</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-2 col-md-4 col-6">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4 class="text-success">{{ stats.completed_transactions }}</h4>
+                <small class="text-muted">Completed</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-2 col-md-4 col-6">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4 class="text-warning">{{ stats.pending_transactions }}</h4>
+                <small class="text-muted">Pending</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-2 col-md-4 col-6">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4 class="text-info">{{ stats.users }}</h4>
+                <small class="text-muted">Users</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-2 col-md-4 col-6">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4 class="text-secondary">{{ stats.traders }}</h4>
+                <small class="text-muted">Traders</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-2 col-md-4 col-6">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4 class="text-dark">{{ stats.assets }}</h4>
+                <small class="text-muted">Assets</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Action Cards -->
+<div class="row mb-4">
+    <!-- Create Single Transaction -->
+    <div class="col-md-6 mb-3">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Create Transaction</h5>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('admin.create_copy_transaction') }}" method="POST">
+                    {{ csrf_token() }}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Follower</label>
+                                <select name="follower_id" class="form-select" required>
+                                    <option value="">Select follower...</option>
+                                    {% for user in users %}
+                                    <option value="{{ user.id }}">{{ user.username }} ({{ user.email }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Trader</label>
+                                <select name="trader_id" class="form-select" required>
+                                    <option value="">Select trader...</option>
+                                    {% for trader in traders %}
+                                    <option value="{{ trader.id }}">{{ trader.user.username }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Base Asset</label>
+                                <select name="base_asset_id" class="form-select" required>
+                                    <option value="">Select base asset...</option>
+                                    {% for asset in assets %}
+                                    <option value="{{ asset.id }}">{{ asset.symbol.upper() }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Quote Asset</label>
+                                <select name="quote_asset_id" class="form-select" required>
+                                    <option value="">Select quote asset...</option>
+                                    {% for asset in assets %}
+                                    <option value="{{ asset.id }}" {% if asset.symbol == 'usdt' %}selected{% endif %}>{{ asset.symbol.upper() }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Trade Type</label>
+                                <select name="trade_type" class="form-select" required>
+                                    <option value="buy">Buy</option>
+                                    <option value="sell">Sell</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Amount</label>
+                                <input type="number" name="amount" class="form-control" step="0.00000001" placeholder="0.001" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Price ($)</label>
+                                <input type="number" name="price" class="form-control" step="0.01" placeholder="45000" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">P&L ($)</label>
+                                <input type="number" name="pnl" class="form-control" step="0.01" placeholder="125.50">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Status</label>
+                                <select name="status" class="form-select">
+                                    <option value="completed">Completed</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="failed">Failed</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Remark</label>
+                                <input type="text" name="remark" class="form-control" placeholder="Optional note">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-plus"></i> Create Transaction
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bulk Actions -->
+    <div class="col-md-6 mb-3">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">Bulk Actions</h5>
+            </div>
+            <div class="card-body">
+                <!-- Bulk Create -->
+                <form action="{{ url_for('admin.bulk_create_transactions') }}" method="POST" class="mb-3">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <div class="mb-3">
+                        <label class="form-label">Create Sample Transactions</label>
+                        <input type="number" name="count" class="form-control" value="20" min="1" max="100">
+                        <div class="form-text">Creates realistic transactions with 70% win rate</div>
+                    </div>
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="bi bi-lightning"></i> Create {{ "20" }} Sample Transactions
+                    </button>
+                </form>
+                
+                <hr>
+                
+                <!-- Clear All -->
+                <form action="{{ url_for('admin.clear_transactions') }}" method="POST" 
+                      onsubmit="return confirm('Are you sure? This will delete ALL copy trading transactions.')">
+                    <button type="submit" class="btn btn-danger w-100">
+                        <i class="bi bi-trash"></i> Clear All Transactions
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Transactions -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Recent Transactions</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_transactions %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Follower</th>
+                                <th>Trader</th>
+                                <th>Pair</th>
+                                <th>Type</th>
+                                <th>Amount</th>
+                                <th>P&L</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for tx in recent_transactions %}
+                            <tr>
+                                <td>{{ tx.transaction_timestamp.strftime('%m/%d %H:%M') }}</td>
+                                <td>{{ tx.follower.username }}</td>
+                                <td>{{ tx.trader_name }}</td>
+                                <td>{{ tx.pair_symbol }}</td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if tx.trade_type == 'buy' else 'danger' }}">
+                                        {{ tx.trade_type.upper() }}
+                                    </span>
+                                </td>
+                                <td>{{ "{:.6f}".format(tx.amount) }}</td>
+                                <td class="{% if tx.pnl > 0 %}text-success{% elif tx.pnl < 0 %}text-danger{% endif %}">
+                                    {% if tx.pnl > 0 %}+{% endif %}${{ "{:.2f}".format(tx.pnl) }}
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if tx.status == 'completed' else 'warning' if tx.status == 'pending' else 'danger' }}">
+                                        {{ tx.status.title() }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <p class="text-muted">No transactions found. Create some transactions to see them here.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-populate realistic values for testing
+document.addEventListener('DOMContentLoaded', function() {
+    const amountInput = document.querySelector('input[name="amount"]');
+    const priceInput = document.querySelector('input[name="price"]');
+    const pnlInput = document.querySelector('input[name="pnl"]');
+    
+    // When base asset changes, suggest realistic values
+    document.querySelector('select[name="base_asset_id"]').addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        const symbol = selectedOption.text.toLowerCase();
+        
+        if (symbol.includes('btc')) {
+            amountInput.value = '0.001';
+            priceInput.value = '45000';
+            pnlInput.value = '45';
+        } else if (symbol.includes('eth')) {
+            amountInput.value = '0.1';
+            priceInput.value = '2500';
+            pnlInput.value = '25';
+        }
+    });
+});
+</script>
+
+{% endblock %}

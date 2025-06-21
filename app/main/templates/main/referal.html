@@ -1,0 +1,203 @@
+{% extends 'layouts/vertical.html' %}
+
+{% block title %}Referral Program - Invite & Earn Crypto{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3 px-2">
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-10 col-xl-8">
+            <!-- Header Card -->
+            <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #6366f1, #8b5cf6);">
+                <div class="card-body text-center text-white py-5">
+                    <h1 class="display-5 fw-bold text-white mb-3">
+                        <i class="ti tabler-gift me-3"></i>
+                        Bloxxxchain Referral Program
+                    </h1>
+                    <h3 class="fw-bold mb-4">Invite & Earn Crypto!</h3>
+                    <p class="lead mb-0">Welcome to the Bloxxxchain Referral Program! Invite your friends to join the most secure and scalable blockchain ecosystem – and get rewarded in $BLX tokens!</p>
+                </div>
+            </div>
+
+            <!-- Referral Link Card -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <h3 class="text-primary mb-4">
+                        <i class="ti tabler-link me-2"></i>
+                        Your Unique Referral Link
+                    </h3>
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control form-control-lg" 
+                               id="referralLink" 
+                               value="https://bloxxxchain.io/referral?code={{ current_user.username }}" 
+                               readonly>
+                        <button class="btn btn-primary btn-lg px-4" type="button" onclick="copyReferralLink()">
+                            <i class="ti tabler-copy me-2"></i>Copy
+                        </button>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <button class="btn btn-outline-primary w-100" onclick="shareViaWhatsApp()">
+                                <i class="ti tabler-brand-whatsapp me-2"></i>Share via WhatsApp
+                            </button>
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-outline-primary w-100" onclick="shareViaTelegram()">
+                                <i class="ti tabler-brand-telegram me-2"></i>Share via Telegram
+                            </button>
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-outline-primary w-100" onclick="shareViaEmail()">
+                                <i class="ti tabler-mail me-2"></i>Share via Email
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Why Refer Section -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <h3 class="text-primary border-bottom pb-2 mb-4">
+                        🏆 Why Refer Bloxxxchain?
+                    </h3>
+                    <div class="row g-4">
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <div class="bg-warning bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                                    <span style="font-size: 2.5rem;">💰</span>
+                                </div>
+                                <h5 class="fw-bold">Instant Rewards</h5>
+                                <p class="text-muted">Earn up to 100 $BLX per successful referral.</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                                    <span style="font-size: 2.5rem;">🛡️</span>
+                                </div>
+                                <h5 class="fw-bold">Trusted Network</h5>
+                                <p class="text-muted">Bloxxxchain is built on next-gen decentralized infrastructure.</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                                    <span style="font-size: 2.5rem;">🔒</span>
+                                </div>
+                                <h5 class="fw-bold">Secure and Transparent</h5>
+                                <p class="text-muted">All rewards are verifiable on-chain.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- How It Works Section -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <h3 class="text-primary border-bottom pb-2 mb-4">
+                        🚀 How It Works
+                    </h3>
+                    <div class="row g-4">
+                        <div class="col-md-4">
+                            <div class="card bg-light h-100">
+                                <div class="card-body text-center">
+                                    <div class="text-primary mb-3" style="font-size: 3rem;">
+                                        <span class="badge bg-primary rounded-circle" style="width: 50px; height: 50px; display: inline-flex; align-items: center; justify-content: center; font-size: 1.5rem;">1</span>
+                                    </div>
+                                    <h6 class="fw-bold">Share Your Link</h6>
+                                    <p class="small mb-0">Copy your unique referral link and share it with friends via social media, email, or messaging apps.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light h-100">
+                                <div class="card-body text-center">
+                                    <div class="text-primary mb-3" style="font-size: 3rem;">
+                                        <span class="badge bg-primary rounded-circle" style="width: 50px; height: 50px; display: inline-flex; align-items: center; justify-content: center; font-size: 1.5rem;">2</span>
+                                    </div>
+                                    <h6 class="fw-bold">Friend Signs Up</h6>
+                                    <p class="small mb-0">Your friend clicks your link, creates an account, and completes their profile verification.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light h-100">
+                                <div class="card-body text-center">
+                                    <div class="text-success mb-3" style="font-size: 3rem;">
+                                        <span class="badge bg-success rounded-circle" style="width: 50px; height: 50px; display: inline-flex; align-items: center; justify-content: center; font-size: 1.5rem;">3</span>
+                                    </div>
+                                    <h6 class="fw-bold">Earn Rewards</h6>
+                                    <p class="small mb-0">Once they make their first trade or deposit, you both receive $BLX tokens!</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Terms and Conditions -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <h3 class="text-primary border-bottom pb-2 mb-4">
+                        <i class="ti tabler-file-text me-2"></i>
+                        Terms & Conditions
+                    </h3>
+                    <div class="alert alert-info bg-info bg-opacity-10 border-info">
+                        <ul class="mb-0">
+                            <li>Referral rewards are credited within 24 hours of your friend's successful verification</li>
+                            <li>Both referrer and referee must complete KYC verification to receive rewards</li>
+                            <li>Self-referrals and fraudulent activities will result in account suspension</li>
+                            <li>Bloxxxchain reserves the right to modify the referral program terms at any time</li>
+                            <li>Minimum withdrawal for referral rewards is 50 $BLX tokens</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+function copyReferralLink() {
+    const linkInput = document.getElementById('referralLink');
+    linkInput.select();
+    linkInput.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(linkInput.value).then(function() {
+        showToast('Referral link copied to clipboard!', 'success');
+    }, function(err) {
+        console.error('Could not copy link: ', err);
+        showToast('Failed to copy link', 'danger');
+    });
+}
+
+function shareViaWhatsApp() {
+    const link = document.getElementById('referralLink').value;
+    const message = `Join me on Bloxxxchain, the most secure blockchain platform! Sign up with my referral link and we both earn $BLX tokens: ${link}`;
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+}
+
+function shareViaTelegram() {
+    const link = document.getElementById('referralLink').value;
+    const message = `Join me on Bloxxxchain! 🚀 Sign up with my referral link: ${link}`;
+    const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(message)}`;
+    window.open(telegramUrl, '_blank');
+}
+
+function shareViaEmail() {
+    const link = document.getElementById('referralLink').value;
+    const subject = 'Join me on Bloxxxchain - Earn Crypto Together!';
+    const body = `Hi!\n\nI wanted to invite you to join Bloxxxchain, an amazing blockchain platform where we can both earn crypto.\n\nSign up using my referral link: ${link}\n\nOnce you complete verification and make your first trade, we both get rewarded with $BLX tokens!\n\nThanks!`;
+    const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailtoUrl;
+}
+
+// Toast function (assuming you have this from other pages)
+function showToast(message, variant = 'primary') {
+    // Implementation depends on your existing toast system
+    console.log(`Toast: ${message} (${variant})`);
+}
+</script>
+{% endblock %}

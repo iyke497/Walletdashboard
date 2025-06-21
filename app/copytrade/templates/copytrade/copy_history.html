@@ -1,0 +1,513 @@
+{% extends "layouts/vertical.html" %}
+
+{% block title %}Copy Trading Transactions{% endblock %}
+
+{% block page_title %}Copy Trading Transactions{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  
+  <!-- Page Header -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h4 class="mb-1">Copy Trading Transactions</h4>
+          <p class="text-muted mb-0">Track your copy trading performance and transaction history</p>
+        </div>
+        <div class="d-flex gap-2">
+          <a href="{{ url_for('copytrade.trader_list') }}" class="btn btn-outline-primary">
+            <i class="ti tabler-arrow-left me-1"></i>
+            Back to Traders
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Statistics Cards -->
+  <div class="row mb-4">
+    <div class="col-lg-3 col-md-6">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
+              <h6 class="card-title mb-1">Total P&L</h6>
+              <h4 class="mb-0 {% if total_pnl >= 0 %}text-success{% else %}text-danger{% endif %}">
+                {% if total_pnl >= 0 %}+{% endif %}${{ "{:,.2f}".format(total_pnl) }}
+              </h4>
+            </div>
+            <div class="avatar">
+              <span class="avatar-initial rounded bg-label-{% if total_pnl >= 0 %}success{% else %}danger{% endif %}">
+                <i class="ti tabler-{% if total_pnl >= 0 %}trending-up{% else %}trending-down{% endif %}"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
+              <h6 class="card-title mb-1">Win Rate</h6>
+              <h4 class="mb-0">{{ "{:.1f}".format(win_rate) }}%</h4>
+            </div>
+            <div class="avatar">
+              <span class="avatar-initial rounded bg-label-info">
+                <i class="ti tabler-target"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
+              <h6 class="card-title mb-1">Total Trades</h6>
+              <h4 class="mb-0">{{ total_trades }}</h4>
+            </div>
+            <div class="avatar">
+              <span class="avatar-initial rounded bg-label-primary">
+                <i class="ti tabler-chart-bar"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
+              <h6 class="card-title mb-1">Profitable Trades</h6>
+              <h4 class="mb-0 text-success">{{ profitable_trades }}</h4>
+            </div>
+            <div class="avatar">
+              <span class="avatar-initial rounded bg-label-success">
+                <i class="ti tabler-trophy"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters Row -->
+  <div class="row align-items-center mb-3">
+    <div class="col-md-10">
+      <div class="d-flex gap-2 flex-wrap">
+        <!-- Status Filter -->
+        <div class="btn-group">
+          <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+            Status: {{ current_params.status|default('All')|title }}
+          </button>
+          <ul class="dropdown-menu">
+            {% for status_option in [('all', 'All'), ('profit', 'Profit'), ('loss', 'Loss'), ('pending', 'Pending'), ('completed', 'Completed')] %}
+            <li>
+              <a class="dropdown-item {% if current_params.status == status_option[0] %}active{% endif %}"
+                 href="{{ url_for('copytrade.copy_transactions', 
+                         status=status_option[0],
+                         trader_id=current_params.trader_id,
+                         page=1) }}">
+                {{ status_option[1] }}
+              </a>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+        
+        <!-- Trader Filter -->
+        {% if copied_traders %}
+        <div class="btn-group">
+          <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+            Trader: {% if current_params.trader_id %}Selected{% else %}All{% endif %}
+          </button>
+          <ul class="dropdown-menu">
+            <li>
+              <a class="dropdown-item {% if not current_params.trader_id %}active{% endif %}"
+                 href="{{ url_for('copytrade.copy_transactions', 
+                         status=current_params.status,
+                         page=1) }}">
+                All Traders
+              </a>
+            </li>
+            {% for trader in copied_traders %}
+            <li>
+              <a class="dropdown-item {% if current_params.trader_id|string == trader.trader_id|string %}active{% endif %}"
+                 href="{{ url_for('copytrade.copy_transactions', 
+                         status=current_params.status,
+                         trader_id=trader.trader_id,
+                         page=1) }}">
+                {{ trader.trader_name }}
+              </a>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+
+        <!-- Date Range Filter -->
+        <div class="btn-group">
+          <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+            Period: {{ current_params.period|default('All Time')|title }}
+          </button>
+          <ul class="dropdown-menu">
+            {% for period_option in [('all', 'All Time'), ('today', 'Today'), ('week', 'This Week'), ('month', 'This Month')] %}
+            <li>
+              <a class="dropdown-item {% if current_params.period == period_option[0] %}active{% endif %}"
+                 href="{{ url_for('copytrade.copy_transactions', 
+                         status=current_params.status,
+                         trader_id=current_params.trader_id,
+                         period=period_option[0],
+                         page=1) }}">
+                {{ period_option[1] }}
+              </a>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Export Button -->
+    <div class="col-md-2 text-md-end text-start mt-2 mt-md-0">
+      <button type="button" class="btn btn-outline-primary" onclick="exportTransactions()">
+        <i class="ti tabler-download me-1"></i>
+        Export CSV
+      </button>
+    </div>
+  </div>
+
+  <!-- Transactions Table -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">Transaction History</h5>
+          <small class="text-muted">
+            {% if pagination.total > 0 %}
+              {{ pagination.total }} transaction{{ 's' if pagination.total != 1 else '' }}
+            {% endif %}
+          </small>
+        </div>
+        <div class="table-responsive text-nowrap">
+          <table class="table table-hover">
+            <thead class="table-light">
+              <tr class="text-nowrap">
+                <th>
+                  <a href="{{ url_for('copytrade.copy_transactions', 
+                             sort_by='timestamp',
+                             sort_order='desc' if current_params.sort_by == 'timestamp' and current_params.sort_order == 'asc' else 'asc',
+                             **current_params) }}" 
+                     class="text-decoration-none text-dark">
+                    Date
+                    {% if current_params.sort_by == 'timestamp' %}
+                      <i class="ti tabler-chevron-{{ 'up' if current_params.sort_order == 'asc' else 'down' }} ms-1"></i>
+                    {% endif %}
+                  </a>
+                </th>
+                <th>Trader</th>
+                <th>Pair</th>
+                <th>
+                  <a href="{{ url_for('copytrade.copy_transactions', 
+                             sort_by='pnl',
+                             sort_order='desc' if current_params.sort_by == 'pnl' and current_params.sort_order == 'asc' else 'asc',
+                             **current_params) }}" 
+                     class="text-decoration-none text-dark">
+                    PnL
+                    {% if current_params.sort_by == 'pnl' %}
+                      <i class="ti tabler-chevron-{{ 'up' if current_params.sort_order == 'asc' else 'down' }} ms-1"></i>
+                    {% endif %}
+                  </a>
+                </th>
+                <th>Remark</th>
+                <th>TXid</th>
+              </tr>
+            </thead>
+            <tbody class="table-border-bottom-0">
+              {% if copy_transactions %}
+                {% for transaction in copy_transactions %}
+                <tr>
+                  <td>
+                    <div class="d-flex flex-column">
+                      <span class="fw-medium">{{ transaction.timestamp.strftime('%Y-%m-%d') }}</span>
+                      <small class="text-muted">{{ transaction.timestamp.strftime('%H:%M:%S') }}</small>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="d-flex align-items-center">
+                      {% if transaction.trader_avatar %}
+                        <img src="{{ transaction.trader_avatar }}" 
+                             alt="{{ transaction.trader_name }}" 
+                             class="rounded-circle me-2" 
+                             style="width: 32px; height: 32px;">
+                      {% else %}
+                        <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center me-2 text-white" 
+                             style="width: 32px; height: 32px; font-size: 12px; font-weight: 600;">
+                          {{ transaction.trader_name[0].upper() }}
+                        </div>
+                      {% endif %}
+                      <div>
+                        <div class="fw-medium">{{ transaction.trader_name }}</div>
+                        {% if transaction.trader_username %}
+                        <small class="text-muted">@{{ transaction.trader_username }}</small>
+                        {% endif %}
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="d-flex align-items-center">
+                      <div class="d-flex align-items-center me-2">
+                        {% if transaction.base_asset.images and transaction.base_asset.images.get('thumb') %}
+                          <img src="{{ transaction.base_asset.images.get('thumb') }}" 
+                               alt="{{ transaction.base_asset.symbol }}" 
+                               class="rounded-circle me-1" 
+                               style="width: 20px; height: 20px;">
+                        {% endif %}
+                        {% if transaction.quote_asset.images and transaction.quote_asset.images.get('thumb') %}
+                          <img src="{{ transaction.quote_asset.images.get('thumb') }}" 
+                               alt="{{ transaction.quote_asset.symbol }}" 
+                               class="rounded-circle" 
+                               style="width: 20px; height: 20px; margin-left: -8px;">
+                        {% endif %}
+                      </div>
+                      <div>
+                        <div class="fw-medium">{{ transaction.pair_symbol }}</div>
+                        <small class="text-muted">
+                          <span class="badge badge-sm bg-label-{{ 'success' if transaction.trade_type == 'buy' else 'danger' }}">
+                            {{ transaction.trade_type.upper() }}
+                          </span>
+                        </small>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    {% if transaction.pnl > 0 %}
+                      <div class="d-flex align-items-center">
+                        <i class="ti tabler-trending-up text-success me-1"></i>
+                        <span class="fw-medium text-success">+${{ "{:,.2f}".format(transaction.pnl) }}</span>
+                      </div>
+                    {% elif transaction.pnl < 0 %}
+                      <div class="d-flex align-items-center">
+                        <i class="ti tabler-trending-down text-danger me-1"></i>
+                        <span class="fw-medium text-danger">-${{ "{:,.2f}".format(transaction.pnl|abs) }}</span>
+                      </div>
+                    {% else %}
+                      <span class="fw-medium text-muted">$0.00</span>
+                    {% endif %}
+                    <div>
+                      <small class="text-muted">{{ "{:.2f}".format(transaction.pnl_percentage) }}%</small>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="d-flex flex-column">
+                      {% if transaction.status == 'completed' %}
+                        <span class="badge bg-label-success mb-1">Completed</span>
+                      {% elif transaction.status == 'pending' %}
+                        <span class="badge bg-label-warning mb-1">Pending</span>
+                      {% elif transaction.status == 'failed' %}
+                        <span class="badge bg-label-danger mb-1">Failed</span>
+                      {% else %}
+                        <span class="badge bg-label-secondary mb-1">{{ transaction.status.title() }}</span>
+                      {% endif %}
+                      {% if transaction.remark %}
+                        <small class="text-muted" title="{{ transaction.remark }}">
+                          {{ transaction.remark[:30] }}{% if transaction.remark|length > 30 %}...{% endif %}
+                        </small>
+                      {% endif %}
+                    </div>
+                  </td>
+                  <td>
+                    {% if transaction.external_tx_id %}
+                      <div class="d-flex align-items-center">
+                        <code class="small">{{ transaction.external_tx_id[:8] }}...{{ transaction.external_tx_id[-4:] }}</code>
+                        <button class="btn btn-sm btn-link p-0 ms-1" 
+                                onclick="copyToClipboard('{{ transaction.external_tx_id }}')"
+                                title="Copy full transaction ID">
+                          <i class="ti tabler-copy text-muted"></i>
+                        </button>
+                      </div>
+                    {% else %}
+                      <span class="text-muted">-</span>
+                    {% endif %}
+                  </td>
+                </tr>
+                {% endfor %}
+              {% else %}
+                <tr>
+                  <td colspan="6" class="text-center py-5">
+                    <div class="d-flex flex-column align-items-center">
+                      <i class="ti tabler-chart-line text-muted mb-3" style="font-size: 3rem;"></i>
+                      <h6 class="text-muted mb-2">No copy trading transactions found</h6>
+                      <p class="text-muted mb-3">Your copy trading transaction history will appear here once you start copying traders.</p>
+                      <a href="{{ url_for('copytrade.trader_list') }}" class="btn btn-primary">
+                        <i class="ti tabler-users me-1"></i>
+                        Browse Traders
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+        
+        <!-- Pagination -->
+        {% if copy_transactions and pagination.pages > 1 %}
+        <div class="card-footer">
+          <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <small class="text-muted">
+              Showing {{ pagination.per_page * (pagination.page - 1) + 1 }} to 
+              {{ pagination.per_page * pagination.page if pagination.page < pagination.pages else pagination.total }} 
+              of {{ pagination.total }} transactions
+            </small>
+            
+            <nav aria-label="Page navigation" class="mt-2 mt-md-0">
+              <ul class="pagination pagination-sm mb-0">
+                {% if pagination.has_prev %}
+                  <li class="page-item">
+                    <a class="page-link" href="{{ url_for('copytrade.copy_transactions', 
+                                                        page=pagination.prev_num,
+                                                        **current_params) }}">
+                      <i class="ti tabler-chevron-left"></i>
+                    </a>
+                  </li>
+                {% endif %}
+                
+                {% for page_num in pagination.iter_pages() %}
+                  {% if page_num %}
+                    {% if page_num != pagination.page %}
+                      <li class="page-item">
+                        <a class="page-link" href="{{ url_for('copytrade.copy_transactions', 
+                                                            page=page_num,
+                                                            **current_params) }}">{{ page_num }}</a>
+                      </li>
+                    {% else %}
+                      <li class="page-item active">
+                        <span class="page-link">{{ page_num }}</span>
+                      </li>
+                    {% endif %}
+                  {% else %}
+                    <li class="page-item disabled">
+                      <span class="page-link">...</span>
+                    </li>
+                  {% endif %}
+                {% endfor %}
+                
+                {% if pagination.has_next %}
+                  <li class="page-item">
+                    <a class="page-link" href="{{ url_for('copytrade.copy_transactions', 
+                                                        page=pagination.next_num,
+                                                        **current_params) }}">
+                      <i class="ti tabler-chevron-right"></i>
+                    </a>
+                  </li>
+                {% endif %}
+              </ul>
+            </nav>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Active Copy Trading Positions -->
+  {% if copied_traders %}
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h6 class="mb-0">Active Copy Positions</h6>
+          <small class="text-muted">{{ copied_traders|length }} trader{{ 's' if copied_traders|length != 1 else '' }}</small>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            {% for copy_trade in copied_traders %}
+            <div class="col-md-4">
+              <div class="d-flex align-items-center p-3 border rounded">
+                {% if copy_trade.trader.avatar_url %}
+                  <img src="{{ copy_trade.trader.avatar_url }}" 
+                       alt="{{ copy_trade.trader.user.username }}" 
+                       class="rounded-circle me-3" 
+                       style="width: 40px; height: 40px;">
+                {% else %}
+                  <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center me-3 text-white" 
+                       style="width: 40px; height: 40px; font-size: 14px; font-weight: 600;">
+                    {{ copy_trade.trader.user.username[0].upper() }}
+                  </div>
+                {% endif %}
+                <div class="flex-grow-1">
+                  <div class="fw-medium">{{ copy_trade.trader.user.username }}</div>
+                  <small class="text-muted">Allocation: ${{ "{:,.2f}".format(copy_trade.allocation) }}</small>
+                  {% if copy_trade.trader.win_rate %}
+                    <div><small class="text-success">{{ copy_trade.trader.win_rate }}% Win Rate</small></div>
+                  {% endif %}
+                </div>
+                <div class="text-end">
+                  <button class="btn btn-sm btn-outline-secondary" 
+                          onclick="filterByTrader({{ copy_trade.trader_id }})"
+                          title="View transactions">
+                    <i class="ti tabler-eye"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+
+<!-- Copy to Clipboard & Export Scripts -->
+<script>
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text).then(function() {
+    showToast('Transaction ID copied to clipboard', 'success');
+  }, function(err) {
+    console.error('Could not copy text: ', err);
+    showToast('Failed to copy transaction ID', 'error');
+  });
+}
+
+function exportTransactions() {
+  // Build current URL with export parameter
+  const currentUrl = new URL(window.location);
+  currentUrl.searchParams.set('export', 'csv');
+  
+  // Create a temporary link and trigger download
+  const link = document.createElement('a');
+  link.href = currentUrl.toString();
+  link.download = 'copy_trading_transactions.csv';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+// Simple toast function - replace with your existing toast system
+function showToast(message, type) {
+  // This is a placeholder - integrate with your existing notification system
+  console.log(`${type.toUpperCase()}: ${message}`);
+  
+  // Optional: Simple browser notification
+  if (typeof toastr !== 'undefined') {
+    toastr[type](message);
+  }
+}
+</script>
+
+{% endblock %}

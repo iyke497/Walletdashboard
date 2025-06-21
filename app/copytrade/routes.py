@@ -1,6 +1,6 @@
 from flask import render_template, request, jsonify, flash, redirect, url_for, current_app
 from flask_login import current_user, login_required
-from app.models import CopyTrade, Asset
+from app.models import CopyTrade, Asset, CopyTradeTransaction, Trader
 from app.extensions import db
 from app.copytrade import copytrade_bp
 from app.copytrade.services import get_list_of_traders, get_trader_by_id
@@ -333,3 +333,220 @@ def trader_profile(trader_id):
     return render_template('copytrade/trader_profile.html', 
                         trader=trader,
                         top_traded_assets=top_traded_assets)
+
+
+@copytrade_bp.route('/transactions')
+@login_required
+def copy_transactions():
+    """Display copy trading transactions history"""
+    
+    # Get request parameters
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 15, type=int)
+    status_filter = request.args.get('status', 'all')
+    trader_filter = request.args.get('trader_id', None, type=int)
+    period_filter = request.args.get('period', 'all')
+    sort_by = request.args.get('sort_by', 'transaction_timestamp')
+    sort_order = request.args.get('sort_order', 'desc')
+    
+    # Handle CSV export
+    if request.args.get('export') == 'csv':
+        return export_transactions_csv(status_filter, trader_filter, period_filter)
+    
+    # Base query for copy trading transactions with eager loading
+    query = db.session.query(CopyTradeTransaction).options(
+        db.joinedload(CopyTradeTransaction.copy_trade).joinedload(CopyTrade.trader).joinedload(Trader.user),
+        db.joinedload(CopyTradeTransaction.base_asset),
+        db.joinedload(CopyTradeTransaction.quote_asset)
+    ).filter(
+        CopyTradeTransaction.follower_id == current_user.id
+    )
+    
+    # Apply filters
+    if status_filter != 'all':
+        if status_filter == 'profit':
+            query = query.filter(CopyTradeTransaction.pnl > 0)
+        elif status_filter == 'loss':
+            query = query.filter(CopyTradeTransaction.pnl < 0)
+        else:
+            query = query.filter(CopyTradeTransaction.status == status_filter)
+    
+    if trader_filter:
+        query = query.join(CopyTrade).filter(CopyTrade.trader_id == trader_filter)
+    
+    # Apply period filter
+    if period_filter != 'all':
+        from datetime import datetime, timedelta
+        now = datetime.utcnow()
+        if period_filter == 'today':
+            start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            query = query.filter(CopyTradeTransaction.transaction_timestamp >= start_date)
+        elif period_filter == 'week':
+            start_date = now - timedelta(days=7)
+            query = query.filter(CopyTradeTransaction.transaction_timestamp >= start_date)
+        elif period_filter == 'month':
+            start_date = now - timedelta(days=30)
+            query = query.filter(CopyTradeTransaction.transaction_timestamp >= start_date)
+    
+    # Apply sorting - Fix the field name mismatch
+    if sort_by == 'timestamp':  # Template sends 'timestamp'
+        sort_by = 'transaction_timestamp'  # But we need to sort by 'transaction_timestamp'
+    
+    if sort_by == 'transaction_timestamp':
+        if sort_order == 'asc':
+            query = query.order_by(CopyTradeTransaction.transaction_timestamp.asc())
+        else:
+            query = query.order_by(CopyTradeTransaction.transaction_timestamp.desc())
+    elif sort_by == 'pnl':
+        if sort_order == 'asc':
+            query = query.order_by(CopyTradeTransaction.pnl.asc())
+        else:
+            query = query.order_by(CopyTradeTransaction.pnl.desc())
+    else:
+        # Default sorting
+        query = query.order_by(CopyTradeTransaction.transaction_timestamp.desc())
+    
+    # Paginate results
+    pagination = query.paginate(
+        page=page,
+        per_page=per_page,
+        error_out=False
+    )
+    
+    # Get summary statistics for the current user
+    stats_query = db.session.query(CopyTradeTransaction).filter(
+        CopyTradeTransaction.follower_id == current_user.id,
+        CopyTradeTransaction.status == 'completed'
+    )
+    
+    # Apply same period filter to stats
+    if period_filter != 'all':
+        from datetime import datetime, timedelta
+        now = datetime.utcnow()
+        if period_filter == 'today':
+            start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            stats_query = stats_query.filter(CopyTradeTransaction.transaction_timestamp >= start_date)
+        elif period_filter == 'week':
+            start_date = now - timedelta(days=7)
+            stats_query = stats_query.filter(CopyTradeTransaction.transaction_timestamp >= start_date)
+        elif period_filter == 'month':
+            start_date = now - timedelta(days=30)
+            stats_query = stats_query.filter(CopyTradeTransaction.transaction_timestamp >= start_date)
+    
+    total_pnl = db.session.query(db.func.sum(CopyTradeTransaction.pnl)).filter(
+        CopyTradeTransaction.follower_id == current_user.id,
+        CopyTradeTransaction.status == 'completed'
+    )
+    
+    # Apply same period filter to total_pnl
+    if period_filter != 'all':
+        if period_filter == 'today':
+            total_pnl = total_pnl.filter(CopyTradeTransaction.transaction_timestamp >= start_date)
+        elif period_filter == 'week':
+            start_date = now - timedelta(days=7)
+            total_pnl = total_pnl.filter(CopyTradeTransaction.transaction_timestamp >= start_date)
+        elif period_filter == 'month':
+            start_date = now - timedelta(days=30)
+            total_pnl = total_pnl.filter(CopyTradeTransaction.transaction_timestamp >= start_date)
+    
+    total_pnl = total_pnl.scalar() or 0
+    
+    profitable_trades = stats_query.filter(CopyTradeTransaction.pnl > 0).count()
+    total_trades = stats_query.count()
+    win_rate = (profitable_trades / total_trades * 100) if total_trades > 0 else 0
+    
+    # Get list of traders user is currently copying (active positions)
+    copied_traders = db.session.query(CopyTrade).options(
+        db.joinedload(CopyTrade.trader).joinedload(Trader.user)
+    ).filter(
+        CopyTrade.follower_id == current_user.id,
+        CopyTrade.is_active == True
+    ).all()
+    
+    return render_template('copytrade/copy_history.html',  # Fixed template name
+                         copy_transactions=pagination.items,
+                         pagination=pagination,
+                         current_params=request.args,
+                         total_pnl=total_pnl,
+                         win_rate=win_rate,
+                         total_trades=total_trades,
+                         profitable_trades=profitable_trades,
+                         copied_traders=copied_traders)
+
+def export_transactions_csv(status_filter='all', trader_filter=None, period_filter='all'):
+    """Export transactions to CSV"""
+    from flask import make_response
+    import csv
+    from io import StringIO
+    from datetime import datetime, timedelta
+    
+    # Build query similar to main function
+    query = db.session.query(CopyTradeTransaction).options(
+        db.joinedload(CopyTradeTransaction.copy_trade).joinedload(CopyTrade.trader).joinedload(Trader.user),
+        db.joinedload(CopyTradeTransaction.base_asset),
+        db.joinedload(CopyTradeTransaction.quote_asset)
+    ).filter(
+        CopyTradeTransaction.follower_id == current_user.id
+    )
+    
+    # Apply same filters
+    if status_filter != 'all':
+        if status_filter == 'profit':
+            query = query.filter(CopyTradeTransaction.pnl > 0)
+        elif status_filter == 'loss':
+            query = query.filter(CopyTradeTransaction.pnl < 0)
+        else:
+            query = query.filter(CopyTradeTransaction.status == status_filter)
+    
+    if trader_filter:
+        query = query.join(CopyTrade).filter(CopyTrade.trader_id == trader_filter)
+    
+    if period_filter != 'all':
+        now = datetime.utcnow()
+        if period_filter == 'today':
+            start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            query = query.filter(CopyTradeTransaction.transaction_timestamp >= start_date)
+        elif period_filter == 'week':
+            start_date = now - timedelta(days=7)
+            query = query.filter(CopyTradeTransaction.transaction_timestamp >= start_date)
+        elif period_filter == 'month':
+            start_date = now - timedelta(days=30)
+            query = query.filter(CopyTradeTransaction.transaction_timestamp >= start_date)
+    
+    transactions = query.order_by(CopyTradeTransaction.transaction_timestamp.desc()).all()
+    
+    # Create CSV
+    output = StringIO()
+    writer = csv.writer(output)
+    
+    # Write header
+    writer.writerow([
+        'Date', 'Time', 'Trader', 'Pair', 'Trade Type', 'Amount', 'Price', 
+        'PnL ($)', 'PnL (%)', 'Status', 'Remark', 'Transaction ID'
+    ])
+    
+    # Write data
+    for tx in transactions:
+        writer.writerow([
+            tx.transaction_timestamp.strftime('%Y-%m-%d'),  # Fixed field name
+            tx.transaction_timestamp.strftime('%H:%M:%S'),  # Fixed field name
+            tx.trader_name,
+            tx.pair_symbol,
+            tx.trade_type.upper(),
+            f"{tx.amount:.8f}",
+            f"{tx.price:.8f}",
+            f"{tx.pnl:.2f}",
+            f"{tx.pnl_percentage:.2f}",
+            tx.status.title(),
+            tx.remark or '',
+            tx.external_tx_id or ''
+        ])
+    
+    output.seek(0)
+    
+    # Create response
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = f'attachment; filename=copy_trading_transactions_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
+    
+    return response
