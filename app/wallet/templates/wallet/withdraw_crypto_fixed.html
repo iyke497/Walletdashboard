@@ -20,13 +20,12 @@
             <div class="card mb-4">
                 <div class="card-body">
                     <!-- Step 1: Choose Coin -->
-                    <h6>1. Select Coin</h6>
+                    <h6>Select Coin</h6>
                     <form method="POST" action="">
                         {{ form.hidden_tag() }}
                         <div class="row mb-4">
                           <div class="col-12">
                             <div class="form-group">
-                              <label class="form-label d-block" for="coin">Select cryptocurrency</label>
                               <div class="dropdown w-100">
                                 <button class="form-select d-flex align-items-center" type="button" id="coinDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                                   <span id="selectedCoin">Select crypto</span>
@@ -59,14 +58,13 @@
 
                     <hr class="my-6 mx-n6" />
                     <!-- Step 2: Choose a network -->
-                    <h6>2. Choose Chain</h6>
+                    <h6>Choose Chain</h6>
                     <form method="POST" action="">
                         {{ form.hidden_tag() }}
                         <input type="hidden" name="asset" value="{{ selected_asset }}">
                         <div class="row mb-4">
                         <div class="col-12">
                             <div class="form-group">
-                            <label class="form-label d-block" for="network">Select network</label>
                             <div class="dropdown w-100">
                                 <button class="form-select d-flex align-items-center" type="button" id="networkDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                                 <span id="selectedNetwork">Select network</span>
@@ -83,9 +81,8 @@
 
                     <hr class="my-6 mx-n6" />
                     <!-- Step 3: Enter a wallet address -->
-                    <h6>3. Wallet Address</h6>
+                    <h6>Wallet Address</h6>
                     <div class="form-group">
-                        <label class="form-label">Withdrawal Address</label>
                         <div class="input-group">
                           <input 
                             type="text" 
@@ -110,17 +107,15 @@
 
                     <hr class="my-6 mx-n6" />
                     <!-- Step 4: Enter withdrawal amount -->
-                    <h6>4. Amount</h6>
+                    <h6>Amount</h6>
                     <div class="row mb-4">
                         <div class="col-12">
-                        <label class="form-label" for="amountInput">Withdrawal Amount</label>
                         <input type="number" step="0.00000001" min="0" class="form-control" id="amountInput" name="amount" placeholder="0.00" required>
                         </div>
                     </div>
 
                     <hr class="my-6 mx-n6" />
                     <!-- Step 5: Process withdrawal -->
-                    <h6>5. Process withdrawal</h6>
                     <!-- Launch Modal -->
                     <div class="col-12 col-sm-6 col-md-8">
                         <button type="button" id="launchModalBtn" class="btn btn-primary" disabled data-bs-toggle="modal" data-bs-target="#animationModal">
@@ -154,41 +149,282 @@
 
         <!-- FAQ + Side widgets -->
         <div class="col-md-4">
-          <!-- Option for Fiat Deposit -->
-          <div class="card mb-0 border-warning">
-            <div class="card-body">
-              <div class="d-flex flex-column">
-                <h5 class="text-warning mb-3">Warning:</h5>
-                <p class="small text-muted mb-2">
-                  Please ensure that the withdrawal address is correct. 
-                  Withdrawals to incorrect addresses cannot be reversed.
-                </p>
-                <p class="small text-muted mb-2">
-                  Make sure you have selected the correct network that matches 
-                  your destination wallet. Sending to the wrong network may 
-                  result in permanent loss of funds.
-                </p>
-                <p class="small text-muted">
-                  Withdrawal fees will be deducted from the amount you specify. 
-                  Please check the fee structure before confirming your withdrawal.
-                </p>
-              </div>
+
+            <!-- Withdrawals FAQ Card -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-primary text-white py-2 px-3">
+                    <h6 class="mb-0 text-white">
+                        <i class="fas fa-question-circle me-2"></i>
+                        Withdrawals FAQ
+                    </h6>
+                </div>
+                <div class="card-body p-0">
+                    <div id="accordionWithdrawalsFAQ" class="accordion accordion-custom-button">
+                        <!-- FAQ Item 1 -->
+                        <div class="accordion-item py-2 px-3">
+                            <h2 class="accordion-header text-body d-flex justify-content-between" id="accordionWithdrawalsOne">
+                                <button
+                                    type="button"
+                                    class="accordion-button collapsed"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#accordionWithdrawals-1"
+                                    aria-controls="accordionWithdrawals-1">
+                                    Do you charge any withdrawal fees?
+                                </button>
+                            </h2>
+                            <div
+                                id="accordionWithdrawals-1"
+                                class="accordion-collapse collapse"
+                                data-bs-parent="#accordionWithdrawalsFAQ">
+                                <div class="accordion-body">
+                                    Yes, Bloxxxchain charges a standard network fee for withdrawals. This fee varies based on the coin/token and current blockchain conditions.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- FAQ Item 2 -->
+                        <div class="accordion-item py-2 px-3">
+                            <h2 class="accordion-header text-body d-flex justify-content-between" id="accordionWithdrawalsTwo">
+                                <button
+                                    type="button"
+                                    class="accordion-button collapsed"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#accordionWithdrawals-2"
+                                    aria-controls="accordionWithdrawals-2">
+                                    How long do withdrawals take to process?
+                                </button>
+                            </h2>
+                            <div
+                                id="accordionWithdrawals-2"
+                                class="accordion-collapse collapse"
+                                data-bs-parent="#accordionWithdrawalsFAQ">
+                                <div class="accordion-body">
+                                    Withdrawals are typically processed instantly, but in some cases may take up to 10–30 minutes depending on network congestion and security checks.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- FAQ Item 3 -->
+                        <div class="accordion-item py-2 px-3">
+                            <h2 class="accordion-header text-body d-flex justify-content-between" id="accordionWithdrawalsThree">
+                                <button
+                                    type="button"
+                                    class="accordion-button collapsed"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#accordionWithdrawals-3"
+                                    aria-controls="accordionWithdrawals-3">
+                                    Why is my withdrawal pending?
+                                </button>
+                            </h2>
+                            <div
+                                id="accordionWithdrawals-3"
+                                class="accordion-collapse collapse"
+                                data-bs-parent="#accordionWithdrawalsFAQ">
+                                <div class="accordion-body">
+                                    Your withdrawal might be pending due to ongoing security verification or high network traffic. If it remains pending for more than 30 minutes, please contact our support team.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- FAQ Item 4 -->
+                        <div class="accordion-item py-2 px-3">
+                            <h2 class="accordion-header text-body d-flex justify-content-between" id="accordionWithdrawalsFour">
+                                <button
+                                    type="button"
+                                    class="accordion-button collapsed"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#accordionWithdrawals-4"
+                                    aria-controls="accordionWithdrawals-4">
+                                    Can I cancel a withdrawal?
+                                </button>
+                            </h2>
+                            <div
+                                id="accordionWithdrawals-4"
+                                class="accordion-collapse collapse"
+                                data-bs-parent="#accordionWithdrawalsFAQ">
+                                <div class="accordion-body">
+                                    Unfortunately, once a withdrawal request has been submitted and is being processed, it cannot be canceled due to the irreversible nature of blockchain transactions.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- FAQ Item 5 -->
+                        <div class="accordion-item py-2 px-3">
+                            <h2 class="accordion-header text-body d-flex justify-content-between" id="accordionWithdrawalsFive">
+                                <button
+                                    type="button"
+                                    class="accordion-button collapsed"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#accordionWithdrawals-5"
+                                    aria-controls="accordionWithdrawals-5">
+                                    I made a withdrawal but haven't received it. What should I do?
+                                </button>
+                            </h2>
+                            <div
+                                id="accordionWithdrawals-5"
+                                class="accordion-collapse collapse"
+                                data-bs-parent="#accordionWithdrawalsFAQ">
+                                <div class="accordion-body">
+                                    <p class="mb-3">First, check if the transaction has been confirmed on the blockchain. If it has, but you haven't received the funds, ensure the destination address was correct.</p>
+                                    <p class="mb-0">If you're still unsure, please reach out to our support team at <a href="mailto:support@bloxxxchain.com" class="text-primary text-decoration-none">support@bloxxxchain.com</a>, via <a href="https://wa.me/17203353834" target="_blank" class="text-success text-decoration-none">WhatsApp</a>, or through our 24/7 live chat. Include your transaction ID and the wallet address you sent to.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- FAQ Item 6 -->
+                        <div class="accordion-item py-2 px-3">
+                            <h2 class="accordion-header text-body d-flex justify-content-between" id="accordionWithdrawalsSix">
+                                <button
+                                    type="button"
+                                    class="accordion-button collapsed"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#accordionWithdrawals-6"
+                                    aria-controls="accordionWithdrawals-6">
+                                    Are there minimum withdrawal limits?
+                                </button>
+                            </h2>
+                            <div
+                                id="accordionWithdrawals-6"
+                                class="accordion-collapse collapse"
+                                data-bs-parent="#accordionWithdrawalsFAQ">
+                                <div class="accordion-body">
+                                    Yes, each coin/token has a minimum withdrawal amount, which is displayed on the withdrawal page before you proceed.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- FAQ Item 7 -->
+                        <div class="accordion-item py-2 px-3">
+                            <h2 class="accordion-header text-body d-flex justify-content-between" id="accordionWithdrawalsSeven">
+                                <button
+                                    type="button"
+                                    class="accordion-button collapsed"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#accordionWithdrawals-7"
+                                    aria-controls="accordionWithdrawals-7">
+                                    Where do I withdraw from?
+                                </button>
+                            </h2>
+                            <div
+                                id="accordionWithdrawals-7"
+                                class="accordion-collapse collapse"
+                                data-bs-parent="#accordionWithdrawalsFAQ">
+                                <div class="accordion-body">
+                                    Go to your Wallet, click 'WITHDRAW', select the coin/token, enter the recipient address and the amount, then confirm the transaction.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-          </div>
+            <!-- Warning -->
+            <div class="card mb-0 border-warning">
+                <div class="card-body">
+                <div class="d-flex flex-column">
+                    <h5 class="text-warning mb-3">Warning:</h5>
+                    <p class="small text-muted mb-2">
+                    Please ensure that the withdrawal address is correct. 
+                    Withdrawals to incorrect addresses cannot be reversed.
+                    </p>
+                    <p class="small text-muted mb-2">
+                    Make sure you have selected the correct network that matches 
+                    your destination wallet. Sending to the wrong network may 
+                    result in permanent loss of funds.
+                    </p>
+                    <p class="small text-muted">
+                    Withdrawal fees will be deducted from the amount you specify. 
+                    Please check the fee structure before confirming your withdrawal.
+                    </p>
+                </div>
+                </div>
+            </div>
         </div>
 
-          <!-- Show recent withdrawals -->
-        <h3 class="mt-4">Recent Withdrawals</h3>
-        <table class="table">
-            {% for tx in recent_withdrawals %}
-            <tr>
-                <td>{{ tx.asset.symbol }}</td>
-                <td>{{ tx.amount|round(4) }}</td>
-                <td>{{ tx.timestamp|datetime }}</td>
-                <td>{{ tx.external_tx_id|truncate(10) }}</td>
-            </tr>
-            {% endfor %}
-        </table>
+        <!-- Withdrawals History Section -->
+        <div class="row mt-5">
+            <div class="col-12">
+            <div class="card">
+                <h5 class="card-header d-flex justify-content-between align-items-center">
+                <span>Recent Withdrawals</span>
+                </h5>
+                <div class="table-responsive text-nowrap">
+                <table class="table">
+                    <thead>
+                    <tr class="text-nowrap">
+                        <th>Date</th>
+                        <th>Asset</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                    </tr>
+                    </thead>
+                    <tbody class="table-border-bottom-0">
+                    {% if recent_withdrawals %}
+                        {% for withdrawal in recent_withdrawals %}
+                        <tr>
+                        <td>
+                            <div class="d-flex flex-column">
+                            <span class="fw-medium">{{ withdrawal.timestamp.strftime('%Y-%m-%d') }}</span>
+                            <small class="text-muted">{{ withdrawal.timestamp.strftime('%H:%M:%S') }}</small>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                            {% if withdrawal.asset.images and withdrawal.asset.images.get('thumb') %}
+                                <img src="{{ withdrawal.asset.images.get('thumb') }}" 
+                                    alt="{{ withdrawal.asset.symbol }}" 
+                                    class="rounded-circle me-2" 
+                                    style="width: 24px; height: 24px;">
+                            {% else %}
+                                <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center me-2" 
+                                    style="width: 24px; height: 24px; font-size: 10px;">
+                                {{ withdrawal.asset.symbol[0] }}
+                                </div>
+                            {% endif %}
+                            <div>
+                                <div class="fw-medium">{{ withdrawal.asset.symbol.upper() }}</div>
+                                <small class="text-muted">{{ withdrawal.asset.name }}</small>
+                            </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="fw-medium text-danger">-{{ "{:,.8f}".format(withdrawal.amount|float).rstrip('0').rstrip('.') }}</span>
+                        </td>
+                        <td>
+                            {% if withdrawal.status %}
+                            {% if withdrawal.status.value == 'pending' %}
+                                <span class="badge bg-warning text-dark">
+                                <i class="ti tabler-clock me-1"></i>Pending
+                                </span>
+                            {% elif withdrawal.status.value == 'success' %}
+                                <span class="badge bg-success">
+                                <i class="ti tabler-check me-1"></i>Success
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ withdrawal.status.value.title() }}</span>
+                            {% endif %}
+                            {% else %}
+                            <span class="badge bg-secondary">Unknown</span>
+                            {% endif %}
+                        </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                        <td colspan="5" class="text-center py-5">
+                            <div class="d-flex flex-column align-items-center">
+                            <i class="ti tabler-outbox text-muted mb-3" style="font-size: 3rem;"></i>
+                            <h6 class="text-muted mb-2">No withdrawals found</h6>
+                            <p class="text-muted mb-0">Your withdrawal history will appear here once you make your first withdrawal.</p>
+                            </div>
+                        </td>
+                        </tr>
+                    {% endif %}
+                    </tbody>
+                </table>
+                </div>
+            </div>
+            </div>
+        </div>
     </div>
 </div>
 
