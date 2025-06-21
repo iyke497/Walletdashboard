@@ -17,14 +17,14 @@
     <div class="col-md-8">
       <div class="card mb-4">
         <div class="card-body">
-          <h6>1. Select Coin</h6>
+          <h6>Select Coin</h6>
           <!-- Step 1: Choose Coin -->
           <form method="POST" action="">
             {{ form.hidden_tag() }}
             <div class="row mb-4">
               <div class="col-12">
                 <div class="form-group">
-                  <label class="form-label d-block" for="coin">Select cryptocurrency</label>
+                  
                   <div class="dropdown w-100">
                     <button class="form-select d-flex align-items-center" type="button" id="coinDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                       <span id="selectedCoin">Select crypto</span>
@@ -57,14 +57,13 @@
 
           <hr class="my-6 mx-n6" />
 
-          <h6>2. Choose Chain</h6>
+          <h6>Choose Chain</h6>
           <form method="POST" action="">
             {{ form.hidden_tag() }}
             <input type="hidden" name="asset" value="{{ selected_asset }}">
             <div class="row mb-4">
               <div class="col-12">
                 <div class="form-group">
-                  <label class="form-label d-block" for="network">Select network</label>
                   <div class="dropdown w-100">
                     <button class="form-select d-flex align-items-center" type="button" id="networkDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                       <span id="selectedNetwork">Select network</span>
@@ -81,17 +80,15 @@
 
           <hr class="my-6 mx-n6" />
 
-          <h6>3. Amount</h6>
+          <h6>Amount</h6>
           <div class="row mb-4">
             <div class="col-12">
-              <label class="form-label" for="amountInput">How much?</label>
               <input type="number" step="0.00000001" min="0" class="form-control" id="amountInput" name="amount" placeholder="0.00" required>
             </div>
           </div>
 
           <hr class="my-6 mx-n6" />
 
-          <h6>4. Confirm Details</h6>
           <div class="col-12 col-sm-6 col-md-8">
             <button type="button" id="launchModalBtn" class="btn btn-primary" disabled data-bs-toggle="modal" data-bs-target="#animationModal">
               Get deposit details
@@ -116,7 +113,7 @@
                 </div>
                 <div class="modal-footer">
                   <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">Close</button>
-                  <button type="button" id="makeDepositBtn" class="btn btn-primary">Deposit</button>
+                  <button type="button" id="makeDepositBtn" class="btn btn-primary">Confirm</button>
                 </div>
               </div>
             </div>
@@ -128,19 +125,143 @@
 
     <!-- FAQ + Side widgets unchanged -->
     <div class="col-md-4">
-      <!-- Option for Fiat Deposit -->
+      <!-- FAQS -->
+      <!-- Deposits FAQ Card -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-primary text-white py-2 px-3">
+            <h6 class="mb-0 text-white">
+                <i class="fas fa-question-circle me-2"></i>
+                Deposits FAQ
+            </h6>
+        </div>
+        <div class="card-body p-0">
+            <div id="accordionDepositsFAQ" class="accordion accordion-custom-button">
+                <!-- FAQ Item 1 -->
+                <div class="accordion-item py-2 px-3">
+                    <h2 class="accordion-header text-body d-flex justify-content-between" id="accordionDepositsOne">
+                        <button
+                            type="button"
+                            class="accordion-button collapsed"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#accordionDeposits-1"
+                            aria-controls="accordionDeposits-1">
+                            Do you have any deposit fees?
+                        </button>
+                    </h2>
+                    <div
+                        id="accordionDeposits-1"
+                        class="accordion-collapse collapse"
+                        data-bs-parent="#accordionDepositsFAQ">
+                        <div class="accordion-body">
+                            Bloxxxchain does not charge any deposit fees.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FAQ Item 2 -->
+                <div class="accordion-item py-2 px-3">
+                    <h2 class="accordion-header text-body d-flex justify-content-between" id="accordionDepositsTwo">
+                        <button
+                            type="button"
+                            class="accordion-button collapsed"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#accordionDeposits-2"
+                            aria-controls="accordionDeposits-2">
+                            Can I convert my crypto to stablecoins or other cryptos?
+                        </button>
+                    </h2>
+                    <div
+                        id="accordionDeposits-2"
+                        class="accordion-collapse collapse"
+                        data-bs-parent="#accordionDepositsFAQ">
+                        <div class="accordion-body">
+                            Yes, by using our own <a href="{{ url_for('trading.swap') }}" class="text-primary text-decoration-none">swap</a> you can exchange your currencies to USDT or USDC directly within Bloxxxchain platform, with no fees.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FAQ Item 3 -->
+                <div class="accordion-item py-2 px-3">
+                    <h2 class="accordion-header text-body d-flex justify-content-between" id="accordionDepositsThree">
+                        <button
+                            type="button"
+                            class="accordion-button collapsed"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#accordionDeposits-3"
+                            aria-controls="accordionDeposits-3">
+                            How many block confirmations do deposits require?
+                        </button>
+                    </h2>
+                    <div
+                        id="accordionDeposits-3"
+                        class="accordion-collapse collapse"
+                        data-bs-parent="#accordionDepositsFAQ">
+                        <div class="accordion-body">
+                            Deposits require 1-3 block confirmations based on the coin/token.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FAQ Item 4 -->
+                <div class="accordion-item py-2 px-3">
+                    <h2 class="accordion-header text-body d-flex justify-content-between" id="accordionDepositsFour">
+                        <button
+                            type="button"
+                            class="accordion-button collapsed"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#accordionDeposits-4"
+                            aria-controls="accordionDeposits-4">
+                            I made a deposit, but it doesn't show up in my account. Why?
+                        </button>
+                    </h2>
+                    <div
+                        id="accordionDeposits-4"
+                        class="accordion-collapse collapse"
+                        data-bs-parent="#accordionDepositsFAQ">
+                        <div class="accordion-body">
+                            <p class="mb-3">If your deposit is not reflected in your Wallet, make sure that your destination address is correct and the deposit has received sufficient confirmations (1-3) on the blockchain.</p>
+                            <p class="mb-0">If you require any assistance don't hesitate to contact our support team via email at <a href="mailto:support@bloxxxchain.com" class="text-primary text-decoration-none">support@bloxxxchain.com</a>, <a href="https://wa.me/17203353834" target="_blank" class="text-success text-decoration-none">WhatsApp</a> or 24/7 live chat and provide us with the details of your transaction, we'll make sure to look into it.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FAQ Item 5 -->
+                <div class="accordion-item py-2 px-3">
+                    <h2 class="accordion-header text-body d-flex justify-content-between" id="accordionDepositsFive">
+                        <button
+                            type="button"
+                            class="accordion-button collapsed"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#accordionDeposits-5"
+                            aria-controls="accordionDeposits-5">
+                            Where can I find my deposit address?
+                        </button>
+                    </h2>
+                    <div
+                        id="accordionDeposits-5"
+                        class="accordion-collapse collapse"
+                        data-bs-parent="#accordionDepositsFAQ">
+                        <div class="accordion-body">
+                            Click 'DEPOSIT', proceed to select the coin/token that you wish to deposit to generate your deposit address.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+      </div>
+      <!-- Warning -->
       <div class="card mb-0 border-warning">
         <div class="card-body">
           <div class="d-flex flex-column">
             <h5 class="text-warning mb-3">Warning:</h5>
             <p class="small text-muted mb-2">
-              Please ensure that the **deposit address** is correct. 
+              Please ensure that the <b>deposit address</b> is correct. 
               Deposits to incorrect addresses cannot be recovered.
             </p>
             <p class="small text-muted mb-2">
               Make sure you have selected the correct network that matches 
-              your **source wallet**. Sending to the wrong network may 
-              result in **permanent loss of funds**.
+              your <b>source wallet</b>. Sending to the wrong network may 
+              result in <b>permanent loss of funds</b>.
             </p>
             <p class="small text-muted">
               Minimum deposit amounts may apply. Please check the deposit limits 
@@ -250,6 +371,122 @@
           </div>
       </div>
     </div>
+
+  <!-- Deposits History Section - Add this before the closing container div -->
+  <div class="row mt-5">
+    <div class="col-12">
+      <div class="card">
+        <h5 class="card-header d-flex justify-content-between align-items-center">
+          <span>Recent Deposits</span>
+        </h5>
+        <div class="table-responsive text-nowrap">
+          <table class="table">
+            <thead>
+              <tr class="text-nowrap">
+                <th>Date</th>
+                <th>Asset</th>
+                <th>Amount</th>
+                <th>Transaction ID</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody class="table-border-bottom-0">
+              {% if all_deposits %}
+                {% for deposit in all_deposits %}
+                <tr>
+                  <td>
+                    <div class="d-flex flex-column">
+                      <span class="fw-medium">{{ deposit.timestamp.strftime('%Y-%m-%d') }}</span>
+                      <small class="text-muted">{{ deposit.timestamp.strftime('%H:%M:%S') }}</small>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="d-flex align-items-center">
+                      {% if deposit.asset.images and deposit.asset.images.get('thumb') %}
+                        <img src="{{ deposit.asset.images.get('thumb') }}" 
+                             alt="{{ deposit.asset.symbol }}" 
+                             class="rounded-circle me-2" 
+                             style="width: 24px; height: 24px;">
+                      {% else %}
+                        <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center me-2" 
+                             style="width: 24px; height: 24px; font-size: 10px;">
+                          {{ deposit.asset.symbol[0] }}
+                        </div>
+                      {% endif %}
+                      <div>
+                        <div class="fw-medium">{{ deposit.asset.symbol.upper() }}</div>
+                        <small class="text-muted">{{ deposit.asset.name }}</small>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="fw-medium text-success">+{{ "{:,.8f}".format(deposit.amount|float).rstrip('0').rstrip('.') }}</span>
+                  </td>
+                  <td>
+                    {% if deposit.external_tx_id %}
+                      <div class="d-flex align-items-center">
+                        <code class="small">{{ deposit.external_tx_id[:12] }}...</code>
+                        <button class="btn btn-sm btn-link p-0 ms-1" 
+                                onclick="copyToClipboard('{{ deposit.external_tx_id }}')"
+                                title="Copy full transaction ID">
+                          <i class="ti tabler-copy text-muted"></i>
+                        </button>
+                      </div>
+                    {% else %}
+                      <span class="text-muted">-</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if deposit.status %}
+                      {% if deposit.status.value == 'pending' %}
+                        <span class="badge bg-warning text-dark">
+                          <i class="ti tabler-clock me-1"></i>Pending
+                        </span>
+                      {% elif deposit.status.value == 'success' %}
+                        <span class="badge bg-success">
+                          <i class="ti tabler-check me-1"></i>Success
+                        </span>
+                      {% else %}
+                        <span class="badge bg-secondary">{{ deposit.status.value.title() }}</span>
+                      {% endif %}
+                    {% else %}
+                      <span class="badge bg-secondary">Unknown</span>
+                    {% endif %}
+                  </td>
+                </tr>
+                {% endfor %}
+              {% else %}
+                <tr>
+                  <td colspan="7" class="text-center py-5">
+                    <div class="d-flex flex-column align-items-center">
+                      <i class="ti tabler-inbox text-muted mb-3" style="font-size: 3rem;"></i>
+                      <h6 class="text-muted mb-2">No deposits found</h6>
+                      <p class="text-muted mb-0">Your deposit history will appear here once you make your first deposit.</p>
+                    </div>
+                  </td>
+                </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Deposit Details Modal -->
+  <div class="modal fade" id="depositDetailsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Deposit Details</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" id="depositDetailsContent">
+          <!-- Details will be loaded here -->
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 {% endblock %}
@@ -387,7 +624,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const info = await res.json();
         document.getElementById('depositQr').src = info.qr;
         document.getElementById('depositAddress').value = info.address;
-        document.getElementById('depositMeta').textContent = `Min ${info.minimum_deposit || '—'}  •  Fee ${info.fees || '—'}`;
+        // document.getElementById('depositMeta').textContent = `Min ${info.minimum_deposit || '—'}  •  Fee ${info.fees || '—'}`;
       } catch (err) {
         console.error(err);
         showToast('Unable to fetch deposit info', 'danger');
@@ -532,8 +769,8 @@ document.addEventListener('DOMContentLoaded', () => {
       <div class="modal fade" id="depositSuccessModal" tabindex="-1" aria-hidden="true">
           <div class="modal-dialog modal-dialog-centered">
               <div class="modal-content">
-                  <div class="modal-header bg-warning text-white">
-                      <h5 class="modal-title">
+                  <div class="modal-header bg-primary text-white">
+                      <h5 class="modal-title text-white py-3 px-2">
                           <i class="ti tabler-clock me-2"></i>Deposit Submitted
                       </h5>
                       <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
@@ -541,11 +778,11 @@ document.addEventListener('DOMContentLoaded', () => {
                   <div class="modal-body text-center py-4">
                       <div class="text-warning mb-3" style="font-size: 3rem;">⏳</div>
                       
-                      <h4 class="text-warning mb-3">Processing Your Deposit</h4>
+                      <h4 class="text-dark mb-3">Processing Your Deposit</h4>
                       
-                      <div class="alert alert-warning" role="alert">
-                          <strong>Your deposit is being reviewed</strong><br>
-                          It will appear in your balance once confirmed by our team.
+                      <div class="alert alert-secondary" role="alert">
+                          <strong>Note:</strong><br>
+                          4 block confirmations are requied before your deposited funds can be added to your available balance.
                       </div>
                       
                       <div class="row text-start">
@@ -563,17 +800,16 @@ document.addEventListener('DOMContentLoaded', () => {
                       
                       <div class="text-start">
                           <h6>What happens next?</h6>
-                          <ol class="small text-muted">
-                              <li>Our team reviews your transaction</li>
-                              <li>We verify the blockchain confirmation</li>
-                              <li>Your balance is updated (usually within 15-30 minutes)</li>
-                              <li>The page will refresh to show your updated balance</li>
-                          </ol>
+                          <ul class="small text-muted">
+                              <li>Funds will be credited to your account once the necessary confirmations have been received.</li>
+                              <li>Please note that this process may take a few minutes, depending on network congestion.</li>
+                              <li>Once the transaction is complete, refresh the page to view your updated wallet balance.</li>
+                          </ul>
                       </div>
                   </div>
                   <div class="modal-footer">
                       <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
-                      <button type="button" class="btn btn-warning" onclick="window.location.reload()">
+                      <button type="button" class="btn btn-primary" onclick="window.location.reload()">
                           <i class="ti tabler-refresh me-1"></i>Refresh Page
                       </button>
                   </div>
@@ -601,6 +837,50 @@ document.addEventListener('DOMContentLoaded', () => {
               window.location.reload();
           }
       }, 120000); // 2 minutes
+    }
+    // Add these functions to your existing JavaScript block
+
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(function() {
+            showToast('Transaction ID copied to clipboard!', 'success');
+        }, function(err) {
+            console.error('Could not copy text: ', err);
+            showToast('Failed to copy to clipboard', 'danger');
+        });
+    }
+
+    function viewDepositDetails(depositId) {
+        // Fetch and display deposit details in modal
+        fetch(`/deposit-details/${depositId}`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('depositDetailsContent').innerHTML = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Transaction Information</h6>
+                            <p><strong>ID:</strong> ${data.id}</p>
+                            <p><strong>Amount:</strong> ${data.amount} ${data.asset}</p>
+                            <p><strong>Status:</strong> <span class="badge bg-${data.status === 'success' ? 'success' : 'warning'}">${data.status}</span></p>
+                            <p><strong>Date:</strong> ${data.timestamp}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Blockchain Information</h6>
+                            <p><strong>Transaction ID:</strong> ${data.external_tx_id || 'N/A'}</p>
+                            ${data.notes ? `<p><strong>Notes:</strong> ${data.notes}</p>` : ''}
+                        </div>
+                    </div>
+                `;
+                new bootstrap.Modal(document.getElementById('depositDetailsModal')).show();
+            })
+            .catch(error => {
+                console.error('Error fetching deposit details:', error);
+                showToast('Failed to load deposit details', 'danger');
+            });
+    }
+
+    function contactSupport(depositId) {
+        // Redirect to support with deposit ID pre-filled
+        window.open(`mailto:support@bloxxxchain.com?subject=Deposit Issue - ID: ${depositId}&body=Hello, I need assistance with my deposit (ID: ${depositId}). Please help me resolve this issue.`, '_blank');
     }
 });
 </script>

@@ -1,5 +1,6 @@
 from datetime import datetime
 from sqlalchemy import desc
+from sqlalchemy.orm import joinedload
 from sqlalchemy.exc import IntegrityError
 from app.models import Transaction, Asset, Holding, TransactionType, AssetType, ExchangeRate, TransactionStatus
 from app.extensions import db
@@ -159,6 +160,7 @@ class WalletService:
             
             if not asset:
                 raise ValueError(f"Crypto asset {asset_symbol} not found")
+            
 
             # Create transaction as PENDING - DON'T update holdings yet
             transaction = Transaction(
@@ -185,7 +187,7 @@ class WalletService:
             raise ValueError(f"Failed to process deposit: {str(e)}")
 
     @staticmethod
-    def get_recent_crypto_deposits(user_id, limit=5):
+    def get_recent_crypto_deposits_old(user_id, limit=5):
         """
         Fetch the user’s last `limit` crypto‐deposit transactions,
         ordered newest first.
@@ -196,6 +198,41 @@ class WalletService:
             .limit(limit) \
             .all()
     
+    @staticmethod
+    def get_recent_crypto_deposits(user_id, limit=None):
+        """
+        Fetch the user's crypto deposit transactions,
+        ordered newest first. If limit is None, fetch all deposits.
+        """
+        
+        query = Transaction.query \
+            .options(joinedload(Transaction.asset)) \
+            .filter_by(user_id=user_id, tx_type=TransactionType.DEPOSIT) \
+            .order_by(desc(Transaction.timestamp))
+        
+        if limit:
+            query = query.limit(limit)
+        
+        return query.all()
+
+
+    @staticmethod
+    def get_user_deposits(user_id, limit=None):
+        """
+        Simple method to fetch user deposits with asset info
+        """
+        
+        query = db.session.query(Transaction).filter(
+            Transaction.user_id == user_id,
+            Transaction.tx_type == TransactionType.DEPOSIT
+        ).order_by(Transaction.timestamp.desc())
+        
+        if limit:
+            query = query.limit(limit)
+        
+        return query.all()
+
+
     @staticmethod
     def deposit_fiat(user_id, asset_symbol, amount, reference=None):
         """Record a fiat currency deposit transaction and update holdings"""

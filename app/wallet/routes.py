@@ -6,7 +6,7 @@ from app.extensions import db
 from app.decorators import email_verified_required
 from .services import WalletService
 from .forms import WithdrawForm, DepositForm
-from app.models import Asset, AssetType, Holding
+from app.models import Asset, AssetType, Holding, Transaction, TransactionType, TransactionStatus
 from decimal import Decimal, InvalidOperation
 import logging
 
@@ -38,13 +38,15 @@ def deposit_crypto_form():
         for asset in crypto_assets
     ]
 
-    # Fetch recent deposits for the current user
-    recent_deposits = WalletService.get_recent_crypto_deposits(current_user.id, limit=5)
+    # Fetch recent deposits for sidebar (limit 5) and all deposits for table
+    #recent_deposits = WalletService.get_recent_crypto_deposits(current_user.id, limit=5)
+    #all_deposits = WalletService.get_recent_crypto_deposits(current_user.id)  # No limit = all deposits
+    all_deposits = WalletService.get_user_deposits(current_user.id, limit=10)
     
     return render_template('wallet/deposit_crypto_fixed.html',
                            form=form, 
                            crypto_assets=serialized_assets, 
-                           recent_deposits=recent_deposits)
+                           all_deposits=all_deposits)
 
 @wallet_bp.route('/search-assets/<search_term>')
 @login_required
@@ -152,7 +154,7 @@ def deposit_crypto():
                     'id': transaction.id,
                     'asset': asset_symbol,
                     'amount': amount,
-                    'status': 'pending',
+                    'status': transaction.status.value,
                     'timestamp': transaction.timestamp.isoformat()
                 }
             }), 201
@@ -184,35 +186,35 @@ def deposit_crypto():
             'error': 'An unexpected error occurred'
         }), 500
 
-@wallet_bp.route('/deposit/fiat', methods=['POST'])
+@wallet_bp.route('/deposit-details/<int:deposit_id>')
 @login_required
-def deposit_fiat():
-    data = request.get_json()
-    
+def get_deposit_details(deposit_id):
+    """Get detailed information about a specific deposit"""
     try:
-        asset_symbol = data.get('asset')
-        amount = float(data.get('amount'))
-        reference = data.get('reference')  # Optional bank reference or payment ID
+        deposit = Transaction.query.filter_by(
+            id=deposit_id,
+            user_id=current_user.id,
+            tx_type=TransactionType.DEPOSIT
+        ).first()
         
-        if not asset_symbol or not amount:
-            return jsonify({'error': 'Asset and amount are required'}), 400
+        if not deposit:
+            return jsonify({'error': 'Deposit not found'}), 404
             
-        transaction = WalletService.deposit_fiat(current_user.id, asset_symbol, amount, reference)
         return jsonify({
-            'message': 'Fiat deposit successful',
-            'transaction': {
-                'id': transaction.id,
-                'asset': asset_symbol,
-                'amount': amount,
-                'reference': reference,
-                'timestamp': transaction.timestamp.isoformat()
-            }
-        }), 201
+            'id': deposit.id,
+            'amount': float(deposit.amount),
+            'asset': deposit.asset.symbol.upper(),
+            'asset_name': deposit.asset.name,
+            'status': deposit.status.value if deposit.status else 'unknown',
+            'timestamp': deposit.timestamp.strftime('%Y-%m-%d %H:%M:%S UTC'),
+            'external_tx_id': deposit.external_tx_id,
+            'notes': deposit.notes,
+            'fee_amount': float(deposit.fee_amount) if deposit.fee_amount else None
+        })
         
-    except ValueError as e:
-        return jsonify({'error': str(e)}), 400
     except Exception as e:
-        return jsonify({'error': 'An unexpected error occurred'}), 500
+        logger.error(f"Error fetching deposit details: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Failed to fetch deposit details'}), 500
 
 # ********** Withdraw **********
 @wallet_bp.route('/withdraw/crypto', methods=['GET'])
